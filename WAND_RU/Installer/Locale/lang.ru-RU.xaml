@@ -1,0 +1,34 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:s="clr-namespace:System;assembly=mscorlib">
+
+    <s:String x:Key="language_display_name">Русский</s:String>
+
+    <!-- MainWindow -->
+    <s:String x:Key="S_Ready_Sub">Готов к русификации</s:String>
+    <s:String x:Key="S_Patch">Русифицировать</s:String>
+    <s:String x:Key="S_Patched_Title">Русификация установлена</s:String>
+    <s:String x:Key="S_Restore">Откатить</s:String>
+    <s:String x:Key="S_Reinstall">Переустановить</s:String>
+    <s:String x:Key="S_NotFound_Title">Wand не найден</s:String>
+    <s:String x:Key="S_NotFound_Sub">Укажите папку установки Wand вручную</s:String>
+    <s:String x:Key="S_Browse">Обзор…</s:String>
+    <s:String x:Key="S_Working">Работаем…</s:String>
+    <s:String x:Key="S_Done_Title">Готово!</s:String>
+    <s:String x:Key="S_Error_Title">Ошибка</s:String>
+    <s:String x:Key="S_Retry">Повторить</s:String>
+
+    <!-- Settings -->
+    <s:String x:Key="S_Settings">Настройки</s:String>
+    <s:String x:Key="S_WandVersion">Версия Wand</s:String>
+    <s:String x:Key="S_RestartWand">Перезапустить Wand после установки</s:String>
+    <s:String x:Key="S_ShowLog">Показывать лог</s:String>
+    <s:String x:Key="S_Close">Закрыть</s:String>
+
+    <!-- VM messages -->
+    <s:String x:Key="S_Msg_NotFound">Wand не найден</s:String>
+    <s:String x:Key="S_Msg_Done">Готово! Перезапустите Wand → Настройки → Язык → Русский</s:String>
+    <s:String x:Key="S_Msg_ErrorPrefix">Ошибка: </s:String>
+    <s:String x:Key="S_Browse_Dialog">Выберите папку установки Wand</s:String>
+
+</ResourceDictionary>

@@ -2,6 +2,7 @@ using System.Reflection;
 using System.Windows;
 using System.Windows.Input;
 using Microsoft.Win32;
+using WandRuInstaller.Core;
 using WandRuInstaller.ViewModels;
 
 namespace WandRuInstaller;
@@ -28,7 +29,7 @@ public partial class MainWindow : Window
 
     void OnBrowse(object sender, RoutedEventArgs e)
     {
-        var dialog = new OpenFolderDialog { Title = "Выберите папку установки Wand" };
+        var dialog = new OpenFolderDialog { Title = L.Get("S_Browse_Dialog") };
         if (dialog.ShowDialog(this) == true)
             ViewModel.DetectFrom(new[] { dialog.FolderName });
     }

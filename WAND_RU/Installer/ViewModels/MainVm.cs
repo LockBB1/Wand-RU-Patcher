@@ -49,7 +49,7 @@ public sealed class MainVm : ObservableObject
         if (Install is null)
         {
             State = InstallerState.NotFound;
-            StatusText = "Wand не найден";
+            StatusText = L.Get("S_Msg_NotFound");
             return;
         }
         Settings = new SettingsVm(Install);
@@ -67,14 +67,14 @@ public sealed class MainVm : ObservableObject
         {
             await Task.Run(() => new RuPatcher(Install.SelectedAppDir, _overrides, Add).Apply());
             State = InstallerState.Done;
-            StatusText = "Готово! Перезапустите Wand → Настройки → Язык → Русский";
+            StatusText = L.Get("S_Msg_Done");
             if (Install is not null) Install.IsPatched = true;
             if (Settings?.RestartWandAfter == true) TryRestartWand();
         }
         catch (Exception ex)
         {
             State = InstallerState.Error;
-            StatusText = "Ошибка: " + ex.Message;
+            StatusText = L.Get("S_Msg_ErrorPrefix") + ex.Message;
             Add(ex.ToString());
         }
     }
@@ -93,7 +93,7 @@ public sealed class MainVm : ObservableObject
         catch (Exception ex)
         {
             State = InstallerState.Error;
-            StatusText = "Ошибка: " + ex.Message;
+            StatusText = L.Get("S_Msg_ErrorPrefix") + ex.Message;
             Add(ex.ToString());
         }
     }

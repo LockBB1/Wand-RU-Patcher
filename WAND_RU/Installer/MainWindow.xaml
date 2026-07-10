@@ -58,9 +58,9 @@
                             Visibility="{Binding State, Converter={StaticResource EnumToVisibility}, ConverterParameter=Ready}">
                     <TextBlock Text="{Binding StatusText}" Foreground="{DynamicResource Foreground}"
                                FontSize="16" HorizontalAlignment="Center" Margin="0 0 0 6"/>
-                    <TextBlock Text="Готов к русификации" Foreground="{DynamicResource MutedForeground}"
+                    <TextBlock Text="{DynamicResource S_Ready_Sub}" Foreground="{DynamicResource MutedForeground}"
                                FontSize="12" HorizontalAlignment="Center" Margin="0 0 0 22"/>
-                    <Button Content="Русифицировать" Style="{StaticResource ColoredButton}"
+                    <Button Content="{DynamicResource S_Patch}" Style="{StaticResource ColoredButton}"
                             Width="220" Height="42" FontSize="15" FontWeight="SemiBold"
                             Command="{Binding PatchCommand}"/>
                 </StackPanel>
@@ -71,14 +71,14 @@
                     <Viewbox Width="46" Height="46" HorizontalAlignment="Center" Margin="0 0 0 12">
                         <Path Fill="{DynamicResource Primary}" Data="{StaticResource CheckDecagram}"/>
                     </Viewbox>
-                    <TextBlock Text="Русификация установлена" Foreground="{DynamicResource Foreground}"
+                    <TextBlock Text="{DynamicResource S_Patched_Title}" Foreground="{DynamicResource Foreground}"
                                FontSize="16" HorizontalAlignment="Center" Margin="0 0 0 4"/>
                     <TextBlock Text="{Binding StatusText}" Foreground="{DynamicResource MutedForeground}"
                                FontSize="12" HorizontalAlignment="Center" Margin="0 0 0 22"/>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                        <Button Content="Откатить" Width="150" Height="40" Margin="0 0 10 0"
+                        <Button Content="{DynamicResource S_Restore}" Width="150" Height="40" Margin="0 0 10 0"
                                 Style="{StaticResource ColoredButton}" Command="{Binding RestoreCommand}"/>
-                        <Button Content="Переустановить" Width="150" Height="40"
+                        <Button Content="{DynamicResource S_Reinstall}" Width="150" Height="40"
                                 Style="{StaticResource IconButton}" Command="{Binding PatchCommand}"/>
                     </StackPanel>
                 </StackPanel>
@@ -89,18 +89,18 @@
                     <Viewbox Width="46" Height="46" HorizontalAlignment="Center" Margin="0 0 0 12">
                         <Path Fill="{DynamicResource MutedForeground}" Data="{StaticResource AlertDecagram}"/>
                     </Viewbox>
-                    <TextBlock Text="Wand не найден" Foreground="{DynamicResource Foreground}"
+                    <TextBlock Text="{DynamicResource S_NotFound_Title}" Foreground="{DynamicResource Foreground}"
                                FontSize="16" HorizontalAlignment="Center" Margin="0 0 0 4"/>
-                    <TextBlock Text="Укажите папку установки Wand вручную" Foreground="{DynamicResource MutedForeground}"
+                    <TextBlock Text="{DynamicResource S_NotFound_Sub}" Foreground="{DynamicResource MutedForeground}"
                                FontSize="12" HorizontalAlignment="Center" Margin="0 0 0 22"/>
-                    <Button Content="Обзор…" Width="200" Height="40"
+                    <Button Content="{DynamicResource S_Browse}" Width="200" Height="40"
                             Style="{StaticResource ColoredButton}" Click="OnBrowse"/>
                 </StackPanel>
 
                 <!-- Working -->
                 <StackPanel VerticalAlignment="Center"
                             Visibility="{Binding State, Converter={StaticResource EnumToVisibility}, ConverterParameter=Working}">
-                    <TextBlock Text="Работаем…" Foreground="{DynamicResource Foreground}"
+                    <TextBlock Text="{DynamicResource S_Working}" Foreground="{DynamicResource Foreground}"
                                FontSize="15" HorizontalAlignment="Center" Margin="0 0 0 12"/>
                     <ProgressBar IsIndeterminate="True" Height="4" Margin="0 0 0 14"
                                  Background="Transparent" Foreground="{DynamicResource Primary}" BorderThickness="0"/>
@@ -124,7 +124,7 @@
                     <Viewbox Width="54" Height="54" HorizontalAlignment="Center" Margin="0 0 0 14">
                         <Path Fill="{DynamicResource Primary}" Data="{StaticResource CheckDecagram}"/>
                     </Viewbox>
-                    <TextBlock Text="Готово!" Foreground="{DynamicResource Foreground}"
+                    <TextBlock Text="{DynamicResource S_Done_Title}" Foreground="{DynamicResource Foreground}"
                                FontSize="18" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0 0 0 6"/>
                     <TextBlock Text="{Binding StatusText}" Foreground="{DynamicResource MutedForeground}"
                                FontSize="12" TextWrapping="Wrap" TextAlignment="Center" MaxWidth="360"/>
@@ -136,11 +136,11 @@
                     <Viewbox Width="50" Height="50" HorizontalAlignment="Center" Margin="0 0 0 12">
                         <Path Fill="{DynamicResource Destructive}" Data="{StaticResource AlertDecagram}"/>
                     </Viewbox>
-                    <TextBlock Text="Ошибка" Foreground="{DynamicResource Foreground}"
+                    <TextBlock Text="{DynamicResource S_Error_Title}" Foreground="{DynamicResource Foreground}"
                                FontSize="16" HorizontalAlignment="Center" Margin="0 0 0 6"/>
                     <TextBlock Text="{Binding StatusText}" Foreground="{DynamicResource MutedForeground}"
                                FontSize="12" TextWrapping="Wrap" TextAlignment="Center" MaxWidth="380" Margin="0 0 0 18"/>
-                    <Button Content="Повторить" Width="180" Height="38"
+                    <Button Content="{DynamicResource S_Retry}" Width="180" Height="38"
                             Style="{StaticResource ColoredButton}" Command="{Binding PatchCommand}"/>
                 </StackPanel>
 
@@ -153,23 +153,23 @@
                         BorderBrush="{DynamicResource Border}" BorderThickness="1"
                         VerticalAlignment="Center" HorizontalAlignment="Center" Padding="22">
                     <StackPanel DataContext="{Binding Settings}">
-                        <TextBlock Text="Настройки" Foreground="{DynamicResource PopoverForeground}"
+                        <TextBlock Text="{DynamicResource S_Settings}" Foreground="{DynamicResource PopoverForeground}"
                                    FontSize="16" FontWeight="SemiBold" Margin="0 0 0 18"/>
 
-                        <TextBlock Text="Версия Wand" Foreground="{DynamicResource MutedForeground}"
+                        <TextBlock Text="{DynamicResource S_WandVersion}" Foreground="{DynamicResource MutedForeground}"
                                    FontSize="12" Margin="0 0 0 5"/>
                         <ComboBox ItemsSource="{Binding AppVersions}"
                                   SelectedItem="{Binding SelectedAppVersion, Mode=TwoWay}"
                                   Margin="0 0 0 16"/>
 
-                        <CheckBox Content="Перезапустить Wand после установки"
+                        <CheckBox Content="{DynamicResource S_RestartWand}"
                                   IsChecked="{Binding RestartWandAfter}"
                                   Foreground="{DynamicResource PopoverForeground}" Margin="0 0 0 10"/>
-                        <CheckBox Content="Показывать лог"
+                        <CheckBox Content="{DynamicResource S_ShowLog}"
                                   IsChecked="{Binding ShowLog}"
                                   Foreground="{DynamicResource PopoverForeground}" Margin="0 0 0 20"/>
 
-                        <Button Content="Закрыть" Style="{StaticResource ColoredButton}"
+                        <Button Content="{DynamicResource S_Close}" Style="{StaticResource ColoredButton}"
                                 Height="36" HorizontalAlignment="Right" Width="120"
                                 Command="{Binding DataContext.CloseSettingsCommand, RelativeSource={RelativeSource AncestorType=Window}}"/>
                     </StackPanel>
