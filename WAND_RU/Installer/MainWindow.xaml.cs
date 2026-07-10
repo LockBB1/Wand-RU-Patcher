@@ -15,8 +15,10 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         DataContext = ViewModel;
-        var v = Assembly.GetExecutingAssembly().GetName().Version;
-        VersionLabel.Text = v is null ? "" : $"v {v.Major}.{v.Minor}.{v.Build}";
+        var info = Assembly.GetExecutingAssembly()
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+        var ver = info?.Split('+')[0];
+        VersionLabel.Text = string.IsNullOrEmpty(ver) ? "" : $"v {ver}";
         Loaded += (_, _) => ViewModel.Detect();
     }
 
