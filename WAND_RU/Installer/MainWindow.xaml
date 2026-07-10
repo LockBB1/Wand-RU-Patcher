@@ -1,0 +1,10 @@
+<Window x:Class="WandRuInstaller.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Wand RU" Height="450" Width="800"
+        FontFamily="{StaticResource Inter}">
+    <Border Background="{DynamicResource Background}">
+        <TextBlock Text="Wand RU" Foreground="{DynamicResource Foreground}"
+                   HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="24"/>
+    </Border>
+</Window>

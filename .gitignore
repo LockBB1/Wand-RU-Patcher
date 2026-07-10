@@ -1,0 +1,21 @@
+# Reference / target — read-only, not ours
+/Wand
+/_ref
+CLAUDE.txt
+
+# .NET build artifacts (Wand-RU-Installer)
+[Bb]in/
+[Oo]bj/
+*.user
+
+# Patch backups & generated manifests
+wand-ru-backup/
+wand-ru-patch.json
+CLAUDE.md
+Wand-RU-Installer/App.xaml
+/Wand-RU-Patcher
+/Wand-RU-Installer
+/docs
+/WAND_RU/docs
+WAND_RU/handoff.md
+WAND_RU/Installer/THIRD-PARTY-NOTICES.md
