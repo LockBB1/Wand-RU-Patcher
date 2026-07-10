@@ -21,6 +21,7 @@
     <!-- Settings -->
     <s:String x:Key="S_Settings">Settings</s:String>
     <s:String x:Key="S_WandVersion">Wand version</s:String>
+    <s:String x:Key="S_WandFolder">Wand folder</s:String>
     <s:String x:Key="S_RestartWand">Restart Wand after install</s:String>
     <s:String x:Key="S_ShowLog">Show log</s:String>
     <s:String x:Key="S_Close">Close</s:String>

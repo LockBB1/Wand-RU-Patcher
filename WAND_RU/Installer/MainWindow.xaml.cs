@@ -34,8 +34,9 @@ public partial class MainWindow : Window
     void OnBrowse(object sender, RoutedEventArgs e)
     {
         var dialog = new OpenFolderDialog { Title = L.Get("S_Browse_Dialog") };
-        if (dialog.ShowDialog(this) == true)
-            ViewModel.DetectFrom(new[] { dialog.FolderName });
+        if (dialog.ShowDialog(this) != true) return;
+        ViewModel.IsSettingsOpen = false;
+        ViewModel.DetectFromFolder(dialog.FolderName);
     }
 
     void OnCopyLog(object sender, RoutedEventArgs e)

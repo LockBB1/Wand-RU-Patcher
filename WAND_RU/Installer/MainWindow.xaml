@@ -178,6 +178,16 @@
                                   SelectedItem="{Binding SelectedAppVersion, Mode=TwoWay}"
                                   Margin="0 0 0 16"/>
 
+                        <TextBlock Text="{DynamicResource S_WandFolder}" Foreground="{DynamicResource MutedForeground}"
+                                   FontSize="12" Margin="0 0 0 5"/>
+                        <DockPanel Margin="0 0 0 16">
+                            <Button DockPanel.Dock="Right" Content="{DynamicResource S_Browse}" Click="OnBrowse"
+                                    Height="26" Padding="12 0" Margin="8 0 0 0" FontSize="12"/>
+                            <TextBlock Text="{Binding DataContext.Install.RootDir, RelativeSource={RelativeSource AncestorType=Window}}"
+                                       Foreground="{DynamicResource PopoverForeground}" FontSize="11"
+                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                        </DockPanel>
+
                         <StackPanel Orientation="Horizontal" Margin="0 0 0 10">
                             <CheckBox IsChecked="{Binding RestartWandAfter}" VerticalAlignment="Center"/>
                             <TextBlock Text="{DynamicResource S_RestartWand}" Foreground="{DynamicResource PopoverForeground}"

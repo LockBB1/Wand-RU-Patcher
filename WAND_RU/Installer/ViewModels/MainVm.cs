@@ -42,6 +42,14 @@ public sealed class MainVm : ObservableObject
 
     public void Detect() => DetectFrom(WandLocator.DefaultRoots());
 
+    /// <summary>Ручной выбор папки: пробуем саму папку и её подпапки (вдруг выбрали родителя Wand).</summary>
+    public void DetectFromFolder(string folder)
+    {
+        var roots = new List<string> { folder };
+        try { roots.AddRange(Directory.GetDirectories(folder)); } catch { /* нет доступа */ }
+        DetectFrom(roots);
+    }
+
     public void DetectFrom(IEnumerable<string> roots)
     {
         State = InstallerState.Detecting;
