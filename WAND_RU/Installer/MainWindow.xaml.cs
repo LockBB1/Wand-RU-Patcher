@@ -1,23 +1,35 @@
-﻿using System.Text;
+using System.Reflection;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
+using Microsoft.Win32;
+using WandRuInstaller.ViewModels;
 
 namespace WandRuInstaller;
 
-/// <summary>
-/// Interaction logic for MainWindow.xaml
-/// </summary>
 public partial class MainWindow : Window
 {
+    public MainVm ViewModel { get; } = new();
+
     public MainWindow()
     {
         InitializeComponent();
+        DataContext = ViewModel;
+        var v = Assembly.GetExecutingAssembly().GetName().Version;
+        VersionLabel.Text = v is null ? "" : $"v {v.Major}.{v.Minor}.{v.Build}";
+        Loaded += (_, _) => ViewModel.Detect();
+    }
+
+    void OnDragMove(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ButtonState == MouseButtonState.Pressed) DragMove();
+    }
+
+    void OnClose(object sender, RoutedEventArgs e) => Close();
+
+    void OnBrowse(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFolderDialog { Title = "Выберите папку установки Wand" };
+        if (dialog.ShowDialog(this) == true)
+            ViewModel.DetectFrom(new[] { dialog.FolderName });
     }
 }

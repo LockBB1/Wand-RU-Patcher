@@ -1,10 +1,146 @@
 <Window x:Class="WandRuInstaller.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Wand RU" Height="450" Width="800"
-        FontFamily="{StaticResource Inter}">
-    <Border Background="{DynamicResource Background}">
-        <TextBlock Text="Wand RU" Foreground="{DynamicResource Foreground}"
-                   HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="24"/>
+        xmlns:vm="clr-namespace:WandRuInstaller.ViewModels"
+        d:DataContext="{d:DesignInstance vm:MainVm}"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="Wand RU"
+        Height="470" Width="700"
+        Opacity="0.98"
+        Background="Transparent"
+        WindowStyle="None"
+        ResizeMode="CanMinimize"
+        WindowStartupLocation="CenterScreen"
+        FontFamily="{StaticResource Inter}"
+        AllowsTransparency="True">
+
+    <Border CornerRadius="7" Background="{DynamicResource Background}"
+            BorderBrush="{DynamicResource Border}" BorderThickness="1" Margin="10">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="15" Direction="-90" RenderingBias="Quality" ShadowDepth="2"/>
+        </Border.Effect>
+
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="55"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <!-- Header (drag) -->
+            <Grid Grid.Row="0" Background="Transparent" MouseLeftButtonDown="OnDragMove">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="25 0 0 0">
+                    <Viewbox Width="30" Height="30" VerticalAlignment="Center">
+                        <Path Fill="{DynamicResource Foreground}" Data="{StaticResource Logo}"/>
+                    </Viewbox>
+                    <TextBlock Foreground="{DynamicResource Foreground}" FontWeight="Bold" Opacity="0.9"
+                               VerticalAlignment="Center" FontSize="18" Margin="10 0 0 0" Text="Wand RU"/>
+                    <TextBlock x:Name="VersionLabel" VerticalAlignment="Bottom" Opacity="0.6"
+                               FontSize="10" Margin="6 0 0 6" Foreground="{DynamicResource Foreground}"/>
+                </StackPanel>
+
+                <Button HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0 0 15 0"
+                        Width="25" Height="25" Padding="6.5"
+                        Style="{StaticResource IconButton}" Tag="{StaticResource CloseIcon}"
+                        Click="OnClose"/>
+            </Grid>
+
+            <!-- Content -->
+            <Grid Grid.Row="1" Margin="30 0 30 25">
+
+                <!-- Ready -->
+                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center"
+                            Visibility="{Binding State, Converter={StaticResource EnumToVisibility}, ConverterParameter=Ready}">
+                    <TextBlock Text="{Binding StatusText}" Foreground="{DynamicResource Foreground}"
+                               FontSize="16" HorizontalAlignment="Center" Margin="0 0 0 6"/>
+                    <TextBlock Text="Готов к русификации" Foreground="{DynamicResource MutedForeground}"
+                               FontSize="12" HorizontalAlignment="Center" Margin="0 0 0 22"/>
+                    <Button Content="Русифицировать" Style="{StaticResource ColoredButton}"
+                            Width="220" Height="42" FontSize="15" FontWeight="SemiBold"
+                            Command="{Binding PatchCommand}"/>
+                </StackPanel>
+
+                <!-- Patched -->
+                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center"
+                            Visibility="{Binding State, Converter={StaticResource EnumToVisibility}, ConverterParameter=Patched}">
+                    <Viewbox Width="46" Height="46" HorizontalAlignment="Center" Margin="0 0 0 12">
+                        <Path Fill="{DynamicResource Primary}" Data="{StaticResource CheckDecagram}"/>
+                    </Viewbox>
+                    <TextBlock Text="Русификация установлена" Foreground="{DynamicResource Foreground}"
+                               FontSize="16" HorizontalAlignment="Center" Margin="0 0 0 4"/>
+                    <TextBlock Text="{Binding StatusText}" Foreground="{DynamicResource MutedForeground}"
+                               FontSize="12" HorizontalAlignment="Center" Margin="0 0 0 22"/>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                        <Button Content="Откатить" Width="150" Height="40" Margin="0 0 10 0"
+                                Style="{StaticResource ColoredButton}" Command="{Binding RestoreCommand}"/>
+                        <Button Content="Переустановить" Width="150" Height="40"
+                                Style="{StaticResource IconButton}" Command="{Binding PatchCommand}"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- NotFound -->
+                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center"
+                            Visibility="{Binding State, Converter={StaticResource EnumToVisibility}, ConverterParameter=NotFound}">
+                    <Viewbox Width="46" Height="46" HorizontalAlignment="Center" Margin="0 0 0 12">
+                        <Path Fill="{DynamicResource MutedForeground}" Data="{StaticResource AlertDecagram}"/>
+                    </Viewbox>
+                    <TextBlock Text="Wand не найден" Foreground="{DynamicResource Foreground}"
+                               FontSize="16" HorizontalAlignment="Center" Margin="0 0 0 4"/>
+                    <TextBlock Text="Укажите папку установки Wand вручную" Foreground="{DynamicResource MutedForeground}"
+                               FontSize="12" HorizontalAlignment="Center" Margin="0 0 0 22"/>
+                    <Button Content="Обзор…" Width="200" Height="40"
+                            Style="{StaticResource ColoredButton}" Click="OnBrowse"/>
+                </StackPanel>
+
+                <!-- Working -->
+                <StackPanel VerticalAlignment="Center"
+                            Visibility="{Binding State, Converter={StaticResource EnumToVisibility}, ConverterParameter=Working}">
+                    <TextBlock Text="Работаем…" Foreground="{DynamicResource Foreground}"
+                               FontSize="15" HorizontalAlignment="Center" Margin="0 0 0 12"/>
+                    <ProgressBar IsIndeterminate="True" Height="4" Margin="0 0 0 14"
+                                 Background="Transparent" Foreground="{DynamicResource Primary}" BorderThickness="0"/>
+                    <Border Background="{DynamicResource Card}" CornerRadius="5" Padding="10" Height="150">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <ItemsControl ItemsSource="{Binding Log}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding}" Foreground="{DynamicResource MutedForeground}"
+                                                   FontSize="11" TextWrapping="Wrap"/>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </Border>
+                </StackPanel>
+
+                <!-- Done -->
+                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center"
+                            Visibility="{Binding State, Converter={StaticResource EnumToVisibility}, ConverterParameter=Done}">
+                    <Viewbox Width="54" Height="54" HorizontalAlignment="Center" Margin="0 0 0 14">
+                        <Path Fill="{DynamicResource Primary}" Data="{StaticResource CheckDecagram}"/>
+                    </Viewbox>
+                    <TextBlock Text="Готово!" Foreground="{DynamicResource Foreground}"
+                               FontSize="18" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0 0 0 6"/>
+                    <TextBlock Text="{Binding StatusText}" Foreground="{DynamicResource MutedForeground}"
+                               FontSize="12" TextWrapping="Wrap" TextAlignment="Center" MaxWidth="360"/>
+                </StackPanel>
+
+                <!-- Error -->
+                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center"
+                            Visibility="{Binding State, Converter={StaticResource EnumToVisibility}, ConverterParameter=Error}">
+                    <Viewbox Width="50" Height="50" HorizontalAlignment="Center" Margin="0 0 0 12">
+                        <Path Fill="{DynamicResource Destructive}" Data="{StaticResource AlertDecagram}"/>
+                    </Viewbox>
+                    <TextBlock Text="Ошибка" Foreground="{DynamicResource Foreground}"
+                               FontSize="16" HorizontalAlignment="Center" Margin="0 0 0 6"/>
+                    <TextBlock Text="{Binding StatusText}" Foreground="{DynamicResource MutedForeground}"
+                               FontSize="12" TextWrapping="Wrap" TextAlignment="Center" MaxWidth="380" Margin="0 0 0 18"/>
+                    <Button Content="Повторить" Width="180" Height="38"
+                            Style="{StaticResource ColoredButton}" Command="{Binding PatchCommand}"/>
+                </StackPanel>
+
+            </Grid>
+        </Grid>
     </Border>
 </Window>
