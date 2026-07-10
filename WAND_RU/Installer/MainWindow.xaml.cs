@@ -1,4 +1,6 @@
+using System.IO;
 using System.Reflection;
+using System.Text;
 using System.Windows;
 using System.Windows.Input;
 using Microsoft.Win32;
@@ -34,5 +36,45 @@ public partial class MainWindow : Window
         var dialog = new OpenFolderDialog { Title = L.Get("S_Browse_Dialog") };
         if (dialog.ShowDialog(this) == true)
             ViewModel.DetectFrom(new[] { dialog.FolderName });
+    }
+
+    void OnCopyLog(object sender, RoutedEventArgs e)
+    {
+        try { Clipboard.SetText(BuildLogReport()); } catch { /* clipboard busy */ }
+    }
+
+    void OnExportLog(object sender, RoutedEventArgs e)
+    {
+        var dialog = new SaveFileDialog
+        {
+            FileName = "wand-ru-log.md",
+            Filter = "Markdown (*.md)|*.md|Текст (*.txt)|*.txt",
+            Title = L.Get("S_ExportLog"),
+        };
+        if (dialog.ShowDialog(this) != true) return;
+        try
+        {
+            var plain = dialog.FileName.EndsWith(".txt", StringComparison.OrdinalIgnoreCase);
+            File.WriteAllText(dialog.FileName,
+                plain ? string.Join(Environment.NewLine, ViewModel.Log) : BuildLogReport(),
+                new UTF8Encoding(false));
+        }
+        catch { /* запись не удалась */ }
+    }
+
+    string BuildLogReport()
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine("# Wand RU — лог");
+        sb.AppendLine();
+        sb.AppendLine($"- WRP: {VersionLabel.Text}");
+        var app = ViewModel.Install?.SelectedAppDir;
+        if (app is not null) sb.AppendLine($"- Wand: {Path.GetFileName(app)}");
+        sb.AppendLine($"- OS: {Environment.OSVersion}");
+        sb.AppendLine();
+        sb.AppendLine("```");
+        foreach (var line in ViewModel.Log) sb.AppendLine(line);
+        sb.AppendLine("```");
+        return sb.ToString();
     }
 }

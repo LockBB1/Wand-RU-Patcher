@@ -139,8 +139,16 @@
                     Background="{DynamicResource Card}" CornerRadius="6" Padding="10"
                     Visibility="{Binding Settings.ShowLog, Converter={StaticResource ToVisibilityConverter}, FallbackValue=Collapsed}">
                 <DockPanel>
-                    <TextBlock DockPanel.Dock="Top" Text="{DynamicResource S_Log}" Foreground="{DynamicResource MutedForeground}"
-                               FontSize="11" FontWeight="SemiBold" Margin="0 0 0 6"/>
+                    <DockPanel DockPanel.Dock="Top" Margin="0 0 0 6">
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                            <Button Content="{DynamicResource S_CopyLog}" Height="22" Padding="10 0" Margin="0 0 6 0"
+                                    FontSize="11" Click="OnCopyLog"/>
+                            <Button Content="{DynamicResource S_ExportLog}" Height="22" Padding="10 0"
+                                    FontSize="11" Click="OnExportLog"/>
+                        </StackPanel>
+                        <TextBlock Text="{DynamicResource S_Log}" Foreground="{DynamicResource MutedForeground}"
+                                   FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                    </DockPanel>
                     <ScrollViewer VerticalScrollBarVisibility="Auto">
                         <ItemsControl ItemsSource="{Binding Log}">
                             <ItemsControl.ItemTemplate>
