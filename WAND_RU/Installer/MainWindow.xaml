@@ -40,10 +40,14 @@
                                FontSize="10" Margin="6 0 0 6" Foreground="{DynamicResource Foreground}"/>
                 </StackPanel>
 
-                <Button HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0 0 15 0"
-                        Width="25" Height="25" Padding="6.5"
-                        Style="{StaticResource IconButton}" Tag="{StaticResource CloseIcon}"
-                        Click="OnClose"/>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <Button Width="25" Height="25" Padding="5.5" Margin="0 0 6 0"
+                            Style="{StaticResource IconButton}" Tag="{StaticResource CogIcon}"
+                            Command="{Binding OpenSettingsCommand}"/>
+                    <Button Width="25" Height="25" Padding="6.5" Margin="0 0 15 0"
+                            Style="{StaticResource IconButton}" Tag="{StaticResource CloseIcon}"
+                            Click="OnClose"/>
+                </StackPanel>
             </Grid>
 
             <!-- Content -->
@@ -141,6 +145,36 @@
                 </StackPanel>
 
             </Grid>
+
+            <!-- Settings overlay -->
+            <Border Grid.RowSpan="2" CornerRadius="7" Background="#CC000000"
+                    Visibility="{Binding IsSettingsOpen, Converter={StaticResource ToVisibilityConverter}}">
+                <Border Width="360" Background="{DynamicResource Popover}" CornerRadius="8"
+                        BorderBrush="{DynamicResource Border}" BorderThickness="1"
+                        VerticalAlignment="Center" HorizontalAlignment="Center" Padding="22">
+                    <StackPanel DataContext="{Binding Settings}">
+                        <TextBlock Text="Настройки" Foreground="{DynamicResource PopoverForeground}"
+                                   FontSize="16" FontWeight="SemiBold" Margin="0 0 0 18"/>
+
+                        <TextBlock Text="Версия Wand" Foreground="{DynamicResource MutedForeground}"
+                                   FontSize="12" Margin="0 0 0 5"/>
+                        <ComboBox ItemsSource="{Binding AppVersions}"
+                                  SelectedItem="{Binding SelectedAppVersion, Mode=TwoWay}"
+                                  Margin="0 0 0 16"/>
+
+                        <CheckBox Content="Перезапустить Wand после установки"
+                                  IsChecked="{Binding RestartWandAfter}"
+                                  Foreground="{DynamicResource PopoverForeground}" Margin="0 0 0 10"/>
+                        <CheckBox Content="Показывать лог"
+                                  IsChecked="{Binding ShowLog}"
+                                  Foreground="{DynamicResource PopoverForeground}" Margin="0 0 0 20"/>
+
+                        <Button Content="Закрыть" Style="{StaticResource ColoredButton}"
+                                Height="36" HorizontalAlignment="Right" Width="120"
+                                Command="{Binding DataContext.CloseSettingsCommand, RelativeSource={RelativeSource AncestorType=Window}}"/>
+                    </StackPanel>
+                </Border>
+            </Border>
         </Grid>
     </Border>
 </Window>

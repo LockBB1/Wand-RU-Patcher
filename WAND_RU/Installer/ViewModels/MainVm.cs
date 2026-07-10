@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO;
 using System.Windows.Input;
 using WandEnhancer.ReactiveUICore;
@@ -11,16 +12,22 @@ public sealed class MainVm : ObservableObject
 {
     InstallerState _state = InstallerState.Detecting;
     string _statusText = "";
+    bool _isSettingsOpen;
+    SettingsVm? _settings;
     readonly RuOverrides _overrides = RuOverrides.LoadEmbedded();
 
     public InstallerState State { get => _state; private set => SetProperty(ref _state, value); }
     public string StatusText { get => _statusText; private set => SetProperty(ref _statusText, value); }
     public ObservableCollection<string> Log { get; } = new();
     public WandInstall? Install { get; private set; }
+    public SettingsVm? Settings { get => _settings; private set => SetProperty(ref _settings, value); }
+    public bool IsSettingsOpen { get => _isSettingsOpen; set => SetProperty(ref _isSettingsOpen, value); }
 
     public ICommand PatchCommand { get; }
     public ICommand RestoreCommand { get; }
     public ICommand BrowseCommand { get; }
+    public ICommand OpenSettingsCommand { get; }
+    public ICommand CloseSettingsCommand { get; }
 
     public MainVm()
     {
@@ -29,6 +36,8 @@ public sealed class MainVm : ObservableObject
         RestoreCommand = new AsyncRelayCommand(async _ => await RestoreAsync(),
             _ => State is InstallerState.Patched);
         BrowseCommand = new RelayCommand(p => { if (p is string dir) DetectFrom(new[] { dir }); });
+        OpenSettingsCommand = new RelayCommand(_ => IsSettingsOpen = true, _ => Settings is not null);
+        CloseSettingsCommand = new RelayCommand(_ => IsSettingsOpen = false);
     }
 
     public void Detect() => DetectFrom(WandLocator.DefaultRoots());
@@ -43,6 +52,7 @@ public sealed class MainVm : ObservableObject
             StatusText = "Wand не найден";
             return;
         }
+        Settings = new SettingsVm(Install);
         var ver = new DirectoryInfo(Install.SelectedAppDir!).Name.Replace("app-", "");
         State = Install.IsPatched ? InstallerState.Patched : InstallerState.Ready;
         StatusText = $"Wand {ver}";
@@ -59,6 +69,7 @@ public sealed class MainVm : ObservableObject
             State = InstallerState.Done;
             StatusText = "Готово! Перезапустите Wand → Настройки → Язык → Русский";
             if (Install is not null) Install.IsPatched = true;
+            if (Settings?.RestartWandAfter == true) TryRestartWand();
         }
         catch (Exception ex)
         {
@@ -85,6 +96,17 @@ public sealed class MainVm : ObservableObject
             StatusText = "Ошибка: " + ex.Message;
             Add(ex.ToString());
         }
+    }
+
+    // Продуктовая фича: перезапуск Wand для конечного юзера. В dev-тестах RestartWandAfter=false.
+    void TryRestartWand()
+    {
+        try
+        {
+            var exe = Path.Combine(Install!.RootDir, "Wand.exe");
+            if (File.Exists(exe)) Process.Start(new ProcessStartInfo(exe) { UseShellExecute = true });
+        }
+        catch (Exception ex) { Add("Не удалось перезапустить Wand: " + ex.Message); }
     }
 
     void Add(string message)
