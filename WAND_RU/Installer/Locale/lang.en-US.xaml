@@ -24,6 +24,9 @@
     <s:String x:Key="S_RestartWand">Restart Wand after install</s:String>
     <s:String x:Key="S_ShowLog">Show log</s:String>
     <s:String x:Key="S_Close">Close</s:String>
+    <s:String x:Key="S_Log">Log</s:String>
+    <s:String x:Key="S_CopyLog">Copy</s:String>
+    <s:String x:Key="S_ExportLog">Export</s:String>
 
     <!-- VM messages -->
     <s:String x:Key="S_Msg_NotFound">Wand not found</s:String>

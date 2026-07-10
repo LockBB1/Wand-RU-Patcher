@@ -27,6 +27,7 @@
             <Grid.RowDefinitions>
                 <RowDefinition Height="55"/>
                 <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
             <!-- Header (drag) -->
@@ -101,20 +102,8 @@
                             Visibility="{Binding State, Converter={StaticResource EnumToVisibility}, ConverterParameter=Working}">
                     <TextBlock Text="{DynamicResource S_Working}" Foreground="{DynamicResource Foreground}"
                                FontSize="15" HorizontalAlignment="Center" Margin="0 0 0 12"/>
-                    <ProgressBar IsIndeterminate="True" Height="4" Margin="0 0 0 14"
+                    <ProgressBar IsIndeterminate="True" Height="4" Width="240"
                                  Background="Transparent" Foreground="{DynamicResource Primary}" BorderThickness="0"/>
-                    <Border Background="{DynamicResource Card}" CornerRadius="5" Padding="10" Height="150">
-                        <ScrollViewer VerticalScrollBarVisibility="Auto">
-                            <ItemsControl ItemsSource="{Binding Log}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <TextBlock Text="{Binding}" Foreground="{DynamicResource MutedForeground}"
-                                                   FontSize="11" TextWrapping="Wrap"/>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </ScrollViewer>
-                    </Border>
                 </StackPanel>
 
                 <!-- Done -->
@@ -145,8 +134,28 @@
 
             </Grid>
 
+            <!-- Log panel (visible when ShowLog) -->
+            <Border Grid.Row="2" Height="150" Margin="30 0 30 15"
+                    Background="{DynamicResource Card}" CornerRadius="6" Padding="10"
+                    Visibility="{Binding Settings.ShowLog, Converter={StaticResource ToVisibilityConverter}, FallbackValue=Collapsed}">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top" Text="{DynamicResource S_Log}" Foreground="{DynamicResource MutedForeground}"
+                               FontSize="11" FontWeight="SemiBold" Margin="0 0 0 6"/>
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <ItemsControl ItemsSource="{Binding Log}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding}" Foreground="{DynamicResource MutedForeground}"
+                                               FontSize="11" TextWrapping="Wrap"/>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </DockPanel>
+            </Border>
+
             <!-- Settings overlay -->
-            <Border Grid.RowSpan="2" CornerRadius="7" Background="#CC000000"
+            <Border Grid.RowSpan="3" CornerRadius="7" Background="#CC000000"
                     Visibility="{Binding IsSettingsOpen, Converter={StaticResource ToVisibilityConverter}}">
                 <Border Width="360" Background="{DynamicResource Popover}" CornerRadius="8"
                         BorderBrush="{DynamicResource Border}" BorderThickness="1"
