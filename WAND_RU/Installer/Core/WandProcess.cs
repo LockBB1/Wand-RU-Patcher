@@ -21,4 +21,16 @@ public static class WandProcess
         }
         return false;
     }
+
+    /// <summary>Закрыть все процессы Wand (перед патчем/откатом при включённом авто-перезапуске).</summary>
+    public static void KillAll()
+    {
+        foreach (var name in Names)
+            foreach (var p in Process.GetProcessesByName(name))
+            {
+                try { p.Kill(entireProcessTree: true); p.WaitForExit(5000); }
+                catch { /* уже закрыт / нет прав */ }
+                finally { p.Dispose(); }
+            }
+    }
 }

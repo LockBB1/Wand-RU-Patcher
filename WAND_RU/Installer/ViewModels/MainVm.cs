@@ -61,7 +61,7 @@ public sealed class MainVm : ObservableObject
     internal async Task PatchAsync()
     {
         if (Install?.SelectedAppDir is null) return;
-        if (WandProcess.AnyRunning()) { StatusText = L.Get("S_Msg_WandRunning"); return; }
+        if (!await EnsureWandClosedAsync()) return;
         State = InstallerState.Working;
         Log.Clear();
         try
@@ -83,7 +83,7 @@ public sealed class MainVm : ObservableObject
     internal async Task RestoreAsync()
     {
         if (Install?.SelectedAppDir is null) return;
-        if (WandProcess.AnyRunning()) { StatusText = L.Get("S_Msg_WandRunning"); return; }
+        if (!await EnsureWandClosedAsync()) return;
         var root = Install.RootDir;
         State = InstallerState.Working;
         Log.Clear();
@@ -98,6 +98,21 @@ public sealed class MainVm : ObservableObject
             StatusText = L.Get("S_Msg_ErrorPrefix") + ex.Message;
             Add(ex.ToString());
         }
+    }
+
+    // Wand залочивает файлы (app.asar.unpacked/*.exe). Если включён авто-перезапуск — закрываем сами,
+    // иначе просим юзера закрыть. Возвращает false, если продолжать нельзя.
+    async Task<bool> EnsureWandClosedAsync()
+    {
+        if (!WandProcess.AnyRunning()) return true;
+        if (Settings?.RestartWandAfter != true)
+        {
+            StatusText = L.Get("S_Msg_WandRunning");
+            return false;
+        }
+        WandProcess.KillAll();
+        await Task.Delay(700); // дать ОС снять блокировки файлов
+        return true;
     }
 
     // Продуктовая фича: перезапуск Wand для конечного юзера. В dev-тестах RestartWandAfter=false.
