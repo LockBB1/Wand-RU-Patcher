@@ -9,7 +9,7 @@ namespace WandRuInstaller.Core;
 public static class JsLocalePatch
 {
     public const string RussianFlagDataUri =
-        "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA5MDAgNjAwIj48cGF0aCBmaWxsPSIjZmZmIiBkPSJNMCAwaDkwMHY2MDBIMHoiLz48cGF0aCBmaWxsPSIjMDAzOWE2IiBkPSJNMCAyMDBoOTAwdjQwMEgweiIvPjxwYXRoIGZpbGw9IiNkNTJbMWUiIGQ9Ik0wIDQwMGg5MDB2MjAwSDB6Ii8+PC9zdmc+";
+        "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA5MDAgNjAwIj48cGF0aCBmaWxsPSIjZmZmIiBkPSJNMCAwaDkwMHY2MDBIMHoiLz48cGF0aCBmaWxsPSIjMDAzOWE2IiBkPSJNMCAyMDBoOTAwdjQwMEgweiIvPjxwYXRoIGZpbGw9IiNkNTJiMWUiIGQ9Ik0wIDQwMGg5MDB2MjAwSDB6Ii8+PC9zdmc+";
 
     // Список локалей: массив BCP-47, начинающийся с "en-US"; вставить "ru-RU" сразу после.
     static readonly Regex LocaleList = new("(\\[\"en-US\"(?:,\"[a-z]{2}-[A-Z]{2}\")*)", RegexOptions.Compiled);

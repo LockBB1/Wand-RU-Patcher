@@ -162,12 +162,16 @@
                                   SelectedItem="{Binding SelectedAppVersion, Mode=TwoWay}"
                                   Margin="0 0 0 16"/>
 
-                        <CheckBox Content="{DynamicResource S_RestartWand}"
-                                  IsChecked="{Binding RestartWandAfter}"
-                                  Foreground="{DynamicResource PopoverForeground}" Margin="0 0 0 10"/>
-                        <CheckBox Content="{DynamicResource S_ShowLog}"
-                                  IsChecked="{Binding ShowLog}"
-                                  Foreground="{DynamicResource PopoverForeground}" Margin="0 0 0 20"/>
+                        <StackPanel Orientation="Horizontal" Margin="0 0 0 10">
+                            <CheckBox IsChecked="{Binding RestartWandAfter}" VerticalAlignment="Center"/>
+                            <TextBlock Text="{DynamicResource S_RestartWand}" Foreground="{DynamicResource PopoverForeground}"
+                                       VerticalAlignment="Center" Margin="10 0 0 0"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0 0 0 20">
+                            <CheckBox IsChecked="{Binding ShowLog}" VerticalAlignment="Center"/>
+                            <TextBlock Text="{DynamicResource S_ShowLog}" Foreground="{DynamicResource PopoverForeground}"
+                                       VerticalAlignment="Center" Margin="10 0 0 0"/>
+                        </StackPanel>
 
                         <Button Content="{DynamicResource S_Close}" Style="{StaticResource ColoredButton}"
                                 Height="36" HorizontalAlignment="Right" Width="120"

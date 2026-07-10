@@ -61,6 +61,7 @@ public sealed class MainVm : ObservableObject
     internal async Task PatchAsync()
     {
         if (Install?.SelectedAppDir is null) return;
+        if (WandProcess.AnyRunning()) { StatusText = L.Get("S_Msg_WandRunning"); return; }
         State = InstallerState.Working;
         Log.Clear();
         try
@@ -82,6 +83,7 @@ public sealed class MainVm : ObservableObject
     internal async Task RestoreAsync()
     {
         if (Install?.SelectedAppDir is null) return;
+        if (WandProcess.AnyRunning()) { StatusText = L.Get("S_Msg_WandRunning"); return; }
         var root = Install.RootDir;
         State = InstallerState.Working;
         Log.Clear();

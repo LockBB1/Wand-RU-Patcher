@@ -29,6 +29,7 @@
     <s:String x:Key="S_Msg_NotFound">Wand not found</s:String>
     <s:String x:Key="S_Msg_Done">Done! Restart Wand → Settings → Language → Russian</s:String>
     <s:String x:Key="S_Msg_ErrorPrefix">Error: </s:String>
+    <s:String x:Key="S_Msg_WandRunning">Close Wand and try again — it locks the files.</s:String>
     <s:String x:Key="S_Browse_Dialog">Select the Wand installation folder</s:String>
 
 </ResourceDictionary>

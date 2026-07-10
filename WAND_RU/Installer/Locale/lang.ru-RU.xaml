@@ -29,6 +29,7 @@
     <s:String x:Key="S_Msg_NotFound">Wand не найден</s:String>
     <s:String x:Key="S_Msg_Done">Готово! Перезапустите Wand → Настройки → Язык → Русский</s:String>
     <s:String x:Key="S_Msg_ErrorPrefix">Ошибка: </s:String>
+    <s:String x:Key="S_Msg_WandRunning">Закройте Wand и повторите — он мешает изменить файлы.</s:String>
     <s:String x:Key="S_Browse_Dialog">Выберите папку установки Wand</s:String>
 
 </ResourceDictionary>
