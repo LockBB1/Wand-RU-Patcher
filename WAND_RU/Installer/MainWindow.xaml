@@ -7,6 +7,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
         Title="Wand RU"
+        Icon="Assets/logo.png"
         Height="470" Width="700"
         Opacity="0.98"
         Background="Transparent"
@@ -31,9 +32,7 @@
             <!-- Header (drag) -->
             <Grid Grid.Row="0" Background="Transparent" MouseLeftButtonDown="OnDragMove">
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="25 0 0 0">
-                    <Viewbox Width="30" Height="30" VerticalAlignment="Center">
-                        <Path Fill="{DynamicResource Foreground}" Data="{StaticResource Logo}"/>
-                    </Viewbox>
+                    <Image Source="Assets/logo.png" Width="30" Height="30" VerticalAlignment="Center"/>
                     <TextBlock Foreground="{DynamicResource Foreground}" FontWeight="Bold" Opacity="0.9"
                                VerticalAlignment="Center" FontSize="18" Margin="10 0 0 0" Text="Wand RU"/>
                     <TextBlock x:Name="VersionLabel" VerticalAlignment="Bottom" Opacity="0.6"

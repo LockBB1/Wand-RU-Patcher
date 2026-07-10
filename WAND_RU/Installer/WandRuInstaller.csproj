@@ -6,9 +6,10 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
-    <Version>0.4.6</Version>
-    <FileVersion>0.4.6.12</FileVersion>
-    <AssemblyVersion>0.4.0.0</AssemblyVersion>
+    <Version>0.5.0</Version>
+    <FileVersion>0.5.0.13</FileVersion>
+    <AssemblyVersion>0.5.0.0</AssemblyVersion>
+    <ApplicationIcon>app.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
@@ -22,6 +23,7 @@
   <ItemGroup>
     <EmbeddedResource Include="Assets\ru-overrides.json" />
     <Resource Include="Style\Inter_18pt-Regular.ttf" />
+    <Resource Include="Assets\logo.png" />
   </ItemGroup>
 
 </Project>
