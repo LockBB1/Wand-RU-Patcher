@@ -41,6 +41,9 @@
                 </StackPanel>
 
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <Button Width="25" Height="25" Padding="5" Margin="0 0 6 0"
+                            Style="{StaticResource IconButton}" Tag="{StaticResource GitHub}"
+                            Command="{Binding OpenAboutCommand}"/>
                     <Button Width="25" Height="25" Padding="5.5" Margin="0 0 6 0"
                             Style="{StaticResource IconButton}" Tag="{StaticResource CogIcon}"
                             Command="{Binding OpenSettingsCommand}"/>
@@ -202,6 +205,37 @@
                         <Button Content="{DynamicResource S_Close}" Style="{StaticResource ColoredButton}"
                                 Height="36" HorizontalAlignment="Right" Width="120"
                                 Command="{Binding DataContext.CloseSettingsCommand, RelativeSource={RelativeSource AncestorType=Window}}"/>
+                    </StackPanel>
+                </Border>
+            </Border>
+
+            <!-- About overlay -->
+            <Border Grid.RowSpan="3" CornerRadius="7" Background="#CC000000"
+                    Visibility="{Binding IsAboutOpen, Converter={StaticResource ToVisibilityConverter}}">
+                <Border Width="360" Background="{DynamicResource Popover}" CornerRadius="8"
+                        BorderBrush="{DynamicResource Border}" BorderThickness="1"
+                        VerticalAlignment="Center" HorizontalAlignment="Center" Padding="24">
+                    <StackPanel HorizontalAlignment="Center">
+                        <Image Source="Assets/logo.png" Width="64" Height="64" Margin="0 0 0 8"/>
+                        <TextBlock Text="Wand RU Patcher" Foreground="{DynamicResource PopoverForeground}"
+                                   FontSize="16" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                        <TextBlock x:Name="AboutVersion" Foreground="{DynamicResource MutedForeground}"
+                                   FontSize="11" HorizontalAlignment="Center" Margin="0 2 0 14"/>
+                        <TextBlock Text="{DynamicResource S_MadeWith}" Foreground="{DynamicResource PopoverForeground}"
+                                   FontSize="12" HorizontalAlignment="Center" Margin="0 0 0 16"/>
+                        <Button Click="OnOpenSource" Height="38" Width="220"
+                                Style="{StaticResource ColoredButton}" Margin="0 0 0 12">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                <Viewbox Width="16" Height="16" Margin="0 0 8 0">
+                                    <Path Fill="{DynamicResource PrimaryForeground}" Data="{StaticResource GitHub}"/>
+                                </Viewbox>
+                                <TextBlock Text="{DynamicResource S_SourceCode}" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                        <TextBlock Text="{DynamicResource S_StarUs}" Foreground="{DynamicResource MutedForeground}"
+                                   FontSize="12" HorizontalAlignment="Center" TextAlignment="Center" Margin="0 0 0 18"/>
+                        <Button Content="{DynamicResource S_Close}" Style="{StaticResource ColoredButton}"
+                                Height="34" Width="120" Command="{Binding CloseAboutCommand}"/>
                     </StackPanel>
                 </Border>
             </Border>

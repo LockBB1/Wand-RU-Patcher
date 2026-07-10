@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using System.Text;
@@ -11,6 +12,8 @@ namespace WandRuInstaller;
 
 public partial class MainWindow : Window
 {
+    const string RepoUrl = "https://github.com/LockBB1/Wand-RU-Patcher";
+
     public MainVm ViewModel { get; } = new();
 
     public MainWindow()
@@ -20,8 +23,16 @@ public partial class MainWindow : Window
         var info = Assembly.GetExecutingAssembly()
             .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
         var ver = info?.Split('+')[0];
-        VersionLabel.Text = string.IsNullOrEmpty(ver) ? "" : $"v {ver}";
+        var verText = string.IsNullOrEmpty(ver) ? "" : $"v {ver}";
+        VersionLabel.Text = verText;
+        AboutVersion.Text = verText;
         Loaded += (_, _) => ViewModel.Detect();
+    }
+
+    void OnOpenSource(object sender, RoutedEventArgs e)
+    {
+        try { Process.Start(new ProcessStartInfo(RepoUrl) { UseShellExecute = true }); }
+        catch { /* нет браузера */ }
     }
 
     void OnDragMove(object sender, MouseButtonEventArgs e)

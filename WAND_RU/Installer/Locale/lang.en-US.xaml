@@ -28,6 +28,10 @@
     <s:String x:Key="S_Log">Log</s:String>
     <s:String x:Key="S_CopyLog">Copy</s:String>
     <s:String x:Key="S_ExportLog">Export</s:String>
+    <s:String x:Key="S_About">About</s:String>
+    <s:String x:Key="S_SourceCode">Source code</s:String>
+    <s:String x:Key="S_MadeWith">Made with love by LockBB1</s:String>
+    <s:String x:Key="S_StarUs">Star us if WRP helped you &lt;3</s:String>
 
     <!-- VM messages -->
     <s:String x:Key="S_Msg_NotFound">Wand not found</s:String>

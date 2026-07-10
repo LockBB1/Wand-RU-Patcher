@@ -13,6 +13,7 @@ public sealed class MainVm : ObservableObject
     InstallerState _state = InstallerState.Detecting;
     string _statusText = "";
     bool _isSettingsOpen;
+    bool _isAboutOpen;
     SettingsVm? _settings;
     readonly RuOverrides _overrides = RuOverrides.LoadEmbedded();
 
@@ -22,12 +23,15 @@ public sealed class MainVm : ObservableObject
     public WandInstall? Install { get; private set; }
     public SettingsVm? Settings { get => _settings; private set => SetProperty(ref _settings, value); }
     public bool IsSettingsOpen { get => _isSettingsOpen; set => SetProperty(ref _isSettingsOpen, value); }
+    public bool IsAboutOpen { get => _isAboutOpen; set => SetProperty(ref _isAboutOpen, value); }
 
     public ICommand PatchCommand { get; }
     public ICommand RestoreCommand { get; }
     public ICommand BrowseCommand { get; }
     public ICommand OpenSettingsCommand { get; }
     public ICommand CloseSettingsCommand { get; }
+    public ICommand OpenAboutCommand { get; }
+    public ICommand CloseAboutCommand { get; }
 
     public MainVm()
     {
@@ -38,6 +42,8 @@ public sealed class MainVm : ObservableObject
         BrowseCommand = new RelayCommand(p => { if (p is string dir) DetectFrom(new[] { dir }); });
         OpenSettingsCommand = new RelayCommand(_ => IsSettingsOpen = true, _ => Settings is not null);
         CloseSettingsCommand = new RelayCommand(_ => IsSettingsOpen = false);
+        OpenAboutCommand = new RelayCommand(_ => IsAboutOpen = true);
+        CloseAboutCommand = new RelayCommand(_ => IsAboutOpen = false);
     }
 
     public void Detect() => DetectFrom(WandLocator.DefaultRoots());
