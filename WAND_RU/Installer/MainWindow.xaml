@@ -79,7 +79,7 @@
                         <Button Content="{DynamicResource S_Restore}" Width="150" Height="40" Margin="0 0 10 0"
                                 Style="{StaticResource ColoredButton}" Command="{Binding RestoreCommand}"/>
                         <Button Content="{DynamicResource S_Reinstall}" Width="150" Height="40"
-                                Style="{StaticResource IconButton}" Command="{Binding PatchCommand}"/>
+                                Style="{StaticResource ColoredButton}" Command="{Binding PatchCommand}"/>
                     </StackPanel>
                 </StackPanel>
 
