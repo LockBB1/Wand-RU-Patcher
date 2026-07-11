@@ -206,6 +206,26 @@
     }
   }
   
+  // Перевод значений i18n.strings (описания/заметки читов). КЛЮЧИ не трогаем - по ним UI ищет
+  // перевод; переводим только ЗНАЧЕНИЯ. Длинный текст офлайн не тянет - только MT + кэш.
+  // Строки >1500 символов пропускаем (лимит URL у GET-провайдеров).
+  async function translateStrings(map, deps) {
+    const { cache, httpsGet, provider } = deps;
+    if (!map || typeof map !== "object") return map;
+    const out = {};
+    await Promise.all(
+      Object.entries(map).map(async ([k, v]) => {
+        out[k] = v;
+        if (typeof v !== "string" || !LATIN.test(v) || v.length > 1500) return;
+        const ck = v.toLowerCase();
+        if (ck in cache) { out[k] = cache[ck]; return; }
+        const ru = await translateOne(v, httpsGet, provider);
+        if (ru) { cache[ck] = ru; out[k] = ru; }
+      })
+    );
+    return out;
+  }
+  
   // Оркестрация. node - ОРИГИНАЛЬНЫЙ (английский) ответ: MT всегда получает исходную строку,
   // а не полуфабрикат офлайна («Задать Prestige» ломает MT). deps.offline (опц.) - строковый
   // офлайн-переводчик: офлайн справился целиком (нет латиницы) -> MT не нужен; иначе MT по оригиналу,
@@ -308,15 +328,27 @@
     if (!d || !conf.online) return Promise.resolve(JSON.stringify(offline));
     try {
       var cache = loadCache(d);
-      return withTimeout(
-        runOnline(data, {
-          cache: cache, httpsGet: httpsGetter(d), targetKeys: TARGET_KEYS_ONLINE,
-          provider: conf.provider,
-          offline: function (s) { return translateText(s, DICT, exact); }
-        }),
-        8000, offline
-      ).then(function (result) { saveCache(d, cache); return JSON.stringify(result); },
-             function () { return JSON.stringify(offline); });
+      var deps = {
+        cache: cache, httpsGet: httpsGetter(d), targetKeys: TARGET_KEYS_ONLINE,
+        provider: conf.provider,
+        offline: function (s) { return translateText(s, DICT, exact); }
+      };
+      // Имена читов + значения i18n.strings (описания/заметки; ключи не трогаем - по ним lookup).
+      var combined = runOnline(data, deps).then(function (res) {
+        if (!res || !res.i18n || !res.i18n.strings) return res;
+        return translateStrings(res.i18n.strings, deps).then(function (s) {
+          var i18n = {};
+          for (var k in res.i18n) i18n[k] = res.i18n[k];
+          i18n.strings = s;
+          var out = {};
+          for (var k2 in res) out[k2] = res[k2];
+          out.i18n = i18n;
+          return out;
+        });
+      });
+      return withTimeout(combined, 12000, offline)
+        .then(function (result) { saveCache(d, cache); return JSON.stringify(result); },
+              function () { return JSON.stringify(offline); });
     } catch (e) { return Promise.resolve(JSON.stringify(offline)); }
   }
 

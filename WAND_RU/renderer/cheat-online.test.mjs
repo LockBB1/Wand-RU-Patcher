@@ -8,6 +8,7 @@ import {
   myMemoryUrl,
   parseMyMemory,
   translateOne,
+  translateStrings,
   runOnline,
 } from "./cheat-online.js";
 
@@ -173,6 +174,36 @@ test("runOnline+offline: MT упал -> применяется хотя бы ч�
     { cache: {}, httpsGet: () => Promise.reject(new Error("down")), targetKeys: KEYS, offline }
   );
   assert.equal(out.cheats[0].name, "Задать Frobnicate"); // лучше, чем чистый англ.
+});
+
+test("translateStrings: переводит ЗНАЧЕНИЯ, ключи не трогает; кэш и скипы работают", async () => {
+  const long = "x".repeat(1600);
+  const map = {
+    "Activate the mod first.": "Activate the mod first.", // англ. значение -> перевести
+    "Cached note.": "Cached note.",                       // уже в кэше
+    "Уже переведено.": "Уже переведено.",                 // кириллица -> скип
+    "Long note.": long,                                   // >1500 -> скип
+  };
+  const cache = { "cached note.": "Кэшированная заметка." };
+  const seen = [];
+  const httpsGet = (url) => {
+    seen.push(url);
+    return Promise.resolve('[[["Сначала включите мод.","Activate the mod first."]]]');
+  };
+  const out = await translateStrings(map, { cache, httpsGet, provider: "auto" });
+  assert.deepEqual(Object.keys(out).sort(), Object.keys(map).sort()); // ключи не тронуты
+  assert.equal(out["Activate the mod first."], "Сначала включите мод.");
+  assert.equal(out["Cached note."], "Кэшированная заметка."); // из кэша, без сети
+  assert.equal(out["Уже переведено."], "Уже переведено.");
+  assert.equal(out["Long note."], long); // слишком длинно - оригинал
+  assert.equal(seen.length, 1); // сеть дёрнулась ровно один раз
+  assert.equal(cache["activate the mod first."], "Сначала включите мод.");
+});
+
+test("translateStrings: сбой MT оставляет оригинал", async () => {
+  const map = { "Note.": "Some english note." };
+  const out = await translateStrings(map, { cache: {}, httpsGet: () => Promise.reject(new Error("down")) });
+  assert.equal(out["Note."], "Some english note.");
 });
 
 test("applyMap: вход не мутирует", () => {

@@ -108,15 +108,27 @@ ${indent(onlineBody)}
     if (!d || !conf.online) return Promise.resolve(JSON.stringify(offline));
     try {
       var cache = loadCache(d);
-      return withTimeout(
-        runOnline(data, {
-          cache: cache, httpsGet: httpsGetter(d), targetKeys: TARGET_KEYS_ONLINE,
-          provider: conf.provider,
-          offline: function (s) { return translateText(s, DICT, exact); }
-        }),
-        8000, offline
-      ).then(function (result) { saveCache(d, cache); return JSON.stringify(result); },
-             function () { return JSON.stringify(offline); });
+      var deps = {
+        cache: cache, httpsGet: httpsGetter(d), targetKeys: TARGET_KEYS_ONLINE,
+        provider: conf.provider,
+        offline: function (s) { return translateText(s, DICT, exact); }
+      };
+      // Имена читов + значения i18n.strings (описания/заметки; ключи не трогаем - по ним lookup).
+      var combined = runOnline(data, deps).then(function (res) {
+        if (!res || !res.i18n || !res.i18n.strings) return res;
+        return translateStrings(res.i18n.strings, deps).then(function (s) {
+          var i18n = {};
+          for (var k in res.i18n) i18n[k] = res.i18n[k];
+          i18n.strings = s;
+          var out = {};
+          for (var k2 in res) out[k2] = res[k2];
+          out.i18n = i18n;
+          return out;
+        });
+      });
+      return withTimeout(combined, 12000, offline)
+        .then(function (result) { saveCache(d, cache); return JSON.stringify(result); },
+              function () { return JSON.stringify(offline); });
     } catch (e) { return Promise.resolve(JSON.stringify(offline)); }
   }
 

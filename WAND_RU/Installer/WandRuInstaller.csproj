@@ -6,9 +6,9 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
-    <Version>0.13.2</Version>
-    <FileVersion>0.13.2.44</FileVersion>
-    <AssemblyVersion>0.13.2.0</AssemblyVersion>
+    <Version>0.14.0</Version>
+    <FileVersion>0.14.0.45</FileVersion>
+    <AssemblyVersion>0.14.0.0</AssemblyVersion>
     <ApplicationIcon>app.ico</ApplicationIcon>
   </PropertyGroup>
 

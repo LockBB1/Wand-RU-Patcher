@@ -89,6 +89,26 @@ export async function translateOne(text, httpsGet, provider) {
   }
 }
 
+// Перевод значений i18n.strings (описания/заметки читов). КЛЮЧИ не трогаем - по ним UI ищет
+// перевод; переводим только ЗНАЧЕНИЯ. Длинный текст офлайн не тянет - только MT + кэш.
+// Строки >1500 символов пропускаем (лимит URL у GET-провайдеров).
+export async function translateStrings(map, deps) {
+  const { cache, httpsGet, provider } = deps;
+  if (!map || typeof map !== "object") return map;
+  const out = {};
+  await Promise.all(
+    Object.entries(map).map(async ([k, v]) => {
+      out[k] = v;
+      if (typeof v !== "string" || !LATIN.test(v) || v.length > 1500) return;
+      const ck = v.toLowerCase();
+      if (ck in cache) { out[k] = cache[ck]; return; }
+      const ru = await translateOne(v, httpsGet, provider);
+      if (ru) { cache[ck] = ru; out[k] = ru; }
+    })
+  );
+  return out;
+}
+
 // Оркестрация. node - ОРИГИНАЛЬНЫЙ (английский) ответ: MT всегда получает исходную строку,
 // а не полуфабрикат офлайна («Задать Prestige» ломает MT). deps.offline (опц.) - строковый
 // офлайн-переводчик: офлайн справился целиком (нет латиницы) -> MT не нужен; иначе MT по оригиналу,
