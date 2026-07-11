@@ -4,11 +4,13 @@
 .EXAMPLE
   ./build.ps1                 # Release build
   ./build.ps1 -Test           # + прогон тестов
-  ./build.ps1 -Publish        # + self-contained single-file .exe в ./publish
+  ./build.ps1 -Publish        # + self-contained single-file .exe (~130-150 МБ, рантайм внутри, ничего ставить не надо)
+  ./build.ps1 -PublishSmall   # + framework-dependent single-file .exe (~2.4 МБ, нужен .NET 9 Desktop Runtime у юзера)
 #>
 param(
     [switch]$Test,
     [switch]$Publish,
+    [switch]$PublishSmall,
     [string]$Configuration = "Release"
 )
 
@@ -35,6 +37,16 @@ if ($Publish) {
         -o $out --nologo
     if ($LASTEXITCODE -ne 0) { throw "publish failed" }
     Write-Host "OK: $out\WandRuInstaller.exe" -ForegroundColor Green
+}
+
+if ($PublishSmall) {
+    Write-Host "==> Publish small (framework-dependent single-file win-x64)" -ForegroundColor Cyan
+    $out = Join-Path $root "publish-small"
+    dotnet publish $proj -c $Configuration -r win-x64 --self-contained false `
+        -p:PublishSingleFile=true `
+        -o $out --nologo
+    if ($LASTEXITCODE -ne 0) { throw "publish-small failed" }
+    Write-Host "OK: $out\WandRuInstaller.exe (~2.4 МБ, нужен .NET 9 Desktop Runtime)" -ForegroundColor Green
 }
 
 Write-Host "Done." -ForegroundColor Green
