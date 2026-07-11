@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { translateText, translateCategory, translateCheats } from "./cheat-translator.js";
+import { translateText, translateCheats } from "./cheat-translator.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const load = (...p) => JSON.parse(readFileSync(join(here, ...p), "utf8"));
@@ -65,17 +65,6 @@ test("preservation: placeholders and numbers untouched", () => {
   assert.equal(translateText("100", dict), "100");
 });
 
-// --- translateCategory ---
-test("category: slug mapped to display name", () => {
-  assert.equal(translateCategory("player", dict), "Игрок");
-  assert.equal(translateCategory("weapons", dict), "Оружие");
-  assert.equal(translateCategory("vehicles", dict), "Транспорт");
-});
-
-test("category: unknown slug unchanged", () => {
-  assert.equal(translateCategory("quantum", dict), "quantum");
-});
-
 // --- translateCheats: synthetic fixture ---
 test("walker: translates cheat names", () => {
   const out = translateCheats(sample, dict);
@@ -86,11 +75,11 @@ test("walker: translates cheat names", () => {
   assert.equal(c[3].name, "Без перезарядки");
 });
 
-test("walker: translates category slug", () => {
+test("walker: leaves category slug untouched (locale key)", () => {
   const out = translateCheats(sample, dict);
   const c = out.trainerMeta.schema.cheats;
-  assert.equal(c[0].category, "Игрок");
-  assert.equal(c[2].category, "Инвентарь");
+  assert.equal(c[0].category, "player");
+  assert.equal(c[2].category, "inventory");
 });
 
 test("walker: translates options[].label, keeps value", () => {
@@ -139,13 +128,13 @@ test("real: translates names on real endpoint shape", () => {
   assert.ok(names.includes("Бесконечная энергия лошади"));
 });
 
-test("real: translates categories, keeps uuid/target", () => {
+test("real: leaves category slugs untouched, keeps uuid/target", () => {
   const out = translateCheats(real, dict);
   const cheats = out.trainer.blueprint.cheats;
   const cats = new Set(cheats.map((c) => c.category));
-  assert.ok(cats.has("Игрок"));
-  assert.ok(cats.has("Оружие"));
-  assert.ok(cats.has("Транспорт"));
+  assert.ok(cats.has("player")); // slug, переводит локаль Фазы 1
+  assert.ok(cats.has("weapons"));
+  assert.ok(cats.has("vehicles"));
   assert.equal(cheats[0].uuid, "ffsrr6gj");
   assert.equal(cheats[0].target, "unlimited_health");
 });

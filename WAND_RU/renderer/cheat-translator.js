@@ -87,22 +87,15 @@ export function translateText(str, dict) {
   return i < 0 ? res : res.slice(0, i) + res.charAt(i).toLocaleUpperCase("ru") + res.slice(i + 1);
 }
 
-// Slug категории ("player") -> имя ("Игрок"). Неизвестный slug -> как есть.
-export function translateCategory(slug, dict) {
-  if (typeof slug !== "string") return slug;
-  const cats = dict.categories || {};
-  const key = slug.trim().toLowerCase();
-  return hasKey(cats, key) ? cats[key] : slug;
-}
-
-// Рекурсивный walker: новый объект, вход не мутирует. Переводит имена (TARGET_KEYS) и category.
+// Рекурсивный walker: новый объект, вход не мутирует. Переводит только имена (TARGET_KEYS).
+// ВАЖНО: category НЕ трогаем — это slug для ключа локали (trainer_cheats_list.category_<slug>),
+// его переводит локаль Фазы 1. Перевод slug ломает lookup ключа.
 export function translateCheats(node, dict) {
   if (Array.isArray(node)) return node.map((n) => translateCheats(n, dict));
   if (node && typeof node === "object") {
     const out = {};
     for (const [k, v] of Object.entries(node)) {
       if (typeof v === "string" && TARGET_KEYS.has(k)) out[k] = translateText(v, dict);
-      else if (typeof v === "string" && k === "category") out[k] = translateCategory(v, dict);
       else out[k] = translateCheats(v, dict);
     }
     return out;

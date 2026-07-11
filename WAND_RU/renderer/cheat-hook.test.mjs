@@ -27,7 +27,7 @@ test("fetch: trainer response is translated", async () => {
   const res = await w.fetch("https://api.wemod.com/v3/games/40171/trainer?v=3");
   const data = await res.json();
   assert.equal(data.trainer.blueprint.cheats[0].name, "Бесконечное здоровье");
-  assert.equal(data.trainer.blueprint.cheats[0].category, "Игрок");
+  assert.equal(data.trainer.blueprint.cheats[0].category, "player"); // slug не тронут (ключ локали)
   assert.equal(data.trainer.blueprint.cheats[1].name, "Множитель урона");
   assert.equal(data.trainer.blueprint.cheats[0].uuid, "a"); // non-target intact
 });

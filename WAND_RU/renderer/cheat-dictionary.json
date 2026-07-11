@@ -254,19 +254,6 @@
     "comfort": { "n": "комфорт", "g": "m", "gen": "комфорта", "acc": "комфорт" },
     "research points": { "n": "очки исследований", "g": "pl", "gen": "очков исследований", "acc": "очки исследований" }
   },
-  "categories": {
-    "player": "Игрок",
-    "inventory": "Инвентарь",
-    "stats": "Характеристики",
-    "game": "Игра",
-    "weapons": "Оружие",
-    "enemies": "Враги",
-    "physics": "Физика",
-    "teleport": "Телепорт",
-    "vehicles": "Транспорт",
-    "world": "Мир",
-    "gameplay": "Геймплей"
-  },
   "suffixes": [
     { "match": "^(.+?)\\s+Multiplier$", "template": "Множитель {0}" },
     { "match": "^(.+?)\\s+Consumption Rate$", "template": "Скорость расхода {0}" },
