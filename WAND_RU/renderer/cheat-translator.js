@@ -1,74 +1,105 @@
 // CheatTranslator — движок перевода имён читов (Фаза 2, engine-first).
 // Чистые функции, без зависимостей. Тестируется node:test.
-// Рантайм-цель: renderer Wand (подтверждено HAR: GET api.wemod.com/v3/games/{id}/trainer,
-// заголовки Sec-Fetch-* => fetch/XHR из renderer). Splice — отдельная фаза.
-// Словарь (idioms/words/categories/patterns) передаётся аргументом; данные — cheat-dictionary.json.
+// Рантайм-цель: renderer Wand (HAR: GET api.wemod.com/v3/games/{id}/trainer, Sec-Fetch-* => fetch/XHR).
+// Словарь (idioms/words/categories/prefixes/suffixes) передаётся аргументом; данные — cheat-dictionary.json.
+//
+// Приоритет резолва имени: compound-split(/ , & and) -> для каждой части:
+//   idiom(полная фраза) > word/phrase(полная фраза) > suffix(Multiplier/Rate) > prefix(Unlimited/No/Set/...)
+//   > passthrough(как есть).
+// Слово словаря: { n: им.падеж, g: род m|f|n|pl, gen?: род.падеж(«Без X»,«Множитель X»),
+//   acc?: вин.падеж(«Задать X»,«Изменить X»; нужен для жен. 1-го скл.: энергия->энергию) }.
 
-// Ключи cheat-объектов с UI-видимым текстом (имя чита). Category — отдельным map (translateCategory).
 const TARGET_KEYS = new Set(["name", "displayName", "label"]);
-
 const CYRILLIC = /[А-Яа-яЁё]/;
+// Разбиение compound-имён: сохраняем разделители, чтобы собрать обратно (God Mode / Ignore Hits).
+const SPLIT = /(\s*\/\s*|\s*,\s*|\s*&\s*|\s+and\s+)/i;
 
-// Внутр.: резолв строки в {text, gender}. gender нужен pattern'ам с согласованием прилагательного.
-function resolve(str, dict) {
-  if (typeof str !== "string") return { text: str, gender: undefined };
-  const trimmed = str.trim();
-  if (trimmed === "" || CYRILLIC.test(trimmed)) return { text: str, gender: undefined };
+function hasKey(o, k) {
+  return o && Object.prototype.hasOwnProperty.call(o, k);
+}
 
-  const key = trimmed.toLowerCase();
+const MAX_DEPTH = 5; // страховка от глубокой взаимной рекурсии resolveName<->resolveTail
 
-  if (dict.idioms && Object.prototype.hasOwnProperty.call(dict.idioms, key)) {
-    return { text: dict.idioms[key], gender: undefined };
+// Хвост (существительное после префикса) -> {nom, gen, acc, gender}. Не нашли — рекурсия в resolveName.
+function resolveTail(tail, dict, depth) {
+  const t = tail.trim();
+  const key = t.toLowerCase();
+  if (hasKey(dict.idioms, key)) {
+    return { nom: dict.idioms[key], gen: null, acc: null, gender: undefined };
   }
-  if (dict.words && Object.prototype.hasOwnProperty.call(dict.words, key)) {
+  if (hasKey(dict.words, key)) {
     const w = dict.words[key];
-    return { text: w.t, gender: w.g };
+    return { nom: w.n, gen: w.gen || null, acc: w.acc || null, gender: w.g };
   }
-  for (const p of dict.patterns || []) {
-    const m = trimmed.match(new RegExp(p.match, "i"));
+  if (depth < MAX_DEPTH) {
+    const inner = resolveName(t, dict, depth + 1); // вложенные префиксы: "Max HP", "X Multiplier"
+    if (inner !== t) return { nom: inner, gen: null, acc: null, gender: undefined };
+  }
+  return { nom: t, gen: null, acc: null, gender: undefined }; // англ. как есть
+}
+
+// Одна часть имени (без compound-разделителей) -> строка перевода.
+function resolveName(seg, dict, depth = 0) {
+  const s = seg.trim();
+  if (s === "" || CYRILLIC.test(s)) return seg;
+  const key = s.toLowerCase();
+
+  if (hasKey(dict.idioms, key)) return dict.idioms[key];
+  if (hasKey(dict.words, key)) return dict.words[key].n;
+
+  // Prefix-паттерны (раньше suffix: "Set X Multiplier" = Set(X Multiplier), а не (Set X)Multiplier).
+  for (const p of dict.prefixes || []) {
+    const m = s.match(new RegExp(p.match, "i"));
     if (!m) continue;
-    const tail = m[1] !== undefined ? m[1] : "";
-    const r = resolve(tail, dict); // рекурсия: хвост через словарь
-    if (p.adj) {
-      const adj = p.adj[r.gender || "m"]; // неизвестный род → муж. по умолчанию
-      return { text: adj + " " + r.text, gender: undefined };
-    }
-    return { text: p.template.replace("{0}", r.text), gender: undefined };
+    const r = resolveTail(m[1] !== undefined ? m[1] : "", dict, depth);
+    if (p.adj) return p.adj[r.gender || "m"] + " " + r.nom; // прилагательное по роду
+    if (p.form === "gen") return p.template.replace("{0}", r.gen || r.nom); // родительный
+    if (p.form === "acc") return p.template.replace("{0}", r.acc || r.nom); // винительный
+    return p.template.replace("{0}", r.nom); // им.падеж
   }
-  return { text: str, gender: undefined }; // ничего не подошло — оригинал целиком
+
+  // Suffix-паттерны (X Multiplier, X Rate): хвост в родительном.
+  for (const suf of dict.suffixes || []) {
+    const m = s.match(new RegExp(suf.match, "i"));
+    if (!m) continue;
+    const r = resolveTail(m[1] !== undefined ? m[1] : "", dict, depth);
+    return suf.template.replace("{0}", r.gen || r.nom);
+  }
+  return seg; // ничего не подошло — оригинал
 }
 
-// Одна строка: idiom > word > pattern > passthrough. Идемпотентно (уже кириллица → как есть).
+// Полное имя чита -> перевод. Идемпотентно (кириллица не трогается). Compound через разделители.
 export function translateText(str, dict) {
-  return resolve(str, dict).text;
+  if (typeof str !== "string") return str;
+  if (str.trim() === "" || CYRILLIC.test(str)) return str;
+  const res = str
+    .split(SPLIT)
+    .map((seg) => (SPLIT.test(seg) ? seg : resolveName(seg, dict)))
+    .join("");
+  // Капитализация первой буквы (хвосты-слова в словаре строчные для склейки).
+  const i = res.search(/\S/);
+  return i < 0 ? res : res.slice(0, i) + res.charAt(i).toLocaleUpperCase("ru") + res.slice(i + 1);
 }
 
-// Slug категории ("player") → имя ("Игрок"). Неизвестный slug → как есть.
+// Slug категории ("player") -> имя ("Игрок"). Неизвестный slug -> как есть.
 export function translateCategory(slug, dict) {
   if (typeof slug !== "string") return slug;
   const cats = dict.categories || {};
   const key = slug.trim().toLowerCase();
-  return Object.prototype.hasOwnProperty.call(cats, key) ? cats[key] : slug;
+  return hasKey(cats, key) ? cats[key] : slug;
 }
 
-// Рекурсивный walker: новый объект, вход не мутирует. Переводит имена (TARGET_KEYS) и category;
-// числа/uuid/target/type/value/hotkeys/плейсхолдеры целы.
+// Рекурсивный walker: новый объект, вход не мутирует. Переводит имена (TARGET_KEYS) и category.
 export function translateCheats(node, dict) {
-  if (Array.isArray(node)) {
-    return node.map((n) => translateCheats(n, dict));
-  }
+  if (Array.isArray(node)) return node.map((n) => translateCheats(n, dict));
   if (node && typeof node === "object") {
     const out = {};
     for (const [k, v] of Object.entries(node)) {
-      if (typeof v === "string" && TARGET_KEYS.has(k)) {
-        out[k] = translateText(v, dict);
-      } else if (typeof v === "string" && k === "category") {
-        out[k] = translateCategory(v, dict);
-      } else {
-        out[k] = translateCheats(v, dict);
-      }
+      if (typeof v === "string" && TARGET_KEYS.has(k)) out[k] = translateText(v, dict);
+      else if (typeof v === "string" && k === "category") out[k] = translateCategory(v, dict);
+      else out[k] = translateCheats(v, dict);
     }
     return out;
   }
-  return node; // примитивы как есть
+  return node;
 }

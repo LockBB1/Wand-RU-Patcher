@@ -154,3 +154,41 @@ test("real: idempotent", () => {
   const once = translateCheats(real, dict);
   assert.deepEqual(translateCheats(once, dict), once);
 });
+
+// --- v2: cases, suffixes, compounds, nesting, capitalization ---
+test("case: gen for No, acc for Set/Edit/Refill", () => {
+  assert.equal(translateText("No Recoil", dict), "Без отдачи"); // gen
+  assert.equal(translateText("No Fall Damage", dict), "Без урона от падения"); // gen phrase
+  assert.equal(translateText("Set Jump Height", dict), "Задать высоту прыжка"); // acc fem
+  assert.equal(translateText("Refill Health", dict), "Пополнить здоровье");
+});
+
+test("suffix: X Multiplier -> Множитель X(gen)", () => {
+  assert.equal(translateText("Damage Multiplier", dict), "Множитель урона");
+  assert.equal(translateText("XP Multiplier", dict), "Множитель опыта");
+  assert.equal(translateText("Defense Multiplier", dict), "Множитель защиты");
+});
+
+test("prefix beats suffix: Set X Multiplier = Set(X Multiplier)", () => {
+  assert.equal(translateText("Set Experience Multiplier", dict), "Задать Множитель опыта");
+});
+
+test("compound: split on / and & keeps separators, translates parts", () => {
+  assert.equal(translateText("God Mode/Ignore Hits", dict), "Режим бога/Игнорировать удары");
+  assert.equal(
+    translateText("Super Damage / One-Hit Kills", dict),
+    "Супер урон / Убийство с одного удара"
+  );
+});
+
+test("nesting: prefix over prefix (Edit Max Health)", () => {
+  assert.equal(translateText("Edit Max Health", dict), "Изменить макс. здоровье");
+});
+
+test("capitalization: standalone tail-word capitalized", () => {
+  assert.equal(translateText("Game Speed", dict), "Скорость игры");
+});
+
+test("adj agreement over adverbs list (XP masculine)", () => {
+  assert.equal(translateText("Unlimited XP", dict), "Бесконечный опыт");
+});
