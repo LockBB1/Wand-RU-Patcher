@@ -159,7 +159,7 @@ test("suffix: X Multiplier -> Множитель X(gen)", () => {
 });
 
 test("prefix beats suffix: Set X Multiplier = Set(X Multiplier)", () => {
-  assert.equal(translateText("Set Experience Multiplier", dict), "Задать Множитель опыта");
+  assert.equal(translateText("Set Experience Multiplier", dict), "Задать множитель опыта");
 });
 
 test("compound: split on / and & keeps separators, translates parts", () => {
@@ -199,12 +199,19 @@ test("bracket: tag translated, inner capitalized", () => {
 });
 
 test("prefix all: All X -> Все X", () => {
-  assert.equal(translateText("Get All Skills", dict), "Получить Все навыки");
+  assert.equal(translateText("Get All Skills", dict), "Получить все навыки");
 });
 
 test("idiom: noclip / invincible", () => {
   assert.equal(translateText("No Clip", dict), "Сквозь стены");
   assert.equal(translateText("Invincible", dict), "Неуязвимость");
+});
+
+// --- Заглавная в середине nested-фраз (косметика): идиома-хвост декапитализируется ---
+test("nested tail: идиома после префикса пишется со строчной", () => {
+  assert.equal(translateText("Set Fly Mode", dict), "Задать режим полёта");
+  assert.equal(translateText("Instant God Mode", dict), "Мгновенный режим бога");
+  assert.equal(translateText("Fly Mode", dict), "Режим полёта"); // самостоятельно - с заглавной
 });
 
 // --- RPG/Paradox-слова (фикс по скрину CK3: «Задать Prestige» и т.п.) ---

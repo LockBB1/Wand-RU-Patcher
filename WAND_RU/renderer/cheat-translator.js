@@ -20,12 +20,20 @@ function hasKey(o, k) {
 
 const MAX_DEPTH = 5; // страховка от глубокой взаимной рекурсии resolveName<->resolveTail
 
+// Хвост внутри фразы пишется со строчной («Задать режим полёта», не «Задать Режим полёта»):
+// идиомы в словаре с заглавной (для самостоятельного показа), в хвосте её опускаем.
+// Финальную заглавную ставит translateText первому кириллическому символу всей фразы.
+function decapFirst(s) {
+  const i = s.search(/[А-ЯЁ]/);
+  return i < 0 ? s : s.slice(0, i) + s.charAt(i).toLocaleLowerCase("ru") + s.slice(i + 1);
+}
+
 // Хвост (существительное после префикса) -> {nom, gen, acc, gender}. Не нашли - рекурсия в resolveName.
 function resolveTail(tail, dict, depth) {
   const t = tail.trim();
   const key = t.toLowerCase();
   if (hasKey(dict.idioms, key)) {
-    return { nom: dict.idioms[key], gen: null, acc: null, gender: undefined };
+    return { nom: decapFirst(dict.idioms[key]), gen: null, acc: null, gender: undefined };
   }
   if (hasKey(dict.words, key)) {
     const w = dict.words[key];
@@ -33,7 +41,7 @@ function resolveTail(tail, dict, depth) {
   }
   if (depth < MAX_DEPTH) {
     const inner = resolveName(t, dict, depth + 1); // вложенные префиксы: "Max HP", "X Multiplier"
-    if (inner !== t) return { nom: inner, gen: null, acc: null, gender: undefined };
+    if (inner !== t) return { nom: decapFirst(inner), gen: null, acc: null, gender: undefined };
   }
   return { nom: t, gen: null, acc: null, gender: undefined }; // англ. как есть
 }
