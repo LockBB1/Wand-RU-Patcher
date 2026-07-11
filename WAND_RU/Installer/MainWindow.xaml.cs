@@ -26,7 +26,27 @@ public partial class MainWindow : Window
         var verText = string.IsNullOrEmpty(ver) ? "" : $"v {ver}";
         VersionLabel.Text = verText;
         AboutVersion.Text = verText;
-        Loaded += (_, _) => ViewModel.Detect();
+        Loaded += (_, _) =>
+        {
+            ViewModel.Detect();
+            _ = ShowUpdateBannerAsync(ver);
+        };
+    }
+
+    // Тихая проверка обновления: офлайн/ошибка — баннер просто не показываем.
+    async Task ShowUpdateBannerAsync(string? current)
+    {
+        if (string.IsNullOrEmpty(current)) return;
+        var latest = await UpdateChecker.CheckAsync(current);
+        if (latest is null) return;
+        UpdateBanner.Text = string.Format(L.Get("S_UpdateAvailable"), latest);
+        UpdateBanner.Visibility = Visibility.Visible;
+    }
+
+    void OnOpenReleases(object sender, MouseButtonEventArgs e)
+    {
+        try { Process.Start(new ProcessStartInfo(UpdateChecker.ReleasesUrl) { UseShellExecute = true }); }
+        catch { /* нет браузера */ }
     }
 
     void OnOpenSource(object sender, RoutedEventArgs e)

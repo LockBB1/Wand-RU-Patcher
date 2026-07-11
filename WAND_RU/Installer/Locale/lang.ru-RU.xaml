@@ -39,6 +39,7 @@
     <s:String x:Key="S_SourceCode">Исходный код</s:String>
     <s:String x:Key="S_MadeWith">Сделано с любовью by LockBB1</s:String>
     <s:String x:Key="S_StarUs">Поставьте звезду, если WRP помог вам &lt;3</s:String>
+    <s:String x:Key="S_UpdateAvailable">Доступна v{0} — скачать</s:String>
 
     <!-- VM messages -->
     <s:String x:Key="S_Msg_NotFound">Wand не найден</s:String>
