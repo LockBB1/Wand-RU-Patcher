@@ -1,6 +1,7 @@
 // Онлайн-MT добор для непокрытого офлайн-словарём (Фаза 3, путь A). Чистая логика с инъекцией
-// зависимостей (fs/https приходят снаружи — в хуке из require, в тестах моки). Провайдер: MyMemory
-// (без ключа). Кэш en->ru. Всё опционально: сбой/нет сети → офлайн-результат не трогаем.
+// зависимостей (fs/https приходят снаружи — в хуке из require, в тестах моки). Провайдеры без ключа,
+// цепочкой: Google (gtx, качественнее) → MyMemory (фолбэк). Кэш en->ru. Всё опционально:
+// сбой/нет сети → офлайн-результат не трогаем.
 
 const LATIN = /[A-Za-z]/;
 
@@ -32,6 +33,25 @@ export function applyMap(node, map, targetKeys) {
   return node;
 }
 
+export function googleUrl(text) {
+  return "https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=ru&dt=t&q=" +
+    encodeURIComponent(text);
+}
+
+// Тело ответа gtx ([[["перевод","оригинал",...],...],...]) -> перевод или null.
+// Эхо (Google вернул исходный текст) считаем неудачей — не засорять кэш.
+export function parseGoogle(body) {
+  try {
+    const j = JSON.parse(body);
+    if (!Array.isArray(j) || !Array.isArray(j[0])) return null;
+    const t = j[0].map((p) => (Array.isArray(p) ? p[0] : "")).filter(Boolean).join("");
+    if (!t) return null;
+    return t;
+  } catch {
+    return null;
+  }
+}
+
 export function myMemoryUrl(text) {
   return "https://api.mymemory.translated.net/get?q=" + encodeURIComponent(text) + "&langpair=en%7Cru";
 }
@@ -50,10 +70,16 @@ export function parseMyMemory(body) {
   }
 }
 
-// Перевести одну строку. httpsGet: (url) => Promise<body>. Сбой -> null.
+// Перевести одну строку: Google → фолбэк MyMemory. httpsGet: (url) => Promise<body>. Сбой -> null.
+// Эхо-ответ (перевод == оригинал) не считаем переводом.
 export async function translateOne(text, httpsGet) {
+  const useful = (t) => (t && t.trim().toLowerCase() !== text.trim().toLowerCase() ? t : null);
   try {
-    return parseMyMemory(await httpsGet(myMemoryUrl(text)));
+    const g = useful(parseGoogle(await httpsGet(googleUrl(text))));
+    if (g) return g;
+  } catch { /* провайдер упал — пробуем следующий */ }
+  try {
+    return useful(parseMyMemory(await httpsGet(myMemoryUrl(text))));
   } catch {
     return null;
   }

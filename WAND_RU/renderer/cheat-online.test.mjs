@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import {
   collectUntranslated,
   applyMap,
+  googleUrl,
+  parseGoogle,
   myMemoryUrl,
   parseMyMemory,
   translateOne,
@@ -42,26 +44,62 @@ test("parseMyMemory: извлекает перевод / фильтрует ош
   assert.equal(parseMyMemory('{"responseData":{"translatedText":""}}'), null);
 });
 
-test("translateOne: сбой httpsGet -> null (не бросает)", async () => {
+test("googleUrl: gtx endpoint, q экранирован", () => {
+  const u = googleUrl("No Reload");
+  assert.match(u, /translate\.googleapis\.com/);
+  assert.match(u, /client=gtx/);
+  assert.match(u, /sl=en&tl=ru/);
+  assert.match(u, /q=No%20Reload/);
+});
+
+test("parseGoogle: извлекает и склеивает сегменты / мусор -> null", () => {
+  assert.equal(parseGoogle('[[["Без перезарядки","No Reload",null]],null,"en"]'), "Без перезарядки");
+  assert.equal(parseGoogle('[[["Часть 1. ","p1"],["Часть 2.","p2"]]]'), "Часть 1. Часть 2.");
+  assert.equal(parseGoogle('{"not":"gtx"}'), null);
+  assert.equal(parseGoogle("not json"), null);
+  assert.equal(parseGoogle("[[]]"), null);
+});
+
+test("translateOne: сбой обоих провайдеров -> null (не бросает)", async () => {
   const res = await translateOne("X", () => Promise.reject(new Error("net down")));
   assert.equal(res, null);
 });
 
-test("runOnline: мисс зовёт MT, пишет кэш, применяет", async () => {
+test("translateOne: Google первым; при его сбое — фолбэк на MyMemory", async () => {
+  const seen = [];
+  const httpsGet = (url) => {
+    seen.push(url);
+    if (url.includes("googleapis")) return Promise.reject(new Error("429"));
+    return Promise.resolve('{"responseData":{"translatedText":"Без перезарядки"}}');
+  };
+  assert.equal(await translateOne("No Reload", httpsGet), "Без перезарядки");
+  assert.match(seen[0], /googleapis/);
+  assert.match(seen[1], /mymemory/);
+});
+
+test("translateOne: эхо-ответ (перевод == оригинал) не считается переводом", async () => {
+  const httpsGet = (url) =>
+    Promise.resolve(url.includes("googleapis")
+      ? '[[["No Reload","No Reload"]]]'
+      : '{"responseData":{"translatedText":"no reload"}}');
+  assert.equal(await translateOne("No Reload", httpsGet), null);
+});
+
+test("runOnline: мисс зовёт MT (Google), пишет кэш, применяет", async () => {
   const cache = {};
   const seen = [];
   const httpsGet = (url) => {
     seen.push(url);
-    const q = decodeURIComponent(url.match(/q=([^&]+)/)[1]);
+    const q = decodeURIComponent(url.match(/q=([^&]+)/)[1]).replace(/\+/g, " ");
     const map = { "Unlimited Widgets": "Бесконечные виджеты", "Quantum Flux": "Квантовый поток" };
-    return Promise.resolve(JSON.stringify({ responseData: { translatedText: map[q] } }));
+    return Promise.resolve(JSON.stringify([[[map[q], q]]])); // gtx-формат
   };
   const out = await runOnline(sample(), { cache, httpsGet, targetKeys: KEYS });
   const cheats = out.trainer.blueprint.cheats;
   assert.equal(cheats[1].name, "Бесконечные виджеты");
   assert.equal(cheats[2].name, "Квантовый поток");
   assert.equal(cheats[0].name, "Бесконечное здоровье"); // не тронуто
-  assert.equal(seen.length, 2); // только 2 мисса
+  assert.equal(seen.length, 2); // 2 мисса, Google ответил с первого раза — фолбэк не дёргался
   assert.equal(cache["unlimited widgets"], "Бесконечные виджеты"); // закэшировано
 });
 

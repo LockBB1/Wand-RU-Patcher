@@ -29,7 +29,7 @@
     <s:String x:Key="S_ShowLog">Показывать лог</s:String>
     <s:String x:Key="S_TranslateCheats">Переводить имена читов</s:String>
     <s:String x:Key="S_TranslateOnline">Онлайн-перевод (нужен интернет)</s:String>
-    <s:String x:Key="S_TranslateOnlineWarn">Переводит всё, что не покрыл офлайн-словарь, через интернет. Бесплатный лимит ~1000 слов/день — при превышении часть имён останется на английском. Применяется после перезапуска Wand.</s:String>
+    <s:String x:Key="S_TranslateOnlineWarn">Переводит всё, что не покрыл офлайн-словарь, через интернет (Google, при сбое — MyMemory). При недоступности обоих сервисов часть имён останется на английском. Применяется после перезапуска Wand.</s:String>
     <s:String x:Key="S_ClearCache">Очистить кэш</s:String>
     <s:String x:Key="S_Close">Закрыть</s:String>
     <s:String x:Key="S_Log">Лог</s:String>
