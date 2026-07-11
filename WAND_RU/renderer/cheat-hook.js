@@ -1,0 +1,181 @@
+/* Wand RU — перехват и перевод имён читов в renderer. Сгенерировано build-hook.mjs, не править вручную. */
+(function () {
+  "use strict";
+  if (typeof window === "undefined" || window.__wandRuCheatHook) return;
+  window.__wandRuCheatHook = true;
+
+  var DICT = {"_comment":"Словарь перевода имён читов Wand/WeMod. Приоритет: idioms(полная фраза) > words(слово/фраза) > suffixes(X Multiplier/Rate) > prefixes(Unlimited/No/Set/...) > passthrough. word = {n:им, g:род m|f|n|pl, gen?:род.падеж, acc?:вин.падеж}. Compound-имена (A / B) переводятся по частям. Новые читы — данными сюда, не в код.","idioms":{"god mode":"Режим бога","stealth mode":"Режим скрытности","one-hit kill":"Убийство с одного удара","one hit kill":"Убийство с одного удара","one-hit kills":"Убийство с одного удара","one hit kills":"Убийство с одного удара","one hit stun":"Оглушение с одного удара","one hit destroy objects":"Уничтожение объектов с одного удара","rapid fire":"Скорострельность","super speed":"Суперскорость","super jump":"Супер-прыжок","invisibility":"Невидимость","gravity":"Гравитация","stop time":"Остановить время","fly up":"Лететь вверх","fly down":"Лететь вниз","fly mode":"Режим полёта","teleport":"Телепорт","teleport to waypoint":"Телепорт к точке маршрута","teleport to saved location":"Телепорт к сохранённой позиции","teleport to marked location":"Телепорт к отмеченной позиции","teleport to surface":"Телепорт на поверхность","teleport to lifepod":"Телепорт к капсуле","teleport down":"Телепорт вниз","undo teleport":"Отменить телепорт","mark location":"Отметить позицию","save location":"Сохранить позицию","daytime +1 hour":"Время суток +1 час","immune to all negative status":"Иммунитет ко всем негативным эффектам","unlock all blueprint":"Открыть все чертежи","unlock all blueprints":"Открыть все чертежи","no bounty":"Без розыска","unlimited horse health":"Бесконечное здоровье лошади","unlimited horse energy":"Бесконечная энергия лошади","slower oxygen depletion":"Медленный расход кислорода","faster oxygen depletion":"Быстрый расход кислорода","slower stats depletion":"Медленный расход характеристик","faster stats depletion":"Быстрый расход характеристик","stamina regeneration rate":"Скорость восстановления выносливости","stamina consumption rate":"Скорость расхода выносливости","fullness consumption rate":"Скорость расхода сытости","hydration consumption rate":"Скорость расхода гидратации","rest consumption rate":"Скорость расхода отдыха","time pass speed":"Скорость течения времени","game time speed":"Скорость игрового времени","instant acceleration":"Мгновенное ускорение","auto reload":"Авто-перезарядка","kill everything":"Убить всех","toggle hud":"Переключить HUD","items don't decrease":"Предметы не убывают","no heat":"Без розыска","no police reinforcements":"Без подкреплений полиции","no police spotting":"Полиция не замечает","vehicle invincibility":"Неуязвимость машины","instant harvest":"Мгновенный сбор","take ownership":"Присвоить","no vehicle damage":"Без урона машины","no vehicle crashing":"Без аварий","invincible":"Неуязвимость","invincibility":"Неуязвимость","no clip":"Сквозь стены","noclip":"Сквозь стены","better accuracy":"Улучшенная точность"},"words":{"health":{"n":"здоровье","g":"n","gen":"здоровья"},"max health":{"n":"макс. здоровье","g":"n","gen":"макс. здоровья"},"hp":{"n":"HP","g":"n"},"fp":{"n":"FP","g":"n"},"money":{"n":"деньги","g":"pl","gen":"денег"},"cash":{"n":"наличные","g":"pl","gen":"наличных"},"gold":{"n":"золото","g":"n","gen":"золота","acc":"золото"},"stamina":{"n":"выносливость","g":"f","gen":"выносливости","acc":"выносливость"},"energy":{"n":"энергия","g":"f","gen":"энергии","acc":"энергию"},"focus":{"n":"концентрация","g":"f","gen":"концентрации","acc":"концентрацию"},"mana":{"n":"мана","g":"f","gen":"маны","acc":"ману"},"power":{"n":"сила","g":"f","gen":"силы","acc":"силу"},"deadeye":{"n":"меткий глаз","g":"m","gen":"меткого глаза","acc":"меткий глаз"},"reload":{"n":"перезарядка","g":"f","gen":"перезарядки","acc":"перезарядку"},"ammo":{"n":"патроны","g":"pl","gen":"патронов","acc":"патроны"},"recoil":{"n":"отдача","g":"f","gen":"отдачи","acc":"отдачу"},"grenades":{"n":"гранаты","g":"pl","gen":"гранат","acc":"гранаты"},"damage":{"n":"урон","g":"m","gen":"урона","acc":"урон"},"accuracy":{"n":"точность","g":"f","gen":"точности","acc":"точность"},"shield":{"n":"щит","g":"m","gen":"щита","acc":"щит"},"xp":{"n":"опыт","g":"m","gen":"опыта","acc":"опыт"},"exp":{"n":"опыт","g":"m","gen":"опыта","acc":"опыт"},"experience":{"n":"опыт","g":"m","gen":"опыта","acc":"опыт"},"skill points":{"n":"очки навыков","g":"pl","gen":"очков навыков","acc":"очки навыков"},"items":{"n":"предметы","g":"pl","gen":"предметов","acc":"предметы"},"weight":{"n":"вес","g":"m","gen":"веса","acc":"вес"},"carrying weight":{"n":"вес переноски","g":"m","gen":"веса переноски","acc":"вес переноски"},"max carrying weight":{"n":"макс. вес переноски","g":"m","gen":"макс. веса переноски"},"max weight":{"n":"макс. вес","g":"m","gen":"макс. веса"},"oxygen":{"n":"кислород","g":"m","gen":"кислорода","acc":"кислород"},"water":{"n":"вода","g":"f","gen":"воды","acc":"воду"},"food":{"n":"еда","g":"f","gen":"еды","acc":"еду"},"hunger":{"n":"голод","g":"m","gen":"голода","acc":"голод"},"thirst":{"n":"жажда","g":"f","gen":"жажды","acc":"жажду"},"radiation":{"n":"радиация","g":"f","gen":"радиации","acc":"радиацию"},"fall damage":{"n":"урон от падения","g":"m","gen":"урона от падения"},"crafting":{"n":"крафт","g":"m","gen":"крафта","acc":"крафт"},"crafting materials":{"n":"ресурсы крафта","g":"pl","gen":"ресурсов крафта","acc":"ресурсы крафта"},"crafting requirements":{"n":"требования крафта","g":"pl","gen":"требований крафта","acc":"требования крафта"},"building requirements":{"n":"требования постройки","g":"pl","gen":"требований постройки","acc":"требования постройки"},"construction":{"n":"строительство","g":"n","gen":"строительства","acc":"строительство"},"research":{"n":"исследования","g":"pl","gen":"исследований","acc":"исследования"},"resources":{"n":"ресурсы","g":"pl","gen":"ресурсов","acc":"ресурсы"},"wood":{"n":"дерево","g":"n","gen":"дерева","acc":"дерево"},"faith":{"n":"вера","g":"f","gen":"веры","acc":"веру"},"happiness":{"n":"счастье","g":"n","gen":"счастья","acc":"счастье"},"recruiting":{"n":"вербовка","g":"f","gen":"вербовки","acc":"вербовку"},"current population":{"n":"население","g":"n","gen":"населения","acc":"население"},"units":{"n":"юниты","g":"pl","gen":"юнитов","acc":"юниты"},"nitro":{"n":"нитро","g":"n","gen":"нитро","acc":"нитро"},"nanite clusters":{"n":"нанокластеры","g":"pl","gen":"нанокластеров","acc":"нанокластеры"},"stats":{"n":"характеристики","g":"pl","gen":"характеристик","acc":"характеристики"},"level":{"n":"уровень","g":"m","gen":"уровня","acc":"уровень"},"player level":{"n":"уровень игрока","g":"m","gen":"уровня игрока","acc":"уровень игрока"},"speed":{"n":"скорость","g":"f","gen":"скорости","acc":"скорость"},"game speed":{"n":"скорость игры","g":"f","gen":"скорости игры","acc":"скорость игры"},"player speed":{"n":"скорость игрока","g":"f","gen":"скорости игрока","acc":"скорость игрока"},"movement speed":{"n":"скорость передвижения","g":"f","gen":"скорости передвижения","acc":"скорость передвижения"},"attack speed":{"n":"скорость атаки","g":"f","gen":"скорости атаки","acc":"скорость атаки"},"jump height":{"n":"высота прыжка","g":"f","gen":"высоты прыжка","acc":"высоту прыжка"},"timer":{"n":"таймер","g":"m","gen":"таймера","acc":"таймер"},"challenge timer":{"n":"таймер испытания","g":"m","gen":"таймера испытания","acc":"таймер испытания"},"daytime":{"n":"время суток","g":"n","gen":"времени суток","acc":"время суток"},"skill cooldown":{"n":"перезарядка навыка","g":"f","gen":"перезарядки навыка","acc":"перезарядку навыка"},"teleport":{"n":"телепорт","g":"m","gen":"телепорта","acc":"телепорт"},"location":{"n":"позиция","g":"f","gen":"позиции","acc":"позицию"},"ship health":{"n":"здоровье корабля","g":"n","gen":"здоровья корабля"},"vehicle health":{"n":"здоровье машины","g":"n","gen":"здоровья машины"},"ai vehicles":{"n":"машины ИИ","g":"pl","gen":"машин ИИ","acc":"машины ИИ"},"hits":{"n":"удары","g":"pl","gen":"ударов","acc":"удары"},"kills":{"n":"убийства","g":"pl","gen":"убийств","acc":"убийства"},"defense":{"n":"защита","g":"f","gen":"защиты","acc":"защиту"},"durability":{"n":"прочность","g":"f","gen":"прочности","acc":"прочность"},"breath":{"n":"дыхание","g":"n","gen":"дыхания","acc":"дыхание"},"battery":{"n":"заряд","g":"m","gen":"заряда","acc":"заряд"},"temperature":{"n":"температура","g":"f","gen":"температуры","acc":"температуру"},"body temperature":{"n":"температура тела","g":"f","gen":"температуры тела","acc":"температуру тела"},"building":{"n":"строительство","g":"n","gen":"строительства","acc":"строительство"},"combo":{"n":"комбо","g":"n","gen":"комбо","acc":"комбо"},"eitr":{"n":"эйтр","g":"m","gen":"эйтра","acc":"эйтр"},"torpidity":{"n":"усталость","g":"f","gen":"усталости","acc":"усталость"},"swim speed":{"n":"скорость плавания","g":"f","gen":"скорости плавания","acc":"скорость плавания"},"move speed":{"n":"скорость передвижения","g":"f","gen":"скорости передвижения","acc":"скорость передвижения"},"walking speed":{"n":"скорость ходьбы","g":"f","gen":"скорости ходьбы","acc":"скорость ходьбы"},"tool energy":{"n":"энергия инструмента","g":"f","gen":"энергии инструмента","acc":"энергию инструмента"},"facility power":{"n":"энергия базы","g":"f","gen":"энергии базы","acc":"энергию базы"},"money value":{"n":"деньги","g":"pl","gen":"денег","acc":"деньги"},"time":{"n":"время","g":"n","gen":"времени","acc":"время"},"skills":{"n":"навыки","g":"pl","gen":"навыков","acc":"навыки"},"mission":{"n":"миссия","g":"f","gen":"миссии","acc":"миссию"},"skill cooldowns":{"n":"перезарядки навыков","g":"pl","gen":"перезарядок навыков","acc":"перезарядки навыков"},"attack cooldowns":{"n":"перезарядки атак","g":"pl","gen":"перезарядок атак","acc":"перезарядки атак"},"death penalty":{"n":"штраф за смерть","g":"m","gen":"штрафа за смерть","acc":"штраф за смерть"},"credits":{"n":"кредиты","g":"pl","gen":"кредитов","acc":"кредиты"},"score":{"n":"очки","g":"pl","gen":"очков","acc":"очки"},"heat":{"n":"розыск","g":"m","gen":"розыска","acc":"розыск"},"police":{"n":"полиция","g":"f","gen":"полиции","acc":"полицию"},"vehicle":{"n":"машина","g":"f","gen":"машины","acc":"машину"},"vehicle damage":{"n":"урон машины","g":"m","gen":"урона машины"},"boost":{"n":"ускорение","g":"n","gen":"ускорения","acc":"ускорение"},"nitro boost":{"n":"нитро-ускорение","g":"n","gen":"нитро-ускорения","acc":"нитро-ускорение"},"jetpack boost":{"n":"ускорение джетпака","g":"n","gen":"ускорения джетпака","acc":"ускорение джетпака"},"race timer":{"n":"таймер гонки","g":"m","gen":"таймера гонки","acc":"таймер гонки"},"weapon energy":{"n":"энергия оружия","g":"f","gen":"энергии оружия","acc":"энергию оружия"},"melee":{"n":"ближний бой","g":"m","gen":"ближнего боя","acc":"ближний бой"},"crafting speed":{"n":"скорость крафта","g":"f","gen":"скорости крафта","acc":"скорость крафта"},"drop rate":{"n":"шанс дропа","g":"m","gen":"шанса дропа","acc":"шанс дропа"},"critical chance":{"n":"шанс крита","g":"m","gen":"шанса крита","acc":"шанс крита"},"dino":{"n":"дино","g":"m","gen":"дино","acc":"дино"},"dinos":{"n":"дино","g":"pl","gen":"дино","acc":"дино"},"creature":{"n":"существо","g":"n","gen":"существа","acc":"существо"},"creatures":{"n":"существа","g":"pl","gen":"существ","acc":"существа"},"egg":{"n":"яйцо","g":"n","gen":"яйца","acc":"яйцо"},"engrams":{"n":"энграммы","g":"pl","gen":"энграмм","acc":"энграммы"},"tek engrams":{"n":"тек-энграммы","g":"pl","gen":"тек-энграмм","acc":"тек-энграммы"},"tribe":{"n":"племя","g":"n","gen":"племени","acc":"племя"},"structures":{"n":"постройки","g":"pl","gen":"построек","acc":"постройки"},"mutation":{"n":"мутация","g":"f","gen":"мутации","acc":"мутацию"},"harvest":{"n":"сбор","g":"m","gen":"сбора","acc":"сбор"},"fortitude":{"n":"стойкость","g":"f","gen":"стойкости","acc":"стойкость"},"imprint quality":{"n":"качество импринта","g":"n","gen":"качества импринта","acc":"качество импринта"},"creative mode":{"n":"творческий режим","g":"m","gen":"творческого режима","acc":"творческий режим"},"time of day":{"n":"время суток","g":"n","gen":"времени суток","acc":"время суток"},"gravity strength":{"n":"сила гравитации","g":"f","gen":"силы гравитации","acc":"силу гравитации"},"spaceship":{"n":"корабль","g":"m","gen":"корабля","acc":"корабль"},"ship":{"n":"корабль","g":"m","gen":"корабля","acc":"корабль"},"item":{"n":"предмет","g":"m","gen":"предмета","acc":"предмет"},"player":{"n":"игрок","g":"m","gen":"игрока","acc":"игрока"},"weapon":{"n":"оружие","g":"n","gen":"оружия","acc":"оружие"},"upgrade":{"n":"улучшение","g":"n","gen":"улучшения","acc":"улучшение"},"tokens":{"n":"жетоны","g":"pl","gen":"жетонов","acc":"жетоны"},"runes":{"n":"руны","g":"pl","gen":"рун","acc":"руны"},"rocket":{"n":"ракета","g":"f","gen":"ракеты","acc":"ракету"},"equipment":{"n":"снаряжение","g":"n","gen":"снаряжения","acc":"снаряжение"},"intel":{"n":"разведданные","g":"pl","gen":"разведданных","acc":"разведданные"},"house":{"n":"дом","g":"m","gen":"дома","acc":"дом"},"trees":{"n":"деревья","g":"pl","gen":"деревьев","acc":"деревья"},"overheat":{"n":"перегрев","g":"m","gen":"перегрева","acc":"перегрев"},"hour":{"n":"час","g":"m","gen":"часа","acc":"час"},"pal":{"n":"пал","g":"m","gen":"пала","acc":"пала"},"pals":{"n":"палы","g":"pl","gen":"палов","acc":"палов"},"cooldown":{"n":"перезарядка","g":"f","gen":"перезарядки","acc":"перезарядку"},"cooldowns":{"n":"перезарядки","g":"pl","gen":"перезарядок","acc":"перезарядки"},"points":{"n":"очки","g":"pl","gen":"очков","acc":"очки"},"sprint":{"n":"спринт","g":"m","gen":"спринта","acc":"спринт"},"reload speed":{"n":"скорость перезарядки","g":"f","gen":"скорости перезарядки","acc":"скорость перезарядки"},"attack":{"n":"атака","g":"f","gen":"атаки","acc":"атаку"},"skill":{"n":"навык","g":"m","gen":"навыка","acc":"навык"},"fuel":{"n":"топливо","g":"n","gen":"топлива","acc":"топливо"},"shields":{"n":"щиты","g":"pl","gen":"щитов","acc":"щиты"},"hull":{"n":"корпус","g":"m","gen":"корпуса","acc":"корпус"},"cargo":{"n":"груз","g":"m","gen":"груза","acc":"груз"},"nanites":{"n":"наниты","g":"pl","gen":"нанитов","acc":"наниты"},"wanted level":{"n":"уровень розыска","g":"m","gen":"уровня розыска","acc":"уровень розыска"},"enemy":{"n":"враг","g":"m","gen":"врага","acc":"врага"},"tech":{"n":"технологии","g":"pl","gen":"технологий","acc":"технологии"},"religion":{"n":"религия","g":"f","gen":"религии","acc":"религию"},"seeds":{"n":"семена","g":"pl","gen":"семян","acc":"семена"},"material":{"n":"материал","g":"m","gen":"материала","acc":"материал"},"materials":{"n":"материалы","g":"pl","gen":"материалов","acc":"материалы"},"production":{"n":"производство","g":"n","gen":"производства","acc":"производство"},"components":{"n":"компоненты","g":"pl","gen":"компонентов","acc":"компоненты"},"staff":{"n":"персонал","g":"m","gen":"персонала","acc":"персонал"},"tiles":{"n":"плитки","g":"pl","gen":"плиток","acc":"плитки"},"status":{"n":"статус","g":"m","gen":"статуса","acc":"статус"},"geo":{"n":"гео","g":"n","gen":"гео","acc":"гео"},"packs":{"n":"наборы","g":"pl","gen":"наборов","acc":"наборы"},"modifiers":{"n":"модификаторы","g":"pl","gen":"модификаторов","acc":"модификаторы"},"mutagen":{"n":"мутаген","g":"m","gen":"мутагена","acc":"мутаген"},"scale":{"n":"масштаб","g":"m","gen":"масштаба","acc":"масштаб"},"agency":{"n":"агентство","g":"n","gen":"агентства","acc":"агентство"},"jump":{"n":"прыжок","g":"m","gen":"прыжка","acc":"прыжок"},"death":{"n":"смерть","g":"f","gen":"смерти","acc":"смерть"},"meter":{"n":"счётчик","g":"m","gen":"счётчика","acc":"счётчик"},"stone":{"n":"камень","g":"m","gen":"камня","acc":"камень"},"population":{"n":"население","g":"n","gen":"населения","acc":"население"},"reputation":{"n":"репутация","g":"f","gen":"репутации","acc":"репутацию"},"pistol":{"n":"пистолет","g":"m","gen":"пистолета","acc":"пистолет"},"shotgun":{"n":"дробовик","g":"m","gen":"дробовика","acc":"дробовик"},"rifle":{"n":"винтовка","g":"f","gen":"винтовки","acc":"винтовку"},"movement":{"n":"движение","g":"n","gen":"движения","acc":"движение"},"comfort":{"n":"комфорт","g":"m","gen":"комфорта","acc":"комфорт"},"research points":{"n":"очки исследований","g":"pl","gen":"очков исследований","acc":"очки исследований"}},"categories":{"player":"Игрок","inventory":"Инвентарь","stats":"Характеристики","game":"Игра","weapons":"Оружие","enemies":"Враги","physics":"Физика","teleport":"Телепорт","vehicles":"Транспорт","world":"Мир","gameplay":"Геймплей"},"suffixes":[{"match":"^(.+?)\\s+Multiplier$","template":"Множитель {0}"},{"match":"^(.+?)\\s+Consumption Rate$","template":"Скорость расхода {0}"},{"match":"^(.+?)\\s+Regeneration Rate$","template":"Скорость восстановления {0}"},{"match":"^(.+?)\\s+Drop Rate$","template":"Шанс выпадения {0}"},{"match":"^(.+?)\\s+Rate$","template":"Скорость {0}"},{"match":"^(.+?)\\s+Speed$","template":"Скорость {0}"},{"match":"^(.+?)\\s+Cooldowns$","template":"Перезарядки {0}"},{"match":"^(.+?)\\s+Cooldown$","template":"Перезарядка {0}"},{"match":"^(.+?)\\s+Duration$","template":"Длительность {0}"},{"match":"^(.+?)\\s+Amount$","template":"Количество {0}"},{"match":"^(.+?)\\s+Level$","template":"Уровень {0}"},{"match":"^(.+?)\\s+Points$","template":"Очки {0}"},{"match":"^(.+?)\\s+Size$","template":"Размер {0}"},{"match":"^(.+?)\\s+Chance$","template":"Шанс {0}"},{"match":"^(.+?)\\s+Damage$","template":"Урон {0}"},{"match":"^(.+?)\\s+Charges$","template":"Заряды {0}"},{"match":"^(.+?)\\s+Consumption$","template":"Расход {0}"},{"match":"^(.+?)\\s+Depletion$","template":"Расход {0}"},{"match":"^(.+?)\\s+Capacity$","template":"Вместимость {0}"},{"match":"^(.+?)\\s+Meter$","template":"Счётчик {0}"},{"match":"^(.+?)\\s+Count$","template":"Количество {0}"},{"match":"^(.+?)\\s+Cost$","template":"Стоимость {0}"},{"match":"^(.+?)\\s+Regen$","template":"Восстановление {0}"},{"match":"^(.+?)\\s+Ammo$","template":"Патроны {0}"}],"prefixes":[{"match":"^(?:unlimited|infinite)\\s+(.+)$","adj":{"m":"Бесконечный","f":"Бесконечная","n":"Бесконечное","pl":"Бесконечные"}},{"match":"^instant\\s+(.+)$","adj":{"m":"Мгновенный","f":"Мгновенная","n":"Мгновенное","pl":"Мгновенные"}},{"match":"^(?:super|mega)\\s+(.+)$","adj":{"m":"Супер","f":"Супер","n":"Супер","pl":"Супер"}},{"match":"^fast\\s+(.+)$","adj":{"m":"Быстрый","f":"Быстрая","n":"Быстрое","pl":"Быстрые"}},{"match":"^easy\\s+(.+)$","adj":{"m":"Лёгкий","f":"Лёгкая","n":"Лёгкое","pl":"Лёгкие"}},{"match":"^zero\\s+(.+)$","adj":{"m":"Нулевой","f":"Нулевая","n":"Нулевое","pl":"Нулевые"}},{"match":"^full\\s+(.+)$","adj":{"m":"Полный","f":"Полная","n":"Полное","pl":"Полные"}},{"match":"^free\\s+(.+)$","adj":{"m":"Бесплатный","f":"Бесплатная","n":"Бесплатное","pl":"Бесплатные"}},{"match":"^no\\s+(.+)$","form":"gen","template":"Без {0}"},{"match":"^max(?:imum)?\\s+(.+)$","template":"Макс. {0}"},{"match":"^min(?:imum)?\\s+(.+)$","template":"Мин. {0}"},{"match":"^set\\s+(.+)$","form":"acc","template":"Задать {0}"},{"match":"^edit\\s+(.+)$","form":"acc","template":"Изменить {0}"},{"match":"^refill\\s+(.+)$","form":"acc","template":"Пополнить {0}"},{"match":"^restore\\s+(.+)$","form":"acc","template":"Восстановить {0}"},{"match":"^add\\s+(.+)$","form":"acc","template":"Добавить {0}"},{"match":"^increase\\s+(.+)$","form":"acc","template":"Увеличить {0}"},{"match":"^decrease\\s+(.+)$","form":"acc","template":"Уменьшить {0}"},{"match":"^multiply\\s+(.+)$","form":"acc","template":"Умножить {0}"},{"match":"^reset\\s+(.+)$","form":"acc","template":"Сбросить {0}"},{"match":"^freeze\\s+(.+)$","form":"acc","template":"Заморозить {0}"},{"match":"^ignore\\s+(.+)$","form":"acc","template":"Игнорировать {0}"},{"match":"^enable\\s+(.+)$","form":"acc","template":"Включить {0}"},{"match":"^disable\\s+(.+)$","form":"acc","template":"Выключить {0}"},{"match":"^toggle\\s+(.+)$","form":"acc","template":"Переключить {0}"},{"match":"^save\\s+(.+)$","form":"acc","template":"Сохранить {0}"},{"match":"^undo\\s+(.+)$","form":"acc","template":"Отменить {0}"},{"match":"^unlock\\s+(.+)$","form":"acc","template":"Открыть {0}"},{"match":"^give\\s+(.+)$","form":"acc","template":"Выдать {0}"},{"match":"^spawn\\s+(.+)$","form":"acc","template":"Создать {0}"},{"match":"^kill\\s+(.+)$","form":"acc","template":"Убить {0}"},{"match":"^clear\\s+(.+)$","form":"acc","template":"Очистить {0}"},{"match":"^complete\\s+(.+)$","form":"acc","template":"Завершить {0}"},{"match":"^get\\s+(.+)$","form":"acc","template":"Получить {0}"},{"match":"^make\\s+(.+)$","form":"acc","template":"Сделать {0}"},{"match":"^find\\s+(.+)$","form":"acc","template":"Найти {0}"},{"match":"^take\\s+(.+)$","form":"acc","template":"Взять {0}"},{"match":"^hatch\\s+(.+)$","form":"acc","template":"Вылупить {0}"},{"match":"^force\\s+(.+)$","template":"Принудительно {0}"},{"match":"^better\\s+(.+)$","adj":{"m":"Улучшенный","f":"Улучшенная","n":"Улучшенное","pl":"Улучшенные"}},{"match":"^clone\\s+(.+)$","form":"acc","template":"Клонировать {0}"},{"match":"^all\\s+(.+)$","template":"Все {0}"},{"match":"^auto\\s+(.+)$","template":"Авто-{0}"}]};
+
+  // CheatTranslator — движок перевода имён читов (Фаза 2, engine-first).
+  // Чистые функции, без зависимостей. Тестируется node:test.
+  // Рантайм-цель: renderer Wand (HAR: GET api.wemod.com/v3/games/{id}/trainer, Sec-Fetch-* => fetch/XHR).
+  // Словарь (idioms/words/categories/prefixes/suffixes) передаётся аргументом; данные — cheat-dictionary.json.
+  //
+  // Приоритет резолва имени: compound-split(/ , & and) -> для каждой части:
+  //   idiom(полная фраза) > word/phrase(полная фраза) > suffix(Multiplier/Rate) > prefix(Unlimited/No/Set/...)
+  //   > passthrough(как есть).
+  // Слово словаря: { n: им.падеж, g: род m|f|n|pl, gen?: род.падеж(«Без X»,«Множитель X»),
+  //   acc?: вин.падеж(«Задать X»,«Изменить X»; нужен для жен. 1-го скл.: энергия->энергию) }.
+  
+  const TARGET_KEYS = new Set(["name", "displayName", "label"]);
+  const CYRILLIC = /[А-Яа-яЁё]/;
+  // Разбиение compound-имён: сохраняем разделители, чтобы собрать обратно (God Mode / Ignore Hits).
+  const SPLIT = /(\s*\/\s*|\s*,\s*|\s*&\s*|\s+and\s+)/i;
+  
+  function hasKey(o, k) {
+    return o && Object.prototype.hasOwnProperty.call(o, k);
+  }
+  
+  const MAX_DEPTH = 5; // страховка от глубокой взаимной рекурсии resolveName<->resolveTail
+  
+  // Хвост (существительное после префикса) -> {nom, gen, acc, gender}. Не нашли — рекурсия в resolveName.
+  function resolveTail(tail, dict, depth) {
+    const t = tail.trim();
+    const key = t.toLowerCase();
+    if (hasKey(dict.idioms, key)) {
+      return { nom: dict.idioms[key], gen: null, acc: null, gender: undefined };
+    }
+    if (hasKey(dict.words, key)) {
+      const w = dict.words[key];
+      return { nom: w.n, gen: w.gen || null, acc: w.acc || null, gender: w.g };
+    }
+    if (depth < MAX_DEPTH) {
+      const inner = resolveName(t, dict, depth + 1); // вложенные префиксы: "Max HP", "X Multiplier"
+      if (inner !== t) return { nom: inner, gen: null, acc: null, gender: undefined };
+    }
+    return { nom: t, gen: null, acc: null, gender: undefined }; // англ. как есть
+  }
+  
+  // Одна часть имени (без compound-разделителей) -> строка перевода.
+  function resolveName(seg, dict, depth = 0) {
+    const s = seg.trim();
+    if (s === "" || CYRILLIC.test(s)) return seg;
+    const key = s.toLowerCase();
+  
+    if (hasKey(dict.idioms, key)) return dict.idioms[key];
+    if (hasKey(dict.words, key)) return dict.words[key].n;
+  
+    // Тег в скобках: "[Spaceship] Unlimited Health" -> "[Корабль] Бесконечное здоровье".
+    const br = s.match(/^\[([^\]]+)\]\s*(.+)$/);
+    if (br && depth < MAX_DEPTH) {
+      return "[" + resolveName(br[1], dict, depth + 1) + "] " + resolveName(br[2], dict, depth + 1);
+    }
+  
+    // Prefix-паттерны (раньше suffix: "Set X Multiplier" = Set(X Multiplier), а не (Set X)Multiplier).
+    for (const p of dict.prefixes || []) {
+      const m = s.match(new RegExp(p.match, "i"));
+      if (!m) continue;
+      const r = resolveTail(m[1] !== undefined ? m[1] : "", dict, depth);
+      if (p.adj) return p.adj[r.gender || "m"] + " " + r.nom; // прилагательное по роду
+      if (p.form === "gen") return p.template.replace("{0}", r.gen || r.nom); // родительный
+      if (p.form === "acc") return p.template.replace("{0}", r.acc || r.nom); // винительный
+      return p.template.replace("{0}", r.nom); // им.падеж
+    }
+  
+    // Suffix-паттерны (X Multiplier, X Rate): хвост в родительном.
+    for (const suf of dict.suffixes || []) {
+      const m = s.match(new RegExp(suf.match, "i"));
+      if (!m) continue;
+      const r = resolveTail(m[1] !== undefined ? m[1] : "", dict, depth);
+      return suf.template.replace("{0}", r.gen || r.nom);
+    }
+    return seg; // ничего не подошло — оригинал
+  }
+  
+  // Полное имя чита -> перевод. Идемпотентно (кириллица не трогается). Compound через разделители.
+  function translateText(str, dict) {
+    if (typeof str !== "string") return str;
+    if (str.trim() === "" || CYRILLIC.test(str)) return str;
+    const res = str
+      .split(SPLIT)
+      .map((seg) => (SPLIT.test(seg) ? seg : resolveName(seg, dict)))
+      .join("");
+    // Капитализация первой КИРИЛЛИЧЕСКОЙ буквы (переведённый хвост строчный; латиницу/плейсхолдеры не трогаем).
+    const i = res.search(/[а-яёА-ЯЁ]/);
+    return i < 0 ? res : res.slice(0, i) + res.charAt(i).toLocaleUpperCase("ru") + res.slice(i + 1);
+  }
+  
+  // Slug категории ("player") -> имя ("Игрок"). Неизвестный slug -> как есть.
+  function translateCategory(slug, dict) {
+    if (typeof slug !== "string") return slug;
+    const cats = dict.categories || {};
+    const key = slug.trim().toLowerCase();
+    return hasKey(cats, key) ? cats[key] : slug;
+  }
+  
+  // Рекурсивный walker: новый объект, вход не мутирует. Переводит имена (TARGET_KEYS) и category.
+  function translateCheats(node, dict) {
+    if (Array.isArray(node)) return node.map((n) => translateCheats(n, dict));
+    if (node && typeof node === "object") {
+      const out = {};
+      for (const [k, v] of Object.entries(node)) {
+        if (typeof v === "string" && TARGET_KEYS.has(k)) out[k] = translateText(v, dict);
+        else if (typeof v === "string" && k === "category") out[k] = translateCategory(v, dict);
+        else out[k] = translateCheats(v, dict);
+      }
+      return out;
+    }
+    return node;
+  }
+
+  var TRAINER = /\/v3\/games\/\d+\/trainer/;
+  function translateBody(text) {
+    try {
+      var data = JSON.parse(text);
+      return JSON.stringify(translateCheats(data, DICT));
+    } catch (e) {
+      return null; // не JSON или сбой — не трогаем
+    }
+  }
+
+  // --- fetch ---
+  var _fetch = window.fetch;
+  if (typeof _fetch === "function") {
+    window.fetch = function (input, init) {
+      var url = typeof input === "string" ? input : (input && input.url) || "";
+      var p = _fetch.apply(this, arguments);
+      if (!TRAINER.test(url)) return p;
+      return p.then(function (res) {
+        try {
+          if (!res || !res.ok) return res;
+          var ct = (res.headers && res.headers.get("content-type")) || "";
+          if (ct.indexOf("json") < 0) return res;
+          return res.clone().text().then(function (text) {
+            var t = translateBody(text);
+            if (t == null) return res;
+            var headers = new Headers(res.headers);
+            headers.delete("content-length");
+            return new Response(t, { status: res.status, statusText: res.statusText, headers: headers });
+          }).catch(function () { return res; });
+        } catch (e) { return res; }
+      });
+    };
+  }
+
+  // --- XMLHttpRequest (best-effort фолбэк) ---
+  var XP = window.XMLHttpRequest && window.XMLHttpRequest.prototype;
+  if (XP && XP.open && XP.send) {
+    var _open = XP.open, _send = XP.send;
+    XP.open = function (method, url) {
+      this.__wandRuUrl = url;
+      return _open.apply(this, arguments);
+    };
+    XP.send = function () {
+      var xhr = this;
+      if (xhr.__wandRuUrl && TRAINER.test(xhr.__wandRuUrl)) {
+        xhr.addEventListener("readystatechange", function () {
+          if (xhr.readyState === 4 && xhr.status >= 200 && xhr.status < 300) {
+            try {
+              var t = translateBody(xhr.responseText);
+              if (t != null) {
+                Object.defineProperty(xhr, "responseText", { value: t, configurable: true });
+                Object.defineProperty(xhr, "response", { value: t, configurable: true });
+              }
+            } catch (e) { /* оставить как есть */ }
+          }
+        });
+      }
+      return _send.apply(this, arguments);
+    };
+  }
+})();
