@@ -45,6 +45,23 @@ public static class AsarIntegrity
         return patched;
     }
 
+    /// <summary>
+    /// Read-back: у каждого exe с blob хэш совпадает с текущим app.asar. Иначе Wand молча не стартует -
+    /// кидаем понятную ошибку сразу после патча, а не оставляем юзеру чёрный экран.
+    /// </summary>
+    public static void VerifyExesMatch(string appDir, string asarPath)
+    {
+        var expected = ComputeHeaderHash(asarPath);
+        foreach (var exe in Directory.EnumerateFiles(appDir, "*.exe", SearchOption.TopDirectoryOnly))
+        {
+            var got = ReadHash(exe);
+            if (got is not null && got != expected)
+                throw new InvalidOperationException(
+                    $"Не удалось обновить проверку целостности в {Path.GetFileName(exe)} - Wand не запустится. " +
+                    "Откатите русификатор (Восстановить) и создайте issue с экспортом лога.");
+        }
+    }
+
     /// <summary>Текущее значение integrity-хэша из exe (null, если blob нет). Для проверок/тестов.</summary>
     public static string? ReadHash(string exePath)
     {

@@ -32,6 +32,13 @@ public static class JsLocalePatch
         "(\\[\"[a-z]{2}-[A-Z]{2}\",(?:\"[^\"]*\"|[A-Za-z_$][\\w$]*)\\])(\\]\\))",
         RegexOptions.Compiled);
 
+    // Сигнатура порчи от жадного якоря: за ["en-US","ru-RU" сразу ] или запятая+не-кавычка (напр.
+    // ["en-US","ru-RU",f] или delete m["en-US","ru-RU"]). Валидный список - только ["en-US","ru-RU","xx"...
+    static readonly Regex LocaleCorruption = new("\\[\"en-US\",\"ru-RU\"(?:\\]|,(?!\"))", RegexOptions.Compiled);
+
+    /// <summary>Патч попал не в список локалей (регресс якоря на новой версии Wand)?</summary>
+    public static bool HasCorruption(string js) => LocaleCorruption.IsMatch(js);
+
     public static bool NeedsPatch(string js) =>
         !js.Contains("\"ru-RU\"") &&
         (LocaleList.IsMatch(js) || LangMetaTail.IsMatch(js) || ShortPairTail.IsMatch(js));

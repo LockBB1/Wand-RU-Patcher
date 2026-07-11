@@ -74,6 +74,26 @@ public class AsarIntegrityTests
         finally { Directory.Delete(dir, true); }
     }
 
+    [Fact]
+    public void VerifyExesMatch_throws_when_exe_hash_stale()
+    {
+        var dir = NewDir();
+        try
+        {
+            var res = Path.Combine(dir, "resources");
+            Directory.CreateDirectory(res);
+            var asar = WriteFakeAsar(res, "{\"files\":{\"a.js\":{\"size\":1,\"offset\":\"0\"}}}");
+            WriteExeWithBlob(dir, "Wand.exe", new string('0', 64)); // хэш не соответствует asar
+
+            var ex = Assert.Throws<InvalidOperationException>(() => AsarIntegrity.VerifyExesMatch(dir, asar));
+            Assert.Contains("не запустится", ex.Message);
+
+            AsarIntegrity.SyncAppDir(dir, asar);                    // записали правильный хэш
+            AsarIntegrity.VerifyExesMatch(dir, asar);               // теперь не кидает
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
     static string NewDir()
     {
         var d = Path.Combine(Path.GetTempPath(), "wru-int-" + Path.GetRandomFileName());

@@ -61,6 +61,8 @@ public sealed class RuPatcher
         // без обновления хэша Electron молча не стартует. Прописываем актуальный хэш в exe.
         if (AsarIntegrity.SyncAppDir(_appDir, _asar, _log) == 0)
             _log("Целостность: встроенная проверка не обнаружена (старая версия Wand) - пропуск.");
+        else
+            AsarIntegrity.VerifyExesMatch(_appDir, _asar); // read-back: хэш реально записан (иначе тихий не-старт)
 
         var man = new PatchManifest
         {
@@ -122,13 +124,20 @@ public sealed class RuPatcher
     internal static void VerifyTree(string treeRoot)
     {
         var ruJson = Path.Combine(treeRoot, "static", "strings", "ru-RU.json");
-        var ok = File.Exists(ruJson) &&
-                 Directory.EnumerateFiles(treeRoot, "*.js", SearchOption.AllDirectories)
-                     .Any(f => File.ReadAllText(f).Contains("\"ru-RU\""));
+        var jsFiles = Directory.EnumerateFiles(treeRoot, "*.js", SearchOption.AllDirectories).ToList();
+        var ok = File.Exists(ruJson) && jsFiles.Any(f => File.ReadAllText(f).Contains("\"ru-RU\""));
         if (!ok)
             throw new NotSupportedException(
                 "Эта версия Wand пока не поддерживается: не найдены точки для вставки русской локали. " +
                 "app.asar не изменён - Wand работает как раньше. Проверьте обновление WRP или создайте issue с экспортом лога.");
+
+        // Guard: жадный якорь мог попасть не в список локалей (регресс на новой версии Wand).
+        // Ловим ДО repack - app.asar ещё оригинальный, Wand не сломан.
+        var corrupt = jsFiles.FirstOrDefault(f => JsLocalePatch.HasCorruption(File.ReadAllText(f)));
+        if (corrupt is not null)
+            throw new NotSupportedException(
+                $"Патч локали дал сбой на этой версии Wand (якорь попал не в список локалей: {Path.GetFileName(corrupt)}). " +
+                "app.asar не изменён. Обновите WRP или создайте issue с экспортом лога.");
     }
 
     static void CopyDir(string s, string d)

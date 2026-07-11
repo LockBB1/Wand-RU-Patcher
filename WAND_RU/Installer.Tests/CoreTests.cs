@@ -136,4 +136,15 @@ public class JsLocalePatchTests
         var js = "x([[\"pt\",\"português\"],[\"tr\",\"Türkçe\"]]);";
         Assert.Contains("[\"ru\",\"Русский\"]", JsLocalePatch.Patch(js, Native, Flag));
     }
+
+    [Theory]
+    [InlineData("var y=new Map([[\"en-US\",\"ru-RU\",f]]);")]   // порча Map-записи
+    [InlineData("delete m[\"en-US\",\"ru-RU\"];")]              // порча delete
+    [InlineData("supportedLocales:[\"en-US\",\"ru-RU\"],x")]     // одиночный список
+    public void HasCorruption_flags_bad_anchor_hits(string js) => Assert.True(JsLocalePatch.HasCorruption(js));
+
+    [Theory]
+    [InlineData("var a=[\"en-US\",\"ru-RU\",\"zh-CN\",\"de-DE\"];")] // валидный список локалей
+    [InlineData("var a=[\"en-US\",\"zh-CN\"];")]                      // без ru-RU
+    public void HasCorruption_passes_valid_locale_list(string js) => Assert.False(JsLocalePatch.HasCorruption(js));
 }
