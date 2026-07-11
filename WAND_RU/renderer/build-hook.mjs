@@ -68,7 +68,11 @@ ${indent(onlineBody)}
     try { return JSON.parse(d.fs.readFileSync(d.cache, "utf8")) || {}; } catch (e) { return {}; }
   }
   function saveCache(d, cache) {
-    try { d.fs.writeFileSync(d.cache, JSON.stringify(cache), "utf8"); } catch (e) { /* не критично */ }
+    try {
+      var disk = loadCache(d);                  // подхватить записи параллельных запросов/этой сессии
+      for (var k in cache) disk[k] = cache[k];   // наш прогресс поверх диска (merge, чужое не затираем)
+      d.fs.writeFileSync(d.cache, JSON.stringify(disk), "utf8");
+    } catch (e) { /* не критично */ }
   }
   function httpsGetter(d) {
     return function (url) {
@@ -126,8 +130,11 @@ ${indent(onlineBody)}
           return out;
         });
       });
+      // Кэш пишем по ПОЛНОМУ завершению MT (в фоне), а не по 12s-таймауту ответа: большая игра
+      // не укладывается в 12s, поздние переводы иначе теряются и кэш не наполняется между рестартами.
+      combined.then(function () { saveCache(d, cache); }, function () { saveCache(d, cache); });
       return withTimeout(combined, 12000, offline)
-        .then(function (result) { saveCache(d, cache); return JSON.stringify(result); },
+        .then(function (result) { return JSON.stringify(result); },
               function () { return JSON.stringify(offline); });
     } catch (e) { return Promise.resolve(JSON.stringify(offline)); }
   }

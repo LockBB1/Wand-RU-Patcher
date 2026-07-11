@@ -83,3 +83,67 @@ test("hook: idempotent (second install is a no-op)", () => {
 test("hook: no window is a safe no-op (does not throw)", () => {
   assert.doesNotThrow(() => new Function("window", "Headers", "Response", hookSrc)(undefined, Headers, Response));
 });
+
+// --- Онлайн-кэш: переживает «рестарт» и не затирается параллельными играми ---
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import * as realFs from "node:fs";
+import * as realPath from "node:path";
+
+// Мок https.get в стиле хука: q=<текст> -> canned Google gtx-ответ [[[<ru>,<en>]]].
+function mockHttps(dict) {
+  return { get(url, _opts, cb) {
+    const m = /[?&]q=([^&]*)/.exec(url);
+    const q = m ? decodeURIComponent(m[1]) : "";
+    const ru = dict[q.toLowerCase()] || q; // неизвестное -> эхо (не закэшируется)
+    const body = JSON.stringify([[[ru, q]]]);
+    queueMicrotask(() => cb({ setEncoding() {}, on(ev, h) { if (ev === "data") h(body); if (ev === "end") h(); return this; } }));
+    return { on() { return this; }, destroy() {} };
+  } };
+}
+
+// Устанавливает хук с Node-доступом (fs/path реальные, https мок) и APPDATA во временной папке.
+function installOnline(base, https, fakeFetch) {
+  mkdirSync(realPath.join(base, "WandRuInstaller"), { recursive: true });
+  writeFileSync(realPath.join(base, "WandRuInstaller", "settings.json"),
+    JSON.stringify({ TranslateCheatsOnline: true, OnlineProvider: "google" }), "utf8");
+  const prevRequire = globalThis.require, prevAppData = process.env.APPDATA;
+  process.env.APPDATA = base;
+  globalThis.require = (mod) => (mod === "fs" ? realFs : mod === "path" ? realPath : mod === "https" ? https : null);
+  const window = { fetch: fakeFetch };
+  new Function("window", "Headers", "Response", hookSrc)(window, Headers, Response);
+  return { window, restore() { globalThis.require = prevRequire; process.env.APPDATA = prevAppData; } };
+}
+const flush = () => new Promise((r) => setTimeout(r, 0));
+const withDesc = (desc) => ({ i18n: { strings: { "d.1": desc } }, trainer: { blueprint: { cheats: [] } } });
+const readCache = (base) => JSON.parse(readFileSync(realPath.join(base, "WandRuInstaller", "cheat-cache.json"), "utf8"));
+
+test("online cache: MT-переведённое описание пишется в файл кэша (для след. запуска)", async () => {
+  const base = mkdtempSync(realPath.join(tmpdir(), "wru-cache-"));
+  const https = mockHttps({ "infinite ammo": "Бесконечные патроны" });
+  const { window, restore } = installOnline(base, https, () => Promise.resolve(jsonRes(withDesc("Infinite ammo"))));
+  try {
+    const res = await window.fetch("https://api.wemod.com/v3/games/1/trainer");
+    const data = await res.json();
+    assert.equal(data.i18n.strings["d.1"], "Бесконечные патроны"); // ответ переведён
+    await flush(); // фоновой saveCache по завершению MT
+    assert.equal(readCache(base)["infinite ammo"], "Бесконечные патроны"); // осело в кэш-файл
+  } finally { restore(); rmSync(base, { recursive: true, force: true }); }
+});
+
+test("online cache: параллельные игры не затирают записи друг друга (merge)", async () => {
+  const base = mkdtempSync(realPath.join(tmpdir(), "wru-cache-"));
+  const https = mockHttps({ "alpha desc": "Альфа", "bravo desc": "Браво" });
+  const a = installOnline(base, https, () => Promise.resolve(jsonRes(withDesc("Alpha desc"))));
+  const b = installOnline(base, https, () => Promise.resolve(jsonRes(withDesc("Bravo desc"))));
+  try {
+    await Promise.all([
+      a.window.fetch("https://api.wemod.com/v3/games/1/trainer").then((r) => r.json()),
+      b.window.fetch("https://api.wemod.com/v3/games/2/trainer").then((r) => r.json()),
+    ]);
+    await flush();
+    const cache = readCache(base);
+    assert.equal(cache["alpha desc"], "Альфа"); // обе записи сохранены
+    assert.equal(cache["bravo desc"], "Браво");
+  } finally { a.restore(); b.restore(); rmSync(base, { recursive: true, force: true }); }
+});
