@@ -187,14 +187,18 @@
     }
   }
   
-  // Перевести одну строку: Google → фолбэк MyMemory. httpsGet: (url) => Promise<body>. Сбой -> null.
-  // Эхо-ответ (перевод == оригинал) не считаем переводом.
-  async function translateOne(text, httpsGet) {
+  // Перевести одну строку. provider: "auto" (Google -> фолбэк MyMemory, default), "google", "mymemory".
+  // httpsGet: (url) => Promise<body>. Сбой -> null. Эхо-ответ (перевод == оригинал) не считаем переводом.
+  async function translateOne(text, httpsGet, provider) {
+    const p = provider || "auto";
     const useful = (t) => (t && t.trim().toLowerCase() !== text.trim().toLowerCase() ? t : null);
-    try {
-      const g = useful(parseGoogle(await httpsGet(googleUrl(text))));
-      if (g) return g;
-    } catch { /* провайдер упал — пробуем следующий */ }
+    if (p !== "mymemory") {
+      try {
+        const g = useful(parseGoogle(await httpsGet(googleUrl(text))));
+        if (g) return g;
+      } catch { /* провайдер упал - дальше фолбэк (в auto) */ }
+      if (p === "google") return null;
+    }
     try {
       return useful(parseMyMemory(await httpsGet(myMemoryUrl(text))));
     } catch {
@@ -203,15 +207,15 @@
   }
   
   // Оркестрация: собрать непокрытое -> кэш-мисс через MT (параллельно) -> обновить кэш -> применить.
-  // deps: { cache (obj en_lower->ru, мутируется), httpsGet, targetKeys }. Возвращает новый node.
+  // deps: { cache (obj en_lower->ru, мутируется), httpsGet, targetKeys, provider? }. Возвращает новый node.
   async function runOnline(node, deps) {
-    const { cache, httpsGet, targetKeys } = deps;
+    const { cache, httpsGet, targetKeys, provider } = deps;
     const all = [...collectUntranslated(node, targetKeys)];
     const misses = all.filter((t) => !(t.toLowerCase() in cache));
   
     await Promise.all(
       misses.map(async (t) => {
-        const ru = await translateOne(t, httpsGet);
+        const ru = await translateOne(t, httpsGet, provider);
         if (ru) cache[t.toLowerCase()] = ru; // кэшируем только успешные
       })
     );
@@ -243,9 +247,15 @@
       return { fs: fs, https: https, settings: p.join(dir, "settings.json"), cache: p.join(dir, "cheat-cache.json") };
     } catch (e) { return null; }
   }
-  function isOnline(d) {
-    try { var s = JSON.parse(d.fs.readFileSync(d.settings, "utf8")); return !!(s && s.TranslateCheatsOnline === true); }
-    catch (e) { return false; }
+  // Настройки онлайн-режима из settings.json: включён ли + провайдер (auto/google/mymemory).
+  function onlineSettings(d) {
+    try {
+      var s = JSON.parse(d.fs.readFileSync(d.settings, "utf8")) || {};
+      return {
+        online: s.TranslateCheatsOnline === true,
+        provider: (typeof s.OnlineProvider === "string" ? s.OnlineProvider : "auto").toLowerCase()
+      };
+    } catch (e) { return { online: false, provider: "auto" }; }
   }
   function loadCache(d) {
     try { return JSON.parse(d.fs.readFileSync(d.cache, "utf8")) || {}; } catch (e) { return {}; }
@@ -285,11 +295,12 @@
     try { data = JSON.parse(text); } catch (e) { return Promise.resolve(null); }
     var offline = translateCheats(data, DICT, exact);
     var d = nodeDeps();
-    if (!d || !isOnline(d)) return Promise.resolve(JSON.stringify(offline));
+    var conf = d ? onlineSettings(d) : null;
+    if (!d || !conf.online) return Promise.resolve(JSON.stringify(offline));
     try {
       var cache = loadCache(d);
       return withTimeout(
-        runOnline(offline, { cache: cache, httpsGet: httpsGetter(d), targetKeys: TARGET_KEYS_ONLINE }),
+        runOnline(offline, { cache: cache, httpsGet: httpsGetter(d), targetKeys: TARGET_KEYS_ONLINE, provider: conf.provider }),
         8000, offline
       ).then(function (result) { saveCache(d, cache); return JSON.stringify(result); },
              function () { return JSON.stringify(offline); });

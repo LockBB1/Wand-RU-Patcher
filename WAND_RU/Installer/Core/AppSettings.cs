@@ -10,6 +10,8 @@ public sealed class AppSettings
     public bool ShowLog { get; set; }
     public bool TranslateCheats { get; set; } = true;
     public bool TranslateCheatsOnline { get; set; }
+    /// <summary>Провайдер онлайн-MT: "auto" (Google -> MyMemory), "google", "mymemory". Читает хук.</summary>
+    public string OnlineProvider { get; set; } = "auto";
 
     static string Dir => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "WandRuInstaller");

@@ -66,6 +66,25 @@
                     <TextBlock Text="{DynamicResource S_TranslateOnline}" Foreground="{DynamicResource Foreground}"
                                VerticalAlignment="Center" Margin="10 0 0 0"/>
                 </StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="26 4 0 6">
+                    <TextBlock Text="{DynamicResource S_OnlineProvider}" Foreground="{DynamicResource Foreground}"
+                               FontSize="12" VerticalAlignment="Center"/>
+                    <ComboBox Width="130" Margin="10 0 0 0" SelectedValuePath="Tag"
+                              SelectedValue="{Binding OnlineProvider, Mode=TwoWay}">
+                        <ComboBoxItem Content="{DynamicResource S_Provider_Auto}" Tag="auto"/>
+                        <ComboBoxItem Content="Google" Tag="google"/>
+                        <ComboBoxItem Content="MyMemory" Tag="mymemory"/>
+                    </ComboBox>
+                    <TextBlock Text="ⓘ" Foreground="{DynamicResource MutedForeground}" FontSize="13"
+                               VerticalAlignment="Center" Margin="8 0 0 0" Cursor="Help"
+                               ToolTipService.InitialShowDelay="200" ToolTipService.ShowDuration="20000">
+                        <TextBlock.ToolTip>
+                            <ToolTip MaxWidth="320">
+                                <TextBlock Text="{DynamicResource S_OnlineProviderInfo}" TextWrapping="Wrap"/>
+                            </ToolTip>
+                        </TextBlock.ToolTip>
+                    </TextBlock>
+                </StackPanel>
                 <TextBlock Text="{DynamicResource S_TranslateOnlineWarn}" Foreground="{DynamicResource MutedForeground}"
                            FontSize="11" TextWrapping="Wrap" Margin="26 0 0 12"/>
                 <StackPanel Orientation="Horizontal" Margin="26 0 0 6">

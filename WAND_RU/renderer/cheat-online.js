@@ -70,14 +70,18 @@ export function parseMyMemory(body) {
   }
 }
 
-// Перевести одну строку: Google → фолбэк MyMemory. httpsGet: (url) => Promise<body>. Сбой -> null.
-// Эхо-ответ (перевод == оригинал) не считаем переводом.
-export async function translateOne(text, httpsGet) {
+// Перевести одну строку. provider: "auto" (Google -> фолбэк MyMemory, default), "google", "mymemory".
+// httpsGet: (url) => Promise<body>. Сбой -> null. Эхо-ответ (перевод == оригинал) не считаем переводом.
+export async function translateOne(text, httpsGet, provider) {
+  const p = provider || "auto";
   const useful = (t) => (t && t.trim().toLowerCase() !== text.trim().toLowerCase() ? t : null);
-  try {
-    const g = useful(parseGoogle(await httpsGet(googleUrl(text))));
-    if (g) return g;
-  } catch { /* провайдер упал — пробуем следующий */ }
+  if (p !== "mymemory") {
+    try {
+      const g = useful(parseGoogle(await httpsGet(googleUrl(text))));
+      if (g) return g;
+    } catch { /* провайдер упал - дальше фолбэк (в auto) */ }
+    if (p === "google") return null;
+  }
   try {
     return useful(parseMyMemory(await httpsGet(myMemoryUrl(text))));
   } catch {
@@ -86,15 +90,15 @@ export async function translateOne(text, httpsGet) {
 }
 
 // Оркестрация: собрать непокрытое -> кэш-мисс через MT (параллельно) -> обновить кэш -> применить.
-// deps: { cache (obj en_lower->ru, мутируется), httpsGet, targetKeys }. Возвращает новый node.
+// deps: { cache (obj en_lower->ru, мутируется), httpsGet, targetKeys, provider? }. Возвращает новый node.
 export async function runOnline(node, deps) {
-  const { cache, httpsGet, targetKeys } = deps;
+  const { cache, httpsGet, targetKeys, provider } = deps;
   const all = [...collectUntranslated(node, targetKeys)];
   const misses = all.filter((t) => !(t.toLowerCase() in cache));
 
   await Promise.all(
     misses.map(async (t) => {
-      const ru = await translateOne(t, httpsGet);
+      const ru = await translateOne(t, httpsGet, provider);
       if (ru) cache[t.toLowerCase()] = ru; // кэшируем только успешные
     })
   );

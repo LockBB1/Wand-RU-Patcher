@@ -77,6 +77,25 @@ test("translateOne: Google первым; при его сбое — фолбэк
   assert.match(seen[1], /mymemory/);
 });
 
+test("translateOne: provider=google не зовёт MyMemory даже при сбое", async () => {
+  const seen = [];
+  const httpsGet = (url) => { seen.push(url); return Promise.reject(new Error("429")); };
+  assert.equal(await translateOne("No Reload", httpsGet, "google"), null);
+  assert.equal(seen.length, 1);
+  assert.match(seen[0], /googleapis/);
+});
+
+test("translateOne: provider=mymemory не зовёт Google", async () => {
+  const seen = [];
+  const httpsGet = (url) => {
+    seen.push(url);
+    return Promise.resolve('{"responseData":{"translatedText":"Без перезарядки"}}');
+  };
+  assert.equal(await translateOne("No Reload", httpsGet, "mymemory"), "Без перезарядки");
+  assert.equal(seen.length, 1);
+  assert.match(seen[0], /mymemory/);
+});
+
 test("translateOne: эхо-ответ (перевод == оригинал) не считается переводом", async () => {
   const httpsGet = (url) =>
     Promise.resolve(url.includes("googleapis")

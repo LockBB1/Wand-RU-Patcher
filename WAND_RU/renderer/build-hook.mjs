@@ -54,9 +54,15 @@ ${indent(onlineBody)}
       return { fs: fs, https: https, settings: p.join(dir, "settings.json"), cache: p.join(dir, "cheat-cache.json") };
     } catch (e) { return null; }
   }
-  function isOnline(d) {
-    try { var s = JSON.parse(d.fs.readFileSync(d.settings, "utf8")); return !!(s && s.TranslateCheatsOnline === true); }
-    catch (e) { return false; }
+  // Настройки онлайн-режима из settings.json: включён ли + провайдер (auto/google/mymemory).
+  function onlineSettings(d) {
+    try {
+      var s = JSON.parse(d.fs.readFileSync(d.settings, "utf8")) || {};
+      return {
+        online: s.TranslateCheatsOnline === true,
+        provider: (typeof s.OnlineProvider === "string" ? s.OnlineProvider : "auto").toLowerCase()
+      };
+    } catch (e) { return { online: false, provider: "auto" }; }
   }
   function loadCache(d) {
     try { return JSON.parse(d.fs.readFileSync(d.cache, "utf8")) || {}; } catch (e) { return {}; }
@@ -96,11 +102,12 @@ ${indent(onlineBody)}
     try { data = JSON.parse(text); } catch (e) { return Promise.resolve(null); }
     var offline = translateCheats(data, DICT, exact);
     var d = nodeDeps();
-    if (!d || !isOnline(d)) return Promise.resolve(JSON.stringify(offline));
+    var conf = d ? onlineSettings(d) : null;
+    if (!d || !conf.online) return Promise.resolve(JSON.stringify(offline));
     try {
       var cache = loadCache(d);
       return withTimeout(
-        runOnline(offline, { cache: cache, httpsGet: httpsGetter(d), targetKeys: TARGET_KEYS_ONLINE }),
+        runOnline(offline, { cache: cache, httpsGet: httpsGetter(d), targetKeys: TARGET_KEYS_ONLINE, provider: conf.provider }),
         8000, offline
       ).then(function (result) { saveCache(d, cache); return JSON.stringify(result); },
              function () { return JSON.stringify(offline); });

@@ -30,6 +30,9 @@
     <s:String x:Key="S_TranslateCheats">Переводить имена читов</s:String>
     <s:String x:Key="S_TranslateOnline">Онлайн-перевод (нужен интернет)</s:String>
     <s:String x:Key="S_TranslateOnlineWarn">Переводит всё, что не покрыл офлайн-словарь, через интернет (Google, при сбое — MyMemory). При недоступности обоих сервисов часть имён останется на английском. Применяется после перезапуска Wand.</s:String>
+    <s:String x:Key="S_OnlineProvider">Сервис перевода</s:String>
+    <s:String x:Key="S_Provider_Auto">Авто</s:String>
+    <s:String x:Key="S_OnlineProviderInfo">Авто: сначала Google (качество выше), при его сбое - MyMemory. Google: только Google Translate. MyMemory: только MyMemory - выбирайте, если Google недоступен в вашей сети. Оба сервиса бесплатны и не требуют ключей.</s:String>
     <s:String x:Key="S_ClearCache">Очистить кэш</s:String>
     <s:String x:Key="S_Close">Закрыть</s:String>
     <s:String x:Key="S_Log">Лог</s:String>

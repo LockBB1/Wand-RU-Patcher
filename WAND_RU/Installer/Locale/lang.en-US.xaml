@@ -30,6 +30,9 @@
     <s:String x:Key="S_TranslateCheats">Translate cheat names</s:String>
     <s:String x:Key="S_TranslateOnline">Online translation (needs internet)</s:String>
     <s:String x:Key="S_TranslateOnlineWarn">Translates whatever the offline dictionary misses, over the internet (Google, MyMemory as fallback). If both services are unavailable, some names stay in English. Applies after restarting Wand.</s:String>
+    <s:String x:Key="S_OnlineProvider">Translation service</s:String>
+    <s:String x:Key="S_Provider_Auto">Auto</s:String>
+    <s:String x:Key="S_OnlineProviderInfo">Auto: Google first (better quality), MyMemory when it fails. Google: Google Translate only. MyMemory: MyMemory only - pick it if Google is unreachable on your network. Both services are free and need no keys.</s:String>
     <s:String x:Key="S_ClearCache">Clear cache</s:String>
     <s:String x:Key="S_Close">Close</s:String>
     <s:String x:Key="S_Log">Log</s:String>

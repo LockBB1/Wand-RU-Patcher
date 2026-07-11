@@ -12,11 +12,12 @@ public class AppSettingsTests
         var path = Path.Combine(Path.GetTempPath(), "wandru-settings-" + Guid.NewGuid().ToString("N") + ".json");
         try
         {
-            new AppSettings { RestartWandAfter = true, ShowLog = true, TranslateCheatsOnline = true }.Save(path);
+            new AppSettings { RestartWandAfter = true, ShowLog = true, TranslateCheatsOnline = true, OnlineProvider = "mymemory" }.Save(path);
             var loaded = AppSettings.Load(path);
             Assert.True(loaded.RestartWandAfter);
             Assert.True(loaded.ShowLog);
             Assert.True(loaded.TranslateCheatsOnline);
+            Assert.Equal("mymemory", loaded.OnlineProvider);
         }
         finally { if (File.Exists(path)) File.Delete(path); }
     }
@@ -29,5 +30,6 @@ public class AppSettingsTests
         Assert.False(loaded.ShowLog);
         Assert.True(loaded.TranslateCheats);       // default on
         Assert.False(loaded.TranslateCheatsOnline); // default off (эталон)
+        Assert.Equal("auto", loaded.OnlineProvider); // default auto (Google -> MyMemory)
     }
 }

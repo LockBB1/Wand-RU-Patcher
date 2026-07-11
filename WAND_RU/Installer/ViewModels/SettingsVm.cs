@@ -15,6 +15,7 @@ public sealed class SettingsVm : ObservableObject
     bool _showLog;
     bool _translateCheats;
     bool _translateCheatsOnline;
+    string _onlineProvider = "auto";
     string _cacheInfo = "";
 
     public IReadOnlyList<string> AppVersions { get; }
@@ -49,6 +50,12 @@ public sealed class SettingsVm : ObservableObject
         set { if (SetProperty(ref _translateCheatsOnline, value)) { _appSettings.TranslateCheatsOnline = value; _appSettings.Save(); } }
     }
 
+    public string OnlineProvider
+    {
+        get => _onlineProvider;
+        set { if (SetProperty(ref _onlineProvider, value)) { _appSettings.OnlineProvider = value; _appSettings.Save(); } }
+    }
+
     public string CacheInfo
     {
         get => _cacheInfo;
@@ -67,6 +74,7 @@ public sealed class SettingsVm : ObservableObject
         _showLog = _appSettings.ShowLog;
         _translateCheats = _appSettings.TranslateCheats;
         _translateCheatsOnline = _appSettings.TranslateCheatsOnline;
+        _onlineProvider = string.IsNullOrEmpty(_appSettings.OnlineProvider) ? "auto" : _appSettings.OnlineProvider;
         ClearCacheCommand = new RelayCommand(_ => { CheatCache.Clear(); RefreshCacheInfo(); });
         RefreshCacheInfo();
         AppVersions = install.AppDirs.Select(VersionOf).ToList();
