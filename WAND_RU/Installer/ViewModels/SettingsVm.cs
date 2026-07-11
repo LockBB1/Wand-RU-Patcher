@@ -1,4 +1,5 @@
 using System.IO;
+using System.Windows.Input;
 using WandEnhancer.ReactiveUICore;
 using WandRuInstaller.Core;
 using WandRuInstaller.Models;
@@ -13,6 +14,8 @@ public sealed class SettingsVm : ObservableObject
     bool _restartWandAfter;
     bool _showLog;
     bool _translateCheats;
+    bool _translateCheatsOnline;
+    string _cacheInfo = "";
 
     public IReadOnlyList<string> AppVersions { get; }
 
@@ -40,6 +43,22 @@ public sealed class SettingsVm : ObservableObject
         set { if (SetProperty(ref _translateCheats, value)) { _appSettings.TranslateCheats = value; _appSettings.Save(); } }
     }
 
+    public bool TranslateCheatsOnline
+    {
+        get => _translateCheatsOnline;
+        set { if (SetProperty(ref _translateCheatsOnline, value)) { _appSettings.TranslateCheatsOnline = value; _appSettings.Save(); } }
+    }
+
+    public string CacheInfo
+    {
+        get => _cacheInfo;
+        private set => SetProperty(ref _cacheInfo, value);
+    }
+
+    public ICommand ClearCacheCommand { get; }
+
+    void RefreshCacheInfo() => CacheInfo = $"{CheatCache.HumanSize()} · {CheatCache.EntryCount()}";
+
     public SettingsVm(WandInstall install)
     {
         _install = install;
@@ -47,6 +66,9 @@ public sealed class SettingsVm : ObservableObject
         _restartWandAfter = _appSettings.RestartWandAfter;
         _showLog = _appSettings.ShowLog;
         _translateCheats = _appSettings.TranslateCheats;
+        _translateCheatsOnline = _appSettings.TranslateCheatsOnline;
+        ClearCacheCommand = new RelayCommand(_ => { CheatCache.Clear(); RefreshCacheInfo(); });
+        RefreshCacheInfo();
         AppVersions = install.AppDirs.Select(VersionOf).ToList();
         _selectedAppVersion = install.SelectedAppDir is not null
             ? VersionOf(install.SelectedAppDir)

@@ -201,10 +201,23 @@
                             <TextBlock Text="{DynamicResource S_ShowLog}" Foreground="{DynamicResource PopoverForeground}"
                                        VerticalAlignment="Center" Margin="10 0 0 0"/>
                         </StackPanel>
-                        <StackPanel Orientation="Horizontal" Margin="0 0 0 20">
+                        <StackPanel Orientation="Horizontal" Margin="0 0 0 10">
                             <CheckBox IsChecked="{Binding TranslateCheats}" VerticalAlignment="Center"/>
                             <TextBlock Text="{DynamicResource S_TranslateCheats}" Foreground="{DynamicResource PopoverForeground}"
                                        VerticalAlignment="Center" Margin="10 0 0 0"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0 0 0 4">
+                            <CheckBox IsChecked="{Binding TranslateCheatsOnline}" VerticalAlignment="Center"/>
+                            <TextBlock Text="{DynamicResource S_TranslateOnline}" Foreground="{DynamicResource PopoverForeground}"
+                                       VerticalAlignment="Center" Margin="10 0 0 0"/>
+                        </StackPanel>
+                        <TextBlock Text="{DynamicResource S_TranslateOnlineWarn}" Foreground="{DynamicResource MutedForeground}"
+                                   FontSize="11" TextWrapping="Wrap" Margin="26 0 0 10"/>
+                        <StackPanel Orientation="Horizontal" Margin="26 0 0 20">
+                            <Button Content="{DynamicResource S_ClearCache}" Style="{StaticResource ColoredButton}"
+                                    Height="28" Padding="12 0" Command="{Binding ClearCacheCommand}"/>
+                            <TextBlock Text="{Binding CacheInfo}" Foreground="{DynamicResource MutedForeground}"
+                                       VerticalAlignment="Center" Margin="12 0 0 0"/>
                         </StackPanel>
 
                         <Button Content="{DynamicResource S_Close}" Style="{StaticResource ColoredButton}"

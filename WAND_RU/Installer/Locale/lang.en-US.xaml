@@ -25,6 +25,9 @@
     <s:String x:Key="S_RestartWand">Restart Wand after install</s:String>
     <s:String x:Key="S_ShowLog">Show log</s:String>
     <s:String x:Key="S_TranslateCheats">Translate cheat names</s:String>
+    <s:String x:Key="S_TranslateOnline">Online translation (needs internet)</s:String>
+    <s:String x:Key="S_TranslateOnlineWarn">Translates whatever the offline dictionary misses, over the internet. Free limit ~1000 words/day — beyond it some names stay in English. Applies after restarting Wand.</s:String>
+    <s:String x:Key="S_ClearCache">Clear cache</s:String>
     <s:String x:Key="S_Close">Close</s:String>
     <s:String x:Key="S_Log">Log</s:String>
     <s:String x:Key="S_CopyLog">Copy</s:String>
