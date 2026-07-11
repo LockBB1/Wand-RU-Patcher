@@ -3,40 +3,59 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { translateText, translateCheats } from "./cheat-translator.js";
+import { translateText, translateCategory, translateCheats } from "./cheat-translator.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const dict = JSON.parse(readFileSync(join(here, "cheat-dictionary.json"), "utf8"));
-const sample = JSON.parse(readFileSync(join(here, "__fixtures__", "cheats-sample.json"), "utf8"));
+const load = (...p) => JSON.parse(readFileSync(join(here, ...p), "utf8"));
+const dict = load("cheat-dictionary.json");
+const sample = load("__fixtures__", "cheats-sample.json");
+const real = load("__fixtures__", "trainer-real.json");
 
 // --- translateText: idioms ---
-test("idiom: exact phrase translated with correct grammar", () => {
+test("idiom: exact phrase, correct grammar", () => {
   assert.equal(translateText("God Mode", dict), "Режим бога");
-  assert.equal(translateText("Unlimited Health", dict), "Бесконечное здоровье");
   assert.equal(translateText("No Reload", dict), "Без перезарядки");
+  assert.equal(translateText("Unlimited Horse Health", dict), "Бесконечное здоровье лошади");
 });
 
 test("idiom: case-insensitive and trimmed", () => {
   assert.equal(translateText("  GOD MODE  ", dict), "Режим бога");
 });
 
-// --- translateText: patterns ---
-test("pattern: prefix rule with known tail word", () => {
+// --- translateText: gender agreement (adj patterns) ---
+test("pattern adj: adjective agrees with tail-word gender", () => {
+  assert.equal(translateText("Unlimited Health", dict), "Бесконечное здоровье"); // n
+  assert.equal(translateText("Unlimited Energy", dict), "Бесконечная энергия"); // f
+  assert.equal(translateText("Unlimited Focus", dict), "Бесконечная концентрация"); // f
+  assert.equal(translateText("Unlimited Ammo", dict), "Бесконечные патроны"); // pl
+  assert.equal(translateText("Unlimited Items", dict), "Бесконечные предметы"); // pl
+  assert.equal(translateText("Infinite Oxygen", dict), "Бесконечный кислород"); // m
+});
+
+test("pattern adj: unknown tail gender defaults masculine, tail kept", () => {
+  assert.equal(translateText("Unlimited Widgets", dict), "Бесконечный Widgets");
+});
+
+// --- translateText: template patterns ---
+test("pattern template: prefix rule with known tail word", () => {
   assert.equal(translateText("Set Money", dict), "Задать деньги");
   assert.equal(translateText("Freeze Gold", dict), "Заморозить золото");
 });
 
-test("pattern: unknown tail word kept as-is in template", () => {
-  // 'Widgets' not in words → tail untranslated, template still applies
+test("pattern template: unknown tail kept as-is", () => {
   assert.equal(translateText("Add Widgets", dict), "Добавить Widgets");
 });
 
-// --- translateText: fallback + idempotency ---
-test("fallback: unknown phrase returned unchanged", () => {
+test("idiom beats pattern (No Bounty)", () => {
+  assert.equal(translateText("No Bounty", dict), "Без розыска");
+});
+
+// --- translateText: fallback + idempotency + preservation ---
+test("fallback: unknown phrase unchanged", () => {
   assert.equal(translateText("Quantum Flux Stabilizer", dict), "Quantum Flux Stabilizer");
 });
 
-test("idempotent: already-Cyrillic string untouched", () => {
+test("idempotent: already-Cyrillic untouched", () => {
   assert.equal(translateText("Режим бога", dict), "Режим бога");
   assert.equal(translateText("Бесконечное здоровье", dict), "Бесконечное здоровье");
 });
@@ -46,25 +65,35 @@ test("preservation: placeholders and numbers untouched", () => {
   assert.equal(translateText("100", dict), "100");
 });
 
-// --- translateCheats: walker ---
-test("walker: translates cheat name fields recursively", () => {
-  const out = translateCheats(sample, dict);
-  const cheats = out.trainerMeta.schema.cheats;
-  assert.equal(cheats[0].name, "Режим бога");
-  assert.equal(cheats[1].name, "Бесконечное здоровье");
-  assert.equal(cheats[2].name, "Задать деньги");
-  assert.equal(cheats[3].name, "Без перезарядки");
+// --- translateCategory ---
+test("category: slug mapped to display name", () => {
+  assert.equal(translateCategory("player", dict), "Игрок");
+  assert.equal(translateCategory("weapons", dict), "Оружие");
+  assert.equal(translateCategory("vehicles", dict), "Транспорт");
 });
 
-test("walker: translates description and category", () => {
-  const out = translateCheats(sample, dict);
-  const c0 = out.trainerMeta.schema.cheats[0];
-  // description has no rule → unchanged (fallback); category slug unknown → unchanged
-  assert.equal(c0.description, "Ignore incoming damage.");
-  assert.equal(c0.category, "player");
+test("category: unknown slug unchanged", () => {
+  assert.equal(translateCategory("quantum", dict), "quantum");
 });
 
-test("walker: translates args.options[].label, keeps value", () => {
+// --- translateCheats: synthetic fixture ---
+test("walker: translates cheat names", () => {
+  const out = translateCheats(sample, dict);
+  const c = out.trainerMeta.schema.cheats;
+  assert.equal(c[0].name, "Режим бога");
+  assert.equal(c[1].name, "Бесконечное здоровье");
+  assert.equal(c[2].name, "Задать деньги");
+  assert.equal(c[3].name, "Без перезарядки");
+});
+
+test("walker: translates category slug", () => {
+  const out = translateCheats(sample, dict);
+  const c = out.trainerMeta.schema.cheats;
+  assert.equal(c[0].category, "Игрок");
+  assert.equal(c[2].category, "Инвентарь");
+});
+
+test("walker: translates options[].label, keeps value", () => {
   const out = translateCheats(sample, dict);
   const opts = out.trainerMeta.schema.cheats[3].args.options;
   assert.equal(opts[0].label, "Режим бога");
@@ -88,13 +117,40 @@ test("walker: does not mutate input", () => {
   assert.equal(JSON.stringify(sample), before);
 });
 
-test("walker: idempotent on its own output", () => {
+test("walker: idempotent on own output", () => {
   const once = translateCheats(sample, dict);
-  const twice = translateCheats(once, dict);
-  assert.deepEqual(twice, once);
+  assert.deepEqual(translateCheats(once, dict), once);
 });
 
 test("walker: unknown cheat name kept (fallback)", () => {
   const out = translateCheats(sample, dict);
   assert.equal(out.trainerMeta.schema.cheats[4].name, "Quantum Flux Stabilizer");
+});
+
+// --- translateCheats: REAL response shape (trainer.blueprint.cheats) ---
+test("real: translates names on real endpoint shape", () => {
+  const out = translateCheats(real, dict);
+  const names = out.trainer.blueprint.cheats.map((c) => c.name);
+  assert.ok(names.includes("Бесконечное здоровье"));
+  assert.ok(names.includes("Бесконечная энергия"));
+  assert.ok(names.includes("Без перезарядки"));
+  assert.ok(names.includes("Задать деньги"));
+  assert.ok(names.includes("Бесконечное здоровье лошади"));
+  assert.ok(names.includes("Бесконечная энергия лошади"));
+});
+
+test("real: translates categories, keeps uuid/target", () => {
+  const out = translateCheats(real, dict);
+  const cheats = out.trainer.blueprint.cheats;
+  const cats = new Set(cheats.map((c) => c.category));
+  assert.ok(cats.has("Игрок"));
+  assert.ok(cats.has("Оружие"));
+  assert.ok(cats.has("Транспорт"));
+  assert.equal(cheats[0].uuid, "ffsrr6gj");
+  assert.equal(cheats[0].target, "unlimited_health");
+});
+
+test("real: idempotent", () => {
+  const once = translateCheats(real, dict);
+  assert.deepEqual(translateCheats(once, dict), once);
 });

@@ -1,0 +1,96 @@
+{
+  "_note": "Урезанная реальная фикстура из api.wemod.com/v3/games/40171/trainer (RDR2, публичные имена читов). Путь trainer.blueprint.cheats как в бою.",
+  "trainer": {
+    "id": "49234",
+    "gameId": "40171",
+    "blueprint": {
+      "cheats": [
+        {
+          "uuid": "ffsrr6gj",
+          "name": "Unlimited Health",
+          "category": "player",
+          "type": "toggle",
+          "target": "unlimited_health"
+        },
+        {
+          "uuid": "2vb4glgh",
+          "name": "Unlimited Energy",
+          "category": "player",
+          "type": "toggle",
+          "target": "unlimited_energy"
+        },
+        {
+          "uuid": "wzlnch0t",
+          "name": "Unlimited Deadeye",
+          "category": "player",
+          "type": "toggle",
+          "target": "unlimited_deadeye_xx"
+        },
+        {
+          "uuid": "otg4c5uz",
+          "name": "Unlimited Focus",
+          "category": "player",
+          "type": "toggle",
+          "target": "unlimited_focus_xx"
+        },
+        {
+          "uuid": "u1xm881t",
+          "name": "No Bounty",
+          "category": "player",
+          "type": "toggle",
+          "target": "no_bounty_xx"
+        },
+        {
+          "uuid": "sx0ea68g",
+          "name": "Unlimited Items",
+          "category": "inventory",
+          "type": "toggle",
+          "target": "unlimited_items"
+        },
+        {
+          "uuid": "b5ozx1xe",
+          "name": "Set Money",
+          "category": "inventory",
+          "type": "slider",
+          "target": "set_money"
+        },
+        {
+          "uuid": "xcs9co8n",
+          "name": "Unlimited Ammo",
+          "category": "weapons",
+          "type": "toggle",
+          "target": "unlimted_ammo"
+        },
+        {
+          "uuid": "p3kc5bw1",
+          "name": "No Reload",
+          "category": "weapons",
+          "type": "toggle",
+          "target": "no_reload"
+        },
+        {
+          "uuid": "fe9r7tqx",
+          "name": "Unlimited Horse Health",
+          "category": "vehicles",
+          "type": "toggle",
+          "target": "unlimited_horse_health"
+        },
+        {
+          "uuid": "ohuaexyw",
+          "name": "Unlimited Horse Energy",
+          "category": "vehicles",
+          "type": "toggle",
+          "target": "unlimited_horse_energy"
+        }
+      ]
+    }
+  },
+  "i18n": {
+    "locale": "ru-RU",
+    "strings": {
+      "For Bows": "For Bows.",
+      "Disable the mod to customize weapons.": "Disable the mod to customize weapons.",
+      "Set money value then spend money to get mod effect": "Set money value then spend money to get mod effect"
+    }
+  }
+}
