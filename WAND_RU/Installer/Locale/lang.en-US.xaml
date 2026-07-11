@@ -43,6 +43,7 @@
     <s:String x:Key="S_MadeWith">Made with love by LockBB1</s:String>
     <s:String x:Key="S_StarUs">Star us if WRP helped you &lt;3</s:String>
     <s:String x:Key="S_UpdateAvailable">v{0} available - download</s:String>
+    <s:String x:Key="S_MigrateHint">Wand updated to {0}, but the Russian patch is still in {1}. Click "Install Russian" to migrate it to the new version.</s:String>
 
     <!-- VM messages -->
     <s:String x:Key="S_Msg_NotFound">Wand not found</s:String>

@@ -12,12 +12,15 @@ public sealed class MainVm : ObservableObject
 {
     InstallerState _state = InstallerState.Detecting;
     string _statusText = "";
+    string _migrationHint = "";
     bool _isAboutOpen;
     SettingsVm? _settings;
     readonly RuOverrides _overrides = RuOverrides.LoadEmbedded();
 
     public InstallerState State { get => _state; private set => SetProperty(ref _state, value); }
     public string StatusText { get => _statusText; private set => SetProperty(ref _statusText, value); }
+    /// <summary>Wand обновился, патч остался в старой app-версии - подсказка «перенесите» (пусто = скрыта).</summary>
+    public string MigrationHint { get => _migrationHint; private set => SetProperty(ref _migrationHint, value); }
     public ObservableCollection<string> Log { get; } = new();
     public WandInstall? Install { get; private set; }
     public SettingsVm? Settings { get => _settings; private set => SetProperty(ref _settings, value); }
@@ -64,6 +67,10 @@ public sealed class MainVm : ObservableObject
         var ver = new DirectoryInfo(Install.SelectedAppDir!).Name.Replace("app-", "");
         State = Install.IsPatched ? InstallerState.Patched : InstallerState.Ready;
         StatusText = $"Wand {ver}";
+        MigrationHint = Install.PatchedOtherAppDir is null
+            ? ""
+            : string.Format(L.Get("S_MigrateHint"),
+                ver, new DirectoryInfo(Install.PatchedOtherAppDir).Name.Replace("app-", ""));
     }
 
     // mode: "local" -> офлайн-перевод, "online" -> +интернет, null -> оставить текущий (переустановка).
@@ -82,6 +89,7 @@ public sealed class MainVm : ObservableObject
             State = InstallerState.Done;
             StatusText = L.Get("S_Msg_Done");
             if (Install is not null) Install.IsPatched = true;
+            MigrationHint = ""; // патч теперь в актуальной версии
             if (Settings?.RestartWandAfter == true) TryRestartWand();
         }
         catch (Exception ex)

@@ -7,4 +7,6 @@ public sealed class WandInstall
     public string? SelectedAppDir { get; set; }
     public bool IsPatched { get; set; }
     public PatchManifest? Manifest { get; set; }
+    /// <summary>Другая (старая) app-версия с патчем - Wand обновился, русификация осталась в ней.</summary>
+    public string? PatchedOtherAppDir { get; set; }
 }

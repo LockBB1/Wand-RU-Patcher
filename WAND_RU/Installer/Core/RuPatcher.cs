@@ -46,6 +46,7 @@ public sealed class RuPatcher
 
         _log("Патч локали и JS…");
         PatchTree(_unpacked);
+        VerifyTree(_unpacked); // до repack: оригинальный app.asar ещё не тронут
 
         _log("Сборка app.asar…");
         var newAsar = Path.Combine(Path.GetTempPath(), "app-ru-" + Guid.NewGuid().ToString("N") + ".asar");
@@ -107,6 +108,22 @@ public sealed class RuPatcher
             _log("Инъекция перевода читов…");
             CheatHook.Inject(treeRoot);
         }
+    }
+
+    /// <summary>
+    /// Честный фейл-детект: если якоря патча не нашлись в новой версии Wand, кидаем понятную
+    /// ошибку ВМЕСТО тихого «успеха» без русского. Зовётся до repack - app.asar остаётся цел.
+    /// </summary>
+    internal static void VerifyTree(string treeRoot)
+    {
+        var ruJson = Path.Combine(treeRoot, "static", "strings", "ru-RU.json");
+        var ok = File.Exists(ruJson) &&
+                 Directory.EnumerateFiles(treeRoot, "*.js", SearchOption.AllDirectories)
+                     .Any(f => File.ReadAllText(f).Contains("\"ru-RU\""));
+        if (!ok)
+            throw new NotSupportedException(
+                "Эта версия Wand пока не поддерживается: не найдены точки для вставки русской локали. " +
+                "app.asar не изменён - Wand работает как раньше. Проверьте обновление WRP или создайте issue с экспортом лога.");
     }
 
     static void CopyDir(string s, string d)

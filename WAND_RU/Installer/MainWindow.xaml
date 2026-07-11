@@ -67,6 +67,10 @@
                                FontSize="16" HorizontalAlignment="Center" Margin="0 0 0 6"/>
                     <TextBlock Text="{DynamicResource S_Ready_Sub}" Foreground="{DynamicResource MutedForeground}"
                                FontSize="12" HorizontalAlignment="Center" Margin="0 0 0 22"/>
+                    <!-- Wand обновился, патч в старой версии: пусто = ничего не видно -->
+                    <TextBlock Text="{Binding MigrationHint}" Foreground="#FACC15" FontSize="12"
+                               HorizontalAlignment="Center" TextWrapping="Wrap" MaxWidth="320"
+                               TextAlignment="Center" Margin="0 -12 0 14"/>
                     <Button Content="{DynamicResource S_PatchLocal}" Style="{StaticResource ColoredButton}"
                             Width="280" Height="42" FontSize="15" FontWeight="SemiBold" Margin="0 0 0 10"
                             Command="{Binding PatchCommand}" CommandParameter="local"/>

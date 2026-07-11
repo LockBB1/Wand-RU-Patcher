@@ -44,10 +44,11 @@ public static class WandLocator
             var dirs = FindAppDirs(root);
             if (dirs.Length == 0) continue;
             var sel = dirs[0];
-            var manifestPath = Path.Combine(sel, "resources", "wand-ru-patch.json");
-            PatchManifest? man = null;
-            if (File.Exists(manifestPath))
-                man = JsonSerializer.Deserialize<PatchManifest>(File.ReadAllText(manifestPath));
+            var man = ReadManifest(sel);
+            // Wand обновился: новая версия без патча, а в старой он есть -> предложим перенос.
+            var patchedOther = man is null
+                ? dirs.Skip(1).FirstOrDefault(d => ReadManifest(d) is not null)
+                : null;
             return new WandInstall
             {
                 RootDir = root,
@@ -55,8 +56,21 @@ public static class WandLocator
                 SelectedAppDir = sel,
                 IsPatched = man is not null,
                 Manifest = man,
+                PatchedOtherAppDir = patchedOther,
             };
         }
         return null;
+    }
+
+    static PatchManifest? ReadManifest(string appDir)
+    {
+        var path = Path.Combine(appDir, "resources", "wand-ru-patch.json");
+        try
+        {
+            return File.Exists(path)
+                ? JsonSerializer.Deserialize<PatchManifest>(File.ReadAllText(path))
+                : null;
+        }
+        catch { return null; } // битый manifest = не пропатчено
     }
 }
