@@ -12,7 +12,6 @@ public sealed class MainVm : ObservableObject
 {
     InstallerState _state = InstallerState.Detecting;
     string _statusText = "";
-    bool _isSettingsOpen;
     bool _isAboutOpen;
     SettingsVm? _settings;
     readonly RuOverrides _overrides = RuOverrides.LoadEmbedded();
@@ -22,26 +21,21 @@ public sealed class MainVm : ObservableObject
     public ObservableCollection<string> Log { get; } = new();
     public WandInstall? Install { get; private set; }
     public SettingsVm? Settings { get => _settings; private set => SetProperty(ref _settings, value); }
-    public bool IsSettingsOpen { get => _isSettingsOpen; set => SetProperty(ref _isSettingsOpen, value); }
     public bool IsAboutOpen { get => _isAboutOpen; set => SetProperty(ref _isAboutOpen, value); }
 
     public ICommand PatchCommand { get; }
     public ICommand RestoreCommand { get; }
     public ICommand BrowseCommand { get; }
-    public ICommand OpenSettingsCommand { get; }
-    public ICommand CloseSettingsCommand { get; }
     public ICommand OpenAboutCommand { get; }
     public ICommand CloseAboutCommand { get; }
 
     public MainVm()
     {
-        PatchCommand = new AsyncRelayCommand(async _ => await PatchAsync(),
+        PatchCommand = new AsyncRelayCommand(async p => await PatchAsync(p as string),
             _ => State is InstallerState.Ready or InstallerState.Patched or InstallerState.Done or InstallerState.Error);
         RestoreCommand = new AsyncRelayCommand(async _ => await RestoreAsync(),
             _ => State is InstallerState.Patched);
         BrowseCommand = new RelayCommand(p => { if (p is string dir) DetectFrom(new[] { dir }); });
-        OpenSettingsCommand = new RelayCommand(_ => IsSettingsOpen = true, _ => Settings is not null);
-        CloseSettingsCommand = new RelayCommand(_ => IsSettingsOpen = false);
         OpenAboutCommand = new RelayCommand(_ => IsAboutOpen = true);
         CloseAboutCommand = new RelayCommand(_ => IsAboutOpen = false);
     }
@@ -72,9 +66,12 @@ public sealed class MainVm : ObservableObject
         StatusText = $"Wand {ver}";
     }
 
-    internal async Task PatchAsync()
+    // mode: "local" -> офлайн-перевод, "online" -> +интернет, null -> оставить текущий (переустановка).
+    internal async Task PatchAsync(string? mode = null)
     {
         if (Install?.SelectedAppDir is null) return;
+        if (Settings is not null && mode is not null)
+            Settings.TranslateCheatsOnline = mode.Equals("online", StringComparison.OrdinalIgnoreCase);
         if (!await EnsureWandClosedAsync()) return;
         State = InstallerState.Working;
         Log.Clear();

@@ -46,7 +46,7 @@
                             Command="{Binding OpenAboutCommand}"/>
                     <Button Width="25" Height="25" Padding="5.5" Margin="0 0 6 0"
                             Style="{StaticResource IconButton}" Tag="{StaticResource CogIcon}"
-                            Command="{Binding OpenSettingsCommand}"/>
+                            Click="OnOpenSettings"/>
                     <Button Width="25" Height="25" Padding="6.5" Margin="0 0 15 0"
                             Style="{StaticResource IconButton}" Tag="{StaticResource CloseIcon}"
                             Click="OnClose"/>
@@ -63,9 +63,15 @@
                                FontSize="16" HorizontalAlignment="Center" Margin="0 0 0 6"/>
                     <TextBlock Text="{DynamicResource S_Ready_Sub}" Foreground="{DynamicResource MutedForeground}"
                                FontSize="12" HorizontalAlignment="Center" Margin="0 0 0 22"/>
-                    <Button Content="{DynamicResource S_Patch}" Style="{StaticResource ColoredButton}"
-                            Width="220" Height="42" FontSize="15" FontWeight="SemiBold"
-                            Command="{Binding PatchCommand}"/>
+                    <Button Content="{DynamicResource S_PatchLocal}" Style="{StaticResource ColoredButton}"
+                            Width="280" Height="42" FontSize="15" FontWeight="SemiBold" Margin="0 0 0 10"
+                            Command="{Binding PatchCommand}" CommandParameter="local"/>
+                    <Button Content="{DynamicResource S_PatchOnline}" Style="{StaticResource ColoredButton}"
+                            Width="280" Height="42" FontSize="14"
+                            Command="{Binding PatchCommand}" CommandParameter="online"/>
+                    <TextBlock Text="{DynamicResource S_PatchOnlineHint}" Foreground="{DynamicResource MutedForeground}"
+                               FontSize="11" HorizontalAlignment="Center" TextWrapping="Wrap"
+                               MaxWidth="300" TextAlignment="Center" Margin="0 8 0 0"/>
                 </StackPanel>
 
                 <!-- Patched -->
@@ -163,68 +169,6 @@
                         </ItemsControl>
                     </ScrollViewer>
                 </DockPanel>
-            </Border>
-
-            <!-- Settings overlay -->
-            <Border Grid.RowSpan="3" CornerRadius="7" Background="#CC000000"
-                    Visibility="{Binding IsSettingsOpen, Converter={StaticResource ToVisibilityConverter}}">
-                <Border Width="360" Background="{DynamicResource Popover}" CornerRadius="8"
-                        BorderBrush="{DynamicResource Border}" BorderThickness="1"
-                        VerticalAlignment="Center" HorizontalAlignment="Center" Padding="22">
-                    <StackPanel DataContext="{Binding Settings}">
-                        <TextBlock Text="{DynamicResource S_Settings}" Foreground="{DynamicResource PopoverForeground}"
-                                   FontSize="16" FontWeight="SemiBold" Margin="0 0 0 18"/>
-
-                        <TextBlock Text="{DynamicResource S_WandVersion}" Foreground="{DynamicResource MutedForeground}"
-                                   FontSize="12" Margin="0 0 0 5"/>
-                        <ComboBox ItemsSource="{Binding AppVersions}"
-                                  SelectedItem="{Binding SelectedAppVersion, Mode=TwoWay}"
-                                  Margin="0 0 0 16"/>
-
-                        <TextBlock Text="{DynamicResource S_WandFolder}" Foreground="{DynamicResource MutedForeground}"
-                                   FontSize="12" Margin="0 0 0 5"/>
-                        <DockPanel Margin="0 0 0 16">
-                            <Button DockPanel.Dock="Right" Content="{DynamicResource S_Browse}" Click="OnBrowse"
-                                    Height="26" Padding="12 0" Margin="8 0 0 0" FontSize="12"/>
-                            <TextBlock Text="{Binding DataContext.Install.RootDir, RelativeSource={RelativeSource AncestorType=Window}}"
-                                       Foreground="{DynamicResource PopoverForeground}" FontSize="11"
-                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
-                        </DockPanel>
-
-                        <StackPanel Orientation="Horizontal" Margin="0 0 0 10">
-                            <CheckBox IsChecked="{Binding RestartWandAfter}" VerticalAlignment="Center"/>
-                            <TextBlock Text="{DynamicResource S_RestartWand}" Foreground="{DynamicResource PopoverForeground}"
-                                       VerticalAlignment="Center" Margin="10 0 0 0"/>
-                        </StackPanel>
-                        <StackPanel Orientation="Horizontal" Margin="0 0 0 10">
-                            <CheckBox IsChecked="{Binding ShowLog}" VerticalAlignment="Center"/>
-                            <TextBlock Text="{DynamicResource S_ShowLog}" Foreground="{DynamicResource PopoverForeground}"
-                                       VerticalAlignment="Center" Margin="10 0 0 0"/>
-                        </StackPanel>
-                        <StackPanel Orientation="Horizontal" Margin="0 0 0 10">
-                            <CheckBox IsChecked="{Binding TranslateCheats}" VerticalAlignment="Center"/>
-                            <TextBlock Text="{DynamicResource S_TranslateCheats}" Foreground="{DynamicResource PopoverForeground}"
-                                       VerticalAlignment="Center" Margin="10 0 0 0"/>
-                        </StackPanel>
-                        <StackPanel Orientation="Horizontal" Margin="0 0 0 4">
-                            <CheckBox IsChecked="{Binding TranslateCheatsOnline}" VerticalAlignment="Center"/>
-                            <TextBlock Text="{DynamicResource S_TranslateOnline}" Foreground="{DynamicResource PopoverForeground}"
-                                       VerticalAlignment="Center" Margin="10 0 0 0"/>
-                        </StackPanel>
-                        <TextBlock Text="{DynamicResource S_TranslateOnlineWarn}" Foreground="{DynamicResource MutedForeground}"
-                                   FontSize="11" TextWrapping="Wrap" Margin="26 0 0 10"/>
-                        <StackPanel Orientation="Horizontal" Margin="26 0 0 20">
-                            <Button Content="{DynamicResource S_ClearCache}" Style="{StaticResource ColoredButton}"
-                                    Height="28" Padding="12 0" Command="{Binding ClearCacheCommand}"/>
-                            <TextBlock Text="{Binding CacheInfo}" Foreground="{DynamicResource MutedForeground}"
-                                       VerticalAlignment="Center" Margin="12 0 0 0"/>
-                        </StackPanel>
-
-                        <Button Content="{DynamicResource S_Close}" Style="{StaticResource ColoredButton}"
-                                Height="36" HorizontalAlignment="Right" Width="120"
-                                Command="{Binding DataContext.CloseSettingsCommand, RelativeSource={RelativeSource AncestorType=Window}}"/>
-                    </StackPanel>
-                </Border>
             </Border>
 
             <!-- About overlay -->

@@ -7,6 +7,9 @@
     <!-- MainWindow -->
     <s:String x:Key="S_Ready_Sub">Готов к русификации</s:String>
     <s:String x:Key="S_Patch">Русифицировать</s:String>
+    <s:String x:Key="S_PatchLocal">Русифицировать локально</s:String>
+    <s:String x:Key="S_PatchOnline">Русифицировать локально + интернет</s:String>
+    <s:String x:Key="S_PatchOnlineHint">Онлайн-режим переводит и то, что не покрыл офлайн-словарь (нужен интернет). Режим можно сменить в настройках.</s:String>
     <s:String x:Key="S_Patched_Title">Русификация установлена</s:String>
     <s:String x:Key="S_Restore">Откатить</s:String>
     <s:String x:Key="S_Reinstall">Переустановить</s:String>

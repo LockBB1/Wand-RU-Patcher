@@ -7,6 +7,9 @@
     <!-- MainWindow -->
     <s:String x:Key="S_Ready_Sub">Ready to localize</s:String>
     <s:String x:Key="S_Patch">Install Russian</s:String>
+    <s:String x:Key="S_PatchLocal">Install Russian (local)</s:String>
+    <s:String x:Key="S_PatchOnline">Install Russian (local + internet)</s:String>
+    <s:String x:Key="S_PatchOnlineHint">Online mode also translates what the offline dictionary misses (needs internet). You can switch modes in settings.</s:String>
     <s:String x:Key="S_Patched_Title">Russian is installed</s:String>
     <s:String x:Key="S_Restore">Roll back</s:String>
     <s:String x:Key="S_Reinstall">Reinstall</s:String>

@@ -1,0 +1,83 @@
+<Window x:Class="WandRuInstaller.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:WandRuInstaller.ViewModels"
+        d:DataContext="{d:DesignInstance vm:MainVm}"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="Wand RU — Settings"
+        Width="460" SizeToContent="Height"
+        Background="Transparent"
+        WindowStyle="None"
+        ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner"
+        FontFamily="{StaticResource Inter}"
+        AllowsTransparency="True">
+
+    <Border CornerRadius="8" Background="{DynamicResource Background}"
+            BorderBrush="{DynamicResource Border}" BorderThickness="1" Margin="10">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="15" Direction="-90" RenderingBias="Quality" ShadowDepth="2"/>
+        </Border.Effect>
+
+        <StackPanel Margin="26 20 26 22">
+            <!-- Header (drag) -->
+            <Grid Margin="0 0 0 20" Background="Transparent" MouseLeftButtonDown="OnDragMove">
+                <TextBlock Text="{DynamicResource S_Settings}" Foreground="{DynamicResource Foreground}"
+                           FontSize="17" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                <Button HorizontalAlignment="Right" Width="24" Height="24" Padding="6"
+                        Style="{StaticResource IconButton}" Tag="{StaticResource CloseIcon}" Click="OnClose"/>
+            </Grid>
+
+            <StackPanel DataContext="{Binding Settings}">
+                <TextBlock Text="{DynamicResource S_WandVersion}" Foreground="{DynamicResource MutedForeground}"
+                           FontSize="12" Margin="0 0 0 5"/>
+                <ComboBox ItemsSource="{Binding AppVersions}"
+                          SelectedItem="{Binding SelectedAppVersion, Mode=TwoWay}" Margin="0 0 0 16"/>
+
+                <TextBlock Text="{DynamicResource S_WandFolder}" Foreground="{DynamicResource MutedForeground}"
+                           FontSize="12" Margin="0 0 0 5"/>
+                <DockPanel Margin="0 0 0 18">
+                    <Button DockPanel.Dock="Right" Content="{DynamicResource S_Browse}" Click="OnBrowse"
+                            Height="26" Padding="12 0" Margin="8 0 0 0" FontSize="12"/>
+                    <TextBlock Text="{Binding DataContext.Install.RootDir, RelativeSource={RelativeSource AncestorType=Window}}"
+                               Foreground="{DynamicResource Foreground}" FontSize="11"
+                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                </DockPanel>
+
+                <StackPanel Orientation="Horizontal" Margin="0 0 0 10">
+                    <CheckBox IsChecked="{Binding RestartWandAfter}" VerticalAlignment="Center"/>
+                    <TextBlock Text="{DynamicResource S_RestartWand}" Foreground="{DynamicResource Foreground}"
+                               VerticalAlignment="Center" Margin="10 0 0 0"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0 0 0 10">
+                    <CheckBox IsChecked="{Binding ShowLog}" VerticalAlignment="Center"/>
+                    <TextBlock Text="{DynamicResource S_ShowLog}" Foreground="{DynamicResource Foreground}"
+                               VerticalAlignment="Center" Margin="10 0 0 0"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0 0 0 10">
+                    <CheckBox IsChecked="{Binding TranslateCheats}" VerticalAlignment="Center"/>
+                    <TextBlock Text="{DynamicResource S_TranslateCheats}" Foreground="{DynamicResource Foreground}"
+                               VerticalAlignment="Center" Margin="10 0 0 0"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0 0 0 4">
+                    <CheckBox IsChecked="{Binding TranslateCheatsOnline}" VerticalAlignment="Center"/>
+                    <TextBlock Text="{DynamicResource S_TranslateOnline}" Foreground="{DynamicResource Foreground}"
+                               VerticalAlignment="Center" Margin="10 0 0 0"/>
+                </StackPanel>
+                <TextBlock Text="{DynamicResource S_TranslateOnlineWarn}" Foreground="{DynamicResource MutedForeground}"
+                           FontSize="11" TextWrapping="Wrap" Margin="26 0 0 12"/>
+                <StackPanel Orientation="Horizontal" Margin="26 0 0 6">
+                    <Button Content="{DynamicResource S_ClearCache}" Style="{StaticResource ColoredButton}"
+                            Height="28" Padding="12 0" Command="{Binding ClearCacheCommand}"/>
+                    <TextBlock Text="{Binding CacheInfo}" Foreground="{DynamicResource MutedForeground}"
+                               VerticalAlignment="Center" Margin="12 0 0 0"/>
+                </StackPanel>
+            </StackPanel>
+
+            <Button Content="{DynamicResource S_Close}" Style="{StaticResource ColoredButton}"
+                    Height="36" HorizontalAlignment="Right" Width="120" Margin="0 22 0 0" Click="OnClose"/>
+        </StackPanel>
+    </Border>
+</Window>
