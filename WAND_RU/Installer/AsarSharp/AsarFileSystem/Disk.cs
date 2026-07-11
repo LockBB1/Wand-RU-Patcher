@@ -163,7 +163,7 @@ namespace AsarSharp.AsarFileSystem
             int sizePickleSize = sizePickle.GetTotalSize();
 
             var buf = new byte[StreamBufferSize];
-            var blockBuf = new byte[4 * 1024 * 1024]; // shared across all files — avoids 4MB alloc per file
+            var blockBuf = new byte[4 * 1024 * 1024]; // shared across all files - avoids 4MB alloc per file
 
             using (var fs = new FileStream(dest, FileMode.Create, FileAccess.Write, FileShare.None, StreamBufferSize, FileOptions.SequentialScan))
             {

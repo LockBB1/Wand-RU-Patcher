@@ -2,7 +2,7 @@ using System.Diagnostics;
 
 namespace WandRuInstaller.Core;
 
-/// <summary>Детект запущенного Wand — патч/откат невозможны, пока exe залочены (напр. WandAuxilaryService.exe).</summary>
+/// <summary>Детект запущенного Wand - патч/откат невозможны, пока exe залочены (напр. WandAuxilaryService.exe).</summary>
 public static class WandProcess
 {
     static readonly string[] Names =

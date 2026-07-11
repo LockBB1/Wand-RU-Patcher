@@ -1,4 +1,4 @@
-// Генерирует cheat-hook.js — self-contained IIFE для инъекции в renderer Wand.
+// Генерирует cheat-hook.js - self-contained IIFE для инъекции в renderer Wand.
 // Источник правды: cheat-translator.js (офлайн-движок) + cheat-online.js (MT-добор) + cheat-dictionary.json.
 // Хук monkey-патчит window.fetch/XHR на /v3/games/{id}/trainer -> перевод -> пересборка ответа.
 // Онлайн-режим (MT) включается флагом TranslateCheatsOnline в %AppData%/WandRuInstaller/settings.json;
@@ -21,7 +21,7 @@ for (const f of readdirSync(join(here, "games")).filter((f) => f.endsWith(".json
 const gamesMin = JSON.stringify(games);
 const indent = (s) => s.split("\n").map((l) => "  " + l).join("\n");
 
-const hook = `/* Wand RU — перехват и перевод имён читов в renderer. Сгенерировано build-hook.mjs, не править вручную. */
+const hook = `/* Wand RU - перехват и перевод имён читов в renderer. Сгенерировано build-hook.mjs, не править вручную. */
 (function () {
   "use strict";
   if (typeof window === "undefined" || window.__wandRuCheatHook) return;
@@ -92,11 +92,11 @@ ${indent(onlineBody)}
     });
   }
 
-  // Офлайн-перевод (синхронно) — для XHR-пути. exact — точный per-game map (или null).
+  // Офлайн-перевод (синхронно) - для XHR-пути. exact - точный per-game map (или null).
   function translateOffline(text, exact) {
     try { return JSON.stringify(translateCheats(JSON.parse(text), DICT, exact)); } catch (e) { return null; }
   }
-  // Офлайн + (опц.) онлайн-MT добор — для fetch-пути. Возвращает Promise<string|null>.
+  // Офлайн + (опц.) онлайн-MT добор - для fetch-пути. Возвращает Promise<string|null>.
   function translateAsync(text, exact) {
     var data;
     try { data = JSON.parse(text); } catch (e) { return Promise.resolve(null); }

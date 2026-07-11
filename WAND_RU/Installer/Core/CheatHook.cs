@@ -8,7 +8,7 @@ namespace WandRuInstaller.Core;
 /// <summary>
 /// Вставляет renderer-скрипт перевода имён читов (cheat-hook.js) в распакованное дерево asar.
 /// Кладёт файл в корень дерева и добавляет &lt;script&gt; в &lt;head&gt; index.html/overlay.html
-/// (не-defer — ставит хук до загрузки app-бандлов и до fetch читов). Идемпотентно.
+/// (не-defer - ставит хук до загрузки app-бандлов и до fetch читов). Идемпотентно.
 /// </summary>
 public static class CheatHook
 {
@@ -40,7 +40,7 @@ public static class CheatHook
             var src = File.ReadAllText(path);
             if (src.Contains(FileName)) continue; // уже подключён
             var m = HeadOpen.Match(src);
-            if (!m.Success) continue; // нет <head> — пропускаем
+            if (!m.Success) continue; // нет <head> - пропускаем
             var patched = src.Insert(m.Index + m.Length, ScriptTag);
             File.WriteAllText(path, patched, Utf8NoBom);
         }

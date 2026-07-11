@@ -29,7 +29,7 @@ namespace AsarSharp
             string rootPath = filesystem.GetRootPath();
             long dataOffset = 8 + filesystem.GetHeaderSize();
 
-            // One archive handle for all reads — old code opened it per file.
+            // One archive handle for all reads - old code opened it per file.
             using (var archive = new FileStream(rootPath, FileMode.Open, FileAccess.Read, FileShare.Read,
                        FS_INTERNAL_BUFFER, FileOptions.RandomAccess))
             {
@@ -127,7 +127,7 @@ namespace AsarSharp
                 if (string.Equals(unpackedSourcePath, unpackedDestPath, StringComparison.OrdinalIgnoreCase))
                     return; // self-copy
                 if (!File.Exists(unpackedSourcePath))
-                    return; // header references a missing unpacked file — skip rather than abort
+                    return; // header references a missing unpacked file - skip rather than abort
 
                 File.Copy(unpackedSourcePath, destFilename, true);
                 return;
@@ -160,7 +160,7 @@ namespace AsarSharp
             var relativeLinkPath = Extensions.GetRelativePath(linkDestPath, linkSrcPath);
 
             try { File.Delete(destFilename); }
-            catch { /* ignore — failing to remove an existing link is non-fatal */ }
+            catch { /* ignore - failing to remove an existing link is non-fatal */ }
 
             var linkTo = Path.Combine(relativeLinkPath, Path.GetFileName(file.Link));
 

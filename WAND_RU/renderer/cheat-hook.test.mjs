@@ -65,7 +65,7 @@ test("fetch: per-game exact map applies by gameId from URL", async () => {
   const data = await res.json();
   assert.equal(data.trainer.blueprint.cheats[0].name, "Никогда не поймают");
   assert.equal(data.trainer.blueprint.cheats[1].name, "Максимум SP");
-  // Чужой gameId — exact-словарь 45481 не применяется, имя уходит движку/passthrough.
+  // Чужой gameId - exact-словарь 45481 не применяется, имя уходит движку/passthrough.
   const w2 = install(() => Promise.resolve(jsonRes(nfs())));
   const res2 = await w2.fetch("https://api.wemod.com/v3/games/40171/trainer?v=3");
   const data2 = await res2.json();

@@ -1,11 +1,11 @@
 // Онлайн-MT добор для непокрытого офлайн-словарём (Фаза 3, путь A). Чистая логика с инъекцией
-// зависимостей (fs/https приходят снаружи — в хуке из require, в тестах моки). Провайдеры без ключа,
+// зависимостей (fs/https приходят снаружи - в хуке из require, в тестах моки). Провайдеры без ключа,
 // цепочкой: Google (gtx, качественнее) → MyMemory (фолбэк). Кэш en->ru. Всё опционально:
 // сбой/нет сети → офлайн-результат не трогаем.
 
 const LATIN = /[A-Za-z]/;
 
-// Уникальные англ. строки на целевых полях, которым нужен MT (офлайн не смог — осталась латиница).
+// Уникальные англ. строки на целевых полях, которым нужен MT (офлайн не смог - осталась латиница).
 export function collectUntranslated(node, targetKeys, out = new Set()) {
   if (Array.isArray(node)) {
     for (const n of node) collectUntranslated(n, targetKeys, out);
@@ -39,7 +39,7 @@ export function googleUrl(text) {
 }
 
 // Тело ответа gtx ([[["перевод","оригинал",...],...],...]) -> перевод или null.
-// Эхо (Google вернул исходный текст) считаем неудачей — не засорять кэш.
+// Эхо (Google вернул исходный текст) считаем неудачей - не засорять кэш.
 export function parseGoogle(body) {
   try {
     const j = JSON.parse(body);
@@ -61,7 +61,7 @@ export function parseMyMemory(body) {
   try {
     const j = JSON.parse(body);
     const t = j && j.responseData && j.responseData.translatedText;
-    // MyMemory при ошибке/лимите кладёт англ.-текст ошибки в translatedText — фильтруем очевидное.
+    // MyMemory при ошибке/лимите кладёт англ.-текст ошибки в translatedText - фильтруем очевидное.
     if (typeof t !== "string" || !t) return null;
     if (/MYMEMORY WARNING|QUERY LENGTH LIMIT|INVALID/i.test(t)) return null;
     return t;

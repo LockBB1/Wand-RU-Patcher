@@ -53,7 +53,7 @@ public sealed class RuPatcher
             .CreatePackageWithOptions();
         File.Copy(newAsar, _asar, overwrite: true);
         File.Delete(newAsar);
-        // ExtractAll закэшировал старый filesystem по этому пути; после перезаписи — сбросить.
+        // ExtractAll закэшировал старый filesystem по этому пути; после перезаписи - сбросить.
         Disk.UncacheFilesystem(_asar);
 
         var man = new PatchManifest

@@ -20,7 +20,7 @@ public static class UpdateChecker
         return Version.TryParse(s, out v!);
     }
 
-    /// <summary>Номер новой версии (без 'v') или null. handler — для тестов (мок HTTP).</summary>
+    /// <summary>Номер новой версии (без 'v') или null. handler - для тестов (мок HTTP).</summary>
     public static async Task<string?> CheckAsync(string currentVersion, HttpMessageHandler? handler = null)
     {
         try

@@ -112,7 +112,7 @@ public sealed class MainVm : ObservableObject
         }
     }
 
-    // Wand залочивает файлы (app.asar.unpacked/*.exe). Если включён авто-перезапуск — закрываем сами,
+    // Wand залочивает файлы (app.asar.unpacked/*.exe). Если включён авто-перезапуск - закрываем сами,
     // иначе просим юзера закрыть. Возвращает false, если продолжать нельзя.
     async Task<bool> EnsureWandClosedAsync()
     {

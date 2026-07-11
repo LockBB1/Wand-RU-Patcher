@@ -4,7 +4,7 @@ namespace WandRuInstaller.Core;
 
 /// <summary>
 /// Регистрирует локаль ru-RU в JS-бандлах Wand. Якоря структурные (не по жёсткому списку языков),
-/// идемпотентны. Если якорь не найден — JS возвращается без изменений.
+/// идемпотентны. Если якорь не найден - JS возвращается без изменений.
 /// </summary>
 public static class JsLocalePatch
 {
@@ -22,7 +22,7 @@ public static class JsLocalePatch
     // Пары [код,подпись], список закрывается );  (напр. i18n init).
     static readonly Regex ShortPairTail = new("(\\[\"[a-z]{2}\",\"[^\"]+\"\\])(\\]\\);)", RegexOptions.Compiled);
 
-    // Пары [BCP-47, <var|строка>], закрывается ]) — для флагов.
+    // Пары [BCP-47, <var|строка>], закрывается ]) - для флагов.
     static readonly Regex FlagPairTail = new(
         "(\\[\"[a-z]{2}-[A-Z]{2}\",(?:\"[^\"]*\"|[A-Za-z_$][\\w$]*)\\])(\\]\\))",
         RegexOptions.Compiled);

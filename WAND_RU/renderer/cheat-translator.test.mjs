@@ -227,7 +227,7 @@ test("exact: per-game map wins over engine and patterns", () => {
   const exact = { "Low Heat": "Низкий уровень розыска", "Max SP": "Максимум SP" };
   assert.equal(translateText("Low Heat", dict, exact), "Низкий уровень розыска");
   assert.equal(translateText("Max SP", dict, exact), "Максимум SP");
-  assert.equal(translateText("Unlimited Health", dict, exact), "Бесконечное здоровье"); // мимо exact — движок
+  assert.equal(translateText("Unlimited Health", dict, exact), "Бесконечное здоровье"); // мимо exact - движок
 });
 
 test("exact: walker threads exact map, idempotent on cyrillic", () => {

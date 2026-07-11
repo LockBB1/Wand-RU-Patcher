@@ -42,13 +42,13 @@
     <s:String x:Key="S_SourceCode">Source code</s:String>
     <s:String x:Key="S_MadeWith">Made with love by LockBB1</s:String>
     <s:String x:Key="S_StarUs">Star us if WRP helped you &lt;3</s:String>
-    <s:String x:Key="S_UpdateAvailable">v{0} available — download</s:String>
+    <s:String x:Key="S_UpdateAvailable">v{0} available - download</s:String>
 
     <!-- VM messages -->
     <s:String x:Key="S_Msg_NotFound">Wand not found</s:String>
     <s:String x:Key="S_Msg_Done">Done! Restart Wand → Settings → Language → Russian</s:String>
     <s:String x:Key="S_Msg_ErrorPrefix">Error: </s:String>
-    <s:String x:Key="S_Msg_WandRunning">Close Wand and try again — it locks the files.</s:String>
+    <s:String x:Key="S_Msg_WandRunning">Close Wand and try again - it locks the files.</s:String>
     <s:String x:Key="S_Browse_Dialog">Select the Wand installation folder</s:String>
 
 </ResourceDictionary>

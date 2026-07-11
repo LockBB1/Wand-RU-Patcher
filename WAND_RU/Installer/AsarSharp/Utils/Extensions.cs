@@ -37,7 +37,7 @@ namespace AsarSharp.Utils
                 return pathFast.Substring(baseFast.Length + 1);
             }
 
-            // Slow path: normalise both sides and compute relative — used for
+            // Slow path: normalise both sides and compute relative - used for
             // security checks (out-of-tree symlink/destination guards) and the
             // rare "go up" case.
             return GetRelativePathNormalised(relativeTo, path);

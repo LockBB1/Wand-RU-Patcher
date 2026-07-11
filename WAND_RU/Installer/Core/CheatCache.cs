@@ -6,7 +6,7 @@ namespace WandRuInstaller.Core;
 
 /// <summary>
 /// Кэш онлайн-переводов читов (пишет renderer-хук через fs). Установщик его меряет и чистит.
-/// Файл — %AppData%\WandRuInstaller\cheat-cache.json (тот же каталог, что settings.json).
+/// Файл - %AppData%\WandRuInstaller\cheat-cache.json (тот же каталог, что settings.json).
 /// </summary>
 public static class CheatCache
 {
@@ -48,6 +48,6 @@ public static class CheatCache
     internal static void Clear(string path)
     {
         try { if (File.Exists(path)) File.Delete(path); }
-        catch { /* не удалось — не критично */ }
+        catch { /* не удалось - не критично */ }
     }
 }

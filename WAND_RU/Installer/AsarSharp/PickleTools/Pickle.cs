@@ -13,7 +13,7 @@ namespace AsarSharp.PickleTools
         public const int SIZE_FLOAT = 4;
         public const int SIZE_DOUBLE = 8;
 
-        // Initial payload allocation. Bumped from 64 — large headers used to
+        // Initial payload allocation. Bumped from 64 - large headers used to
         // realloc many times when growing geometrically from 64.
         public const int PAYLOAD_UNIT = 4096;
 
@@ -79,7 +79,7 @@ namespace AsarSharp.PickleTools
             return result;
         }
 
-        /// <summary>Write the serialised pickle straight to <paramref name="stream"/> — no extra copy.</summary>
+        /// <summary>Write the serialised pickle straight to <paramref name="stream"/> - no extra copy.</summary>
         public void WriteTo(Stream stream)
         {
             stream.Write(_header, 0, GetTotalSize());

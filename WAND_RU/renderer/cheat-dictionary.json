@@ -1,5 +1,5 @@
 {
-  "_comment": "Словарь перевода имён читов Wand/WeMod. Приоритет: idioms(полная фраза) > words(слово/фраза) > suffixes(X Multiplier/Rate) > prefixes(Unlimited/No/Set/...) > passthrough. word = {n:им, g:род m|f|n|pl, gen?:род.падеж, acc?:вин.падеж}. Compound-имена (A / B) переводятся по частям. Новые читы — данными сюда, не в код.",
+  "_comment": "Словарь перевода имён читов Wand/WeMod. Приоритет: idioms(полная фраза) > words(слово/фраза) > suffixes(X Multiplier/Rate) > prefixes(Unlimited/No/Set/...) > passthrough. word = {n:им, g:род m|f|n|pl, gen?:род.падеж, acc?:вин.падеж}. Compound-имена (A / B) переводятся по частям. Новые читы - данными сюда, не в код.",
   "idioms": {
     "god mode": "Режим бога",
     "king age": "возраст короля",

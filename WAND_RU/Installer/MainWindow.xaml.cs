@@ -33,7 +33,7 @@ public partial class MainWindow : Window
         };
     }
 
-    // Тихая проверка обновления: офлайн/ошибка — баннер просто не показываем.
+    // Тихая проверка обновления: офлайн/ошибка - баннер просто не показываем.
     async Task ShowUpdateBannerAsync(string? current)
     {
         if (string.IsNullOrEmpty(current)) return;
@@ -102,7 +102,7 @@ public partial class MainWindow : Window
     string BuildLogReport()
     {
         var sb = new StringBuilder();
-        sb.AppendLine("# Wand RU — лог");
+        sb.AppendLine("# Wand RU - лог");
         sb.AppendLine();
         sb.AppendLine($"- WRP: {VersionLabel.Text}");
         var app = ViewModel.Install?.SelectedAppDir;

@@ -1,7 +1,7 @@
-// CheatTranslator — движок перевода имён читов (Фаза 2, engine-first).
+// CheatTranslator - движок перевода имён читов (Фаза 2, engine-first).
 // Чистые функции, без зависимостей. Тестируется node:test.
 // Рантайм-цель: renderer Wand (HAR: GET api.wemod.com/v3/games/{id}/trainer, Sec-Fetch-* => fetch/XHR).
-// Словарь (idioms/words/categories/prefixes/suffixes) передаётся аргументом; данные — cheat-dictionary.json.
+// Словарь (idioms/words/categories/prefixes/suffixes) передаётся аргументом; данные - cheat-dictionary.json.
 //
 // Приоритет резолва имени: compound-split(/ , & and) -> для каждой части:
 //   idiom(полная фраза) > word/phrase(полная фраза) > suffix(Multiplier/Rate) > prefix(Unlimited/No/Set/...)
@@ -20,7 +20,7 @@ function hasKey(o, k) {
 
 const MAX_DEPTH = 5; // страховка от глубокой взаимной рекурсии resolveName<->resolveTail
 
-// Хвост (существительное после префикса) -> {nom, gen, acc, gender}. Не нашли — рекурсия в resolveName.
+// Хвост (существительное после префикса) -> {nom, gen, acc, gender}. Не нашли - рекурсия в resolveName.
 function resolveTail(tail, dict, depth) {
   const t = tail.trim();
   const key = t.toLowerCase();
@@ -71,11 +71,11 @@ function resolveName(seg, dict, depth = 0) {
     const r = resolveTail(m[1] !== undefined ? m[1] : "", dict, depth);
     return suf.template.replace("{0}", r.gen || r.nom);
   }
-  return seg; // ничего не подошло — оригинал
+  return seg; // ничего не подошло - оригинал
 }
 
 // Полное имя чита -> перевод. Идемпотентно (кириллица не трогается). Compound через разделители.
-// exact (опц.) — точный per-game map «имя -> перевод» (renderer/games/*.json), приоритет над движком.
+// exact (опц.) - точный per-game map «имя -> перевод» (renderer/games/*.json), приоритет над движком.
 export function translateText(str, dict, exact) {
   if (typeof str !== "string") return str;
   if (str.trim() === "" || CYRILLIC.test(str)) return str;
@@ -90,7 +90,7 @@ export function translateText(str, dict, exact) {
 }
 
 // Рекурсивный walker: новый объект, вход не мутирует. Переводит только имена (TARGET_KEYS).
-// ВАЖНО: category НЕ трогаем — это slug для ключа локали (trainer_cheats_list.category_<slug>),
+// ВАЖНО: category НЕ трогаем - это slug для ключа локали (trainer_cheats_list.category_<slug>),
 // его переводит локаль Фазы 1. Перевод slug ломает lookup ключа.
 export function translateCheats(node, dict, exact) {
   if (Array.isArray(node)) return node.map((n) => translateCheats(n, dict, exact));

@@ -29,7 +29,7 @@ public partial class SettingsWindow : Window
     {
         var dialog = new OpenFolderDialog { Title = L.Get("S_Browse_Dialog") };
         if (dialog.ShowDialog(this) != true) return;
-        _vm.DetectFromFolder(dialog.FolderName); // пересоздаёт Settings — закрываем окно
+        _vm.DetectFromFolder(dialog.FolderName); // пересоздаёт Settings - закрываем окно
         Close();
     }
 }

@@ -12,7 +12,7 @@ public static class LocaleBuilder
         var root = JsonNode.Parse(string.IsNullOrWhiteSpace(enUsJson) ? "{}" : enUsJson)!.AsObject();
         foreach (var kv in overrides.Translations)
             SetNested(root, kv.Key.Split('.'), kv.Value);
-        // UnsafeRelaxedJsonEscaping: кириллица остаётся литеральной (не \uXXXX) — читаемо и как у оригинальных локалей.
+        // UnsafeRelaxedJsonEscaping: кириллица остаётся литеральной (не \uXXXX) - читаемо и как у оригинальных локалей.
         return root.ToJsonString(new JsonSerializerOptions
         {
             WriteIndented = true,

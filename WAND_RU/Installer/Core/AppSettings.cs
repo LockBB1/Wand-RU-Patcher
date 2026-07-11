@@ -27,7 +27,7 @@ public sealed class AppSettings
             if (File.Exists(path))
                 return JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(path)) ?? new AppSettings();
         }
-        catch { /* битый/недоступный файл — дефолты */ }
+        catch { /* битый/недоступный файл - дефолты */ }
         return new AppSettings();
     }
 
@@ -39,6 +39,6 @@ public sealed class AppSettings
             if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
             File.WriteAllText(path, JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true }));
         }
-        catch { /* не удалось сохранить — не критично */ }
+        catch { /* не удалось сохранить - не критично */ }
     }
 }
