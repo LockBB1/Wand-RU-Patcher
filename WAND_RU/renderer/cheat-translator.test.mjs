@@ -207,6 +207,21 @@ test("idiom: noclip / invincible", () => {
   assert.equal(translateText("Invincible", dict), "Неуязвимость");
 });
 
+// --- RPG/Paradox-слова (фикс по скрину CK3: «Задать Prestige» и т.п.) ---
+test("rpg words: Set/Unlimited + характеристики CK3 с верной грамматикой", () => {
+  assert.equal(translateText("Set Prestige", dict), "Задать престиж");
+  assert.equal(translateText("Set Dread", dict), "Задать ужас");
+  assert.equal(translateText("Set Diplomacy", dict), "Задать дипломатию"); // вин. падеж
+  assert.equal(translateText("Set Stewardship", dict), "Задать управление");
+  assert.equal(translateText("Set Learning", dict), "Задать учёность");
+  assert.equal(translateText("Set Martial", dict), "Задать военное дело");
+  assert.equal(translateText("Set Prowess", dict), "Задать доблесть");
+  assert.equal(translateText("Set Stress", dict), "Задать стресс");
+  assert.equal(translateText("Set Renown", dict), "Задать известность");
+  assert.equal(translateText("Set King Age", dict), "Задать возраст короля"); // idiom-хвост
+  assert.equal(translateText("Fast Culture Progress", dict), "Быстрый прогресс культуры");
+});
+
 // --- per-game exact map (renderer/games/*.json) ---
 test("exact: per-game map wins over engine and patterns", () => {
   const exact = { "Low Heat": "Низкий уровень розыска", "Max SP": "Максимум SP" };
