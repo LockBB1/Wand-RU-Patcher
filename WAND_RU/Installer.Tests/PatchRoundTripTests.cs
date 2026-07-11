@@ -87,4 +87,23 @@ public class PatchRoundTripTests
         Assert.Equal(before, File.ReadAllBytes(asar));
         Assert.False(File.Exists(Path.Combine(appDir, "resources", "wand-ru-patch.json")));
     }
+
+    // Регресс: патченый Wand молча не стартует, если хэш заголовка app.asar в Wand.exe не обновлён
+    // (Electron fuse integrity). После Apply exe должен указывать на хэш ПАТЧЕНОГО заголовка, после
+    // Restore - вернуться к оригинальному.
+    [Fact]
+    public void Apply_and_restore_keep_exe_integrity_hash_in_sync()
+    {
+        var appDir = TestPaths.PristineAppCopy();
+        var asar = Path.Combine(appDir, "resources", "app.asar");
+        var exe = Path.Combine(appDir, "Wand.exe");
+
+        Assert.Equal(AsarIntegrity.ComputeHeaderHash(asar), AsarIntegrity.ReadHash(exe)); // pristine согласован
+
+        new RuPatcher(appDir, RuOverrides.LoadEmbedded()).Apply();
+        Assert.Equal(AsarIntegrity.ComputeHeaderHash(asar), AsarIntegrity.ReadHash(exe)); // патч -> новый хэш
+
+        RuUnpatcher.Restore(appDir);
+        Assert.Equal(AsarIntegrity.ComputeHeaderHash(asar), AsarIntegrity.ReadHash(exe)); // откат -> оригинал
+    }
 }

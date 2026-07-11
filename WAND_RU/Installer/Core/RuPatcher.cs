@@ -57,6 +57,11 @@ public sealed class RuPatcher
         // ExtractAll закэшировал старый filesystem по этому пути; после перезаписи - сбросить.
         Disk.UncacheFilesystem(_asar);
 
+        // Wand.exe хранит SHA256 заголовка app.asar (Electron fuse integrity). Заголовок изменился -
+        // без обновления хэша Electron молча не стартует. Прописываем актуальный хэш в exe.
+        if (AsarIntegrity.SyncAppDir(_appDir, _asar, _log) == 0)
+            _log("Целостность: встроенная проверка не обнаружена (старая версия Wand) - пропуск.");
+
         var man = new PatchManifest
         {
             Name = "Wand RU",
