@@ -192,3 +192,28 @@ test("capitalization: standalone tail-word capitalized", () => {
 test("adj agreement over adverbs list (XP masculine)", () => {
   assert.equal(translateText("Unlimited XP", dict), "Бесконечный опыт");
 });
+
+// --- v3: generic suffixes, bracket tags, weapon ammo ---
+test("suffix: generic noun suffixes with known tail", () => {
+  assert.equal(translateText("Reload Speed", dict), "Скорость перезарядки");
+  assert.equal(translateText("Sprint Speed", dict), "Скорость спринта");
+  assert.equal(translateText("Item Duration", dict), "Длительность предмета");
+});
+
+test("suffix: weapon ammo", () => {
+  assert.equal(translateText("Shotgun Ammo", dict), "Патроны дробовика");
+  assert.equal(translateText("Pistol Ammo", dict), "Патроны пистолета");
+});
+
+test("bracket: tag translated, inner capitalized", () => {
+  assert.equal(translateText("[Spaceship] Unlimited Health", dict), "[Корабль] Бесконечное здоровье");
+});
+
+test("prefix all: All X -> Все X", () => {
+  assert.equal(translateText("Get All Skills", dict), "Получить Все навыки");
+});
+
+test("idiom: noclip / invincible", () => {
+  assert.equal(translateText("No Clip", dict), "Сквозь стены");
+  assert.equal(translateText("Invincible", dict), "Неуязвимость");
+});

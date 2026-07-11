@@ -47,6 +47,12 @@ function resolveName(seg, dict, depth = 0) {
   if (hasKey(dict.idioms, key)) return dict.idioms[key];
   if (hasKey(dict.words, key)) return dict.words[key].n;
 
+  // Тег в скобках: "[Spaceship] Unlimited Health" -> "[Корабль] Бесконечное здоровье".
+  const br = s.match(/^\[([^\]]+)\]\s*(.+)$/);
+  if (br && depth < MAX_DEPTH) {
+    return "[" + resolveName(br[1], dict, depth + 1) + "] " + resolveName(br[2], dict, depth + 1);
+  }
+
   // Prefix-паттерны (раньше suffix: "Set X Multiplier" = Set(X Multiplier), а не (Set X)Multiplier).
   for (const p of dict.prefixes || []) {
     const m = s.match(new RegExp(p.match, "i"));
@@ -76,8 +82,8 @@ export function translateText(str, dict) {
     .split(SPLIT)
     .map((seg) => (SPLIT.test(seg) ? seg : resolveName(seg, dict)))
     .join("");
-  // Капитализация первой буквы (хвосты-слова в словаре строчные для склейки).
-  const i = res.search(/\S/);
+  // Капитализация первой КИРИЛЛИЧЕСКОЙ буквы (переведённый хвост строчный; латиницу/плейсхолдеры не трогаем).
+  const i = res.search(/[а-яёА-ЯЁ]/);
   return i < 0 ? res : res.slice(0, i) + res.charAt(i).toLocaleUpperCase("ru") + res.slice(i + 1);
 }
 
