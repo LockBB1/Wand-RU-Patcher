@@ -1,0 +1,32 @@
+{
+  "title": "?",
+  "names": {
+    "God Mode/Ignore Hits": "Режим бога / игнорировать попадания",
+    "Unlimited Health": "Бесконечное здоровье",
+    "Edit Max Health": "Изменить макс. здоровье",
+    "Defense Multiplier": "Множитель защиты",
+    "Unlimited Thrust": "Бесконечная тяга",
+    "Edit Max Thrust": "Изменить макс. тягу",
+    "Max Hacking Gauge": "Макс. шкала взлома",
+    "Unlimited Repair Cartridge": "Бесконечные ремонтные картриджи",
+    "Unlimited Ammo": "Бесконечные патроны",
+    "No Recoil": "Без отдачи",
+    "Rapid Fire": "Скорострельность",
+    "Edit Lunafilament": "Изменить лунафиламент",
+    "Lunafilament Multiplier": "Множитель лунафиламента",
+    "Edit Upgrade Components": "Изменить компоненты улучшений",
+    "Upgrade Components Multiplier": "Множитель компонентов улучшений",
+    "Edit Pure Lunum": "Изменить чистый лунум",
+    "Pure Lunum Multiplier": "Множитель чистого лунума",
+    "Edit Cabin Coins": "Изменить монеты кабины",
+    "Cabin Coins Multiplier": "Множитель монет кабины",
+    "Unlimited OPEN State Duration": "Бесконечная длительность режима OPEN",
+    "Super Hacking Damage": "Суперурон взлома",
+    "Hacking Damage Multiplier": "Множитель урона взлома",
+    "Super Damage/One-Hit Kills": "Суперурон / убийство с одного удара",
+    "Damage Multiplier": "Множитель урона",
+    "Freeze Puzzle Timer": "Заморозить таймер головоломки",
+    "Freeze Training Timer": "Заморозить таймер тренировки",
+    "Game Speed": "Скорость игры"
+  }
+}

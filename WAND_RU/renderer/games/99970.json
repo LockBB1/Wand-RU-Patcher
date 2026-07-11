@@ -1,0 +1,23 @@
+{
+  "title": "Schedule I",
+  "names": {
+    "Unlimited Health": "Бесконечное здоровье",
+    "Invisibility": "Невидимость",
+    "Clone Items When Clicking": "Клонировать предметы по клику",
+    "Unlimited Water for Watering Can": "Бесконечная вода в лейке",
+    "Unlimited Cash": "Бесконечные наличные",
+    "Edit Cash": "Изменить наличные",
+    "Unlimited Bank Balance": "Бесконечный банковский счёт",
+    "Edit Bank Balance": "Изменить банковский счёт",
+    "Instant Max NPC Relationship": "Мгновенно макс. отношения с NPC",
+    "Instant Plant Growth": "Мгновенный рост растений",
+    "Instant Ingredient Mixing": "Мгновенное смешивание ингредиентов",
+    "Unlock All Shop Items": "Открыть все товары в магазинах",
+    "No Curfew": "Без комендантского часа",
+    "No Investigate / No Body Search": "Без проверок / без обыска",
+    "Advance 1 Hour": "Вперёд на 1 час",
+    "Rewind 1 Hour": "Назад на 1 час",
+    "Time Stop": "Остановка времени",
+    "Run Speed Multiplier": "Множитель скорости бега"
+  }
+}

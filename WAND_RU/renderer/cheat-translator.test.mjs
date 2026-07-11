@@ -206,3 +206,32 @@ test("idiom: noclip / invincible", () => {
   assert.equal(translateText("No Clip", dict), "Сквозь стены");
   assert.equal(translateText("Invincible", dict), "Неуязвимость");
 });
+
+// --- per-game exact map (renderer/games/*.json) ---
+test("exact: per-game map wins over engine and patterns", () => {
+  const exact = { "Low Heat": "Низкий уровень розыска", "Max SP": "Максимум SP" };
+  assert.equal(translateText("Low Heat", dict, exact), "Низкий уровень розыска");
+  assert.equal(translateText("Max SP", dict, exact), "Максимум SP");
+  assert.equal(translateText("Unlimited Health", dict, exact), "Бесконечное здоровье"); // мимо exact — движок
+});
+
+test("exact: walker threads exact map, idempotent on cyrillic", () => {
+  const exact = { "Never Busted": "Никогда не поймают" };
+  const out = translateCheats([{ name: "Never Busted", category: "police" }], dict, exact);
+  assert.equal(out[0].name, "Никогда не поймают");
+  assert.equal(out[0].category, "police"); // slug не тронут
+  assert.equal(translateText("Никогда не поймают", dict, exact), "Никогда не поймают");
+});
+
+test("exact: all game files are valid (title + non-empty names)", async () => {
+  const { readdirSync } = await import("node:fs");
+  const files = readdirSync(join(here, "games")).filter((f) => f.endsWith(".json"));
+  assert.ok(files.length >= 16);
+  for (const f of files) {
+    const g = load("games", f);
+    assert.equal(typeof g.title, "string", f);
+    for (const [en, ru] of Object.entries(g.names)) {
+      assert.ok(/[А-Яа-яЁё]/.test(ru), `${f}: нет кириллицы в переводе «${en}» -> «${ru}»`);
+    }
+  }
+});

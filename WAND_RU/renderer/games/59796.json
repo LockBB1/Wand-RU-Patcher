@@ -1,0 +1,33 @@
+{
+  "title": "Victoria 3",
+  "names": {
+    "Unlimited Units Health": "Бесконечное здоровье отрядов",
+    "AI Accept All Deals": "ИИ принимает все сделки",
+    "Add 10 Supply Ships": "+10 кораблей снабжения",
+    "Disable Retooling": "Отключить переоснащение",
+    "Fast Battle": "Быстрые сражения",
+    "Fast Build": "Быстрое строительство",
+    "Fast Build Ships": "Быстрая постройка кораблей",
+    "Fast Civil Wars": "Быстрые гражданские войны",
+    "Fast Colonize": "Быстрая колонизация",
+    "Fast Enact": "Быстрое принятие законов",
+    "Fast Hire": "Быстрый найм",
+    "Fast Incorporate": "Быстрая инкорпорация",
+    "Fast Institutions": "Быстрые институты",
+    "Fast Interests": "Быстрые интересы",
+    "Fast Mobilize": "Быстрая мобилизация",
+    "Fast Movements": "Быстрые движения",
+    "Fast Research": "Быстрые исследования",
+    "Fast Revolution": "Быстрые революции",
+    "Fast Secret Goals": "Быстрые тайные цели",
+    "Fast Travels": "Быстрые перемещения",
+    "No Revolution": "Без революций",
+    "No Secession": "Без сецессий",
+    "No Shortages": "Без дефицита",
+    "Complete All Research": "Завершить все исследования",
+    "Set Gold Reserve": "Задать золотой запас",
+    "Set Investment Pool": "Задать инвестиционный фонд",
+    "Refil Gold Reserves": "Пополнить золотой запас",
+    "Reset Infamy": "Сбросить дурную славу"
+  }
+}

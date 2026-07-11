@@ -1,0 +1,31 @@
+{
+  "title": "?",
+  "names": {
+    "Infinite Health": "Бесконечное здоровье",
+    "Defense Multiplier": "Множитель защиты",
+    "Infinite Barrier": "Бесконечный барьер",
+    "Infinite Energy": "Бесконечная энергия",
+    "Set Energy Regeneration": "Задать регенерацию энергии",
+    "Set Attack Speed": "Задать скорость атаки",
+    "Set Cast Speed": "Задать скорость каста",
+    "100% Critical Chance": "100% шанс крита",
+    "100% Drop Rate": "100% шанс выпадения",
+    "Edit Loot Drop Amount": "Изменить количество добычи",
+    "Set Player Speed": "Задать скорость игрока",
+    "Set Movement Speed": "Задать скорость передвижения",
+    "Edit Gold": "Изменить золото",
+    "Infinite Exp": "Бесконечный опыт",
+    "Exp Multiplier": "Множитель опыта",
+    "Edit Total Attribute Points": "Изменить очки характеристик",
+    "Edit Total Divinity Points": "Изменить очки божественности",
+    "Edit Total Active Points": "Изменить очки активных навыков",
+    "Edit Total Passive Points": "Изменить очки пассивных навыков",
+    "Set AI Speed": "Задать скорость ИИ",
+    "Super Damage/One-Hit Kills": "Суперурон / убийство с одного удара",
+    "Damage Multiplier": "Множитель урона",
+    "Set Game Speed": "Задать скорость игры",
+    "Save Location": "Сохранить позицию",
+    "Teleport": "Телепорт",
+    "Undo Teleport": "Отменить телепорт"
+  }
+}

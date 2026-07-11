@@ -75,9 +75,11 @@ function resolveName(seg, dict, depth = 0) {
 }
 
 // Полное имя чита -> перевод. Идемпотентно (кириллица не трогается). Compound через разделители.
-export function translateText(str, dict) {
+// exact (опц.) — точный per-game map «имя -> перевод» (renderer/games/*.json), приоритет над движком.
+export function translateText(str, dict, exact) {
   if (typeof str !== "string") return str;
   if (str.trim() === "" || CYRILLIC.test(str)) return str;
+  if (exact && hasKey(exact, str.trim())) return exact[str.trim()];
   const res = str
     .split(SPLIT)
     .map((seg) => (SPLIT.test(seg) ? seg : resolveName(seg, dict)))
@@ -90,13 +92,13 @@ export function translateText(str, dict) {
 // Рекурсивный walker: новый объект, вход не мутирует. Переводит только имена (TARGET_KEYS).
 // ВАЖНО: category НЕ трогаем — это slug для ключа локали (trainer_cheats_list.category_<slug>),
 // его переводит локаль Фазы 1. Перевод slug ломает lookup ключа.
-export function translateCheats(node, dict) {
-  if (Array.isArray(node)) return node.map((n) => translateCheats(n, dict));
+export function translateCheats(node, dict, exact) {
+  if (Array.isArray(node)) return node.map((n) => translateCheats(n, dict, exact));
   if (node && typeof node === "object") {
     const out = {};
     for (const [k, v] of Object.entries(node)) {
-      if (typeof v === "string" && TARGET_KEYS.has(k)) out[k] = translateText(v, dict);
-      else out[k] = translateCheats(v, dict);
+      if (typeof v === "string" && TARGET_KEYS.has(k)) out[k] = translateText(v, dict, exact);
+      else out[k] = translateCheats(v, dict, exact);
     }
     return out;
   }

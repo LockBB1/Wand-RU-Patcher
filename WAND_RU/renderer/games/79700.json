@@ -1,0 +1,16 @@
+{
+  "title": "Mortal Kombat 1",
+  "names": {
+    "Choose Team": "Выбор команды",
+    "Unhittable": "Враг промахивается",
+    "Invincible": "Неуязвимость",
+    "Infinite Super Meter": "Бесконечная шкала суперприёма",
+    "Infinite Kameo Meter": "Бесконечная шкала камео",
+    "One-Hit Kills": "Убийство с одного удара",
+    "Ignore Enemy Blocks": "Игнорировать блоки врага",
+    "Enemy Can't Use Kameos": "Враг не может использовать камео",
+    "No Enemy Super Meter": "Нет шкалы суперприёма у врага",
+    "No Enemy Kameo Meter": "Нет шкалы камео у врага",
+    "Infinite Fight Timer": "Бесконечный таймер боя"
+  }
+}

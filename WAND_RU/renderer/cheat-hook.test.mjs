@@ -55,6 +55,23 @@ test("fetch: error status passes through", async () => {
   assert.equal(await res.text(), "nope"); // не тронут
 });
 
+test("fetch: per-game exact map applies by gameId from URL", async () => {
+  const nfs = () => ({ trainer: { blueprint: { cheats: [
+    { uuid: "n", name: "Never Busted", category: "police" },
+    { uuid: "s", name: "Max SP", category: "progression" },
+  ] } } });
+  const w = install(() => Promise.resolve(jsonRes(nfs())));
+  const res = await w.fetch("https://api.wemod.com/v3/games/45481/trainer?v=3"); // games/45481.json
+  const data = await res.json();
+  assert.equal(data.trainer.blueprint.cheats[0].name, "Никогда не поймают");
+  assert.equal(data.trainer.blueprint.cheats[1].name, "Максимум SP");
+  // Чужой gameId — exact-словарь 45481 не применяется, имя уходит движку/passthrough.
+  const w2 = install(() => Promise.resolve(jsonRes(nfs())));
+  const res2 = await w2.fetch("https://api.wemod.com/v3/games/40171/trainer?v=3");
+  const data2 = await res2.json();
+  assert.notEqual(data2.trainer.blueprint.cheats[0].name, "Никогда не поймают"); // exact 45481 не применился
+});
+
 test("hook: idempotent (second install is a no-op)", () => {
   const window = { fetch: () => Promise.resolve(jsonRes(trainer())) };
   new Function("window", "Headers", "Response", hookSrc)(window, Headers, Response);
