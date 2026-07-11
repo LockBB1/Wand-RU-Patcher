@@ -56,6 +56,14 @@ public partial class MainWindow : Window
         catch { /* нет браузера */ }
     }
 
+    // Открывает страницу репо по относительному пути из Tag кнопки (Help-оверлей).
+    void OnOpenUrl(object sender, RoutedEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.Tag is not string path) return;
+        try { Process.Start(new ProcessStartInfo(RepoUrl + path) { UseShellExecute = true }); }
+        catch { /* нет браузера */ }
+    }
+
     void OnDragMove(object sender, MouseButtonEventArgs e)
     {
         if (e.ButtonState == MouseButtonState.Pressed) DragMove();

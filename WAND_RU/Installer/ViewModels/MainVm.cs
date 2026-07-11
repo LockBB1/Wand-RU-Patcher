@@ -14,6 +14,7 @@ public sealed class MainVm : ObservableObject
     string _statusText = "";
     string _migrationHint = "";
     bool _isAboutOpen;
+    bool _isHelpOpen;
     SettingsVm? _settings;
     readonly RuOverrides _overrides = RuOverrides.LoadEmbedded();
 
@@ -25,12 +26,15 @@ public sealed class MainVm : ObservableObject
     public WandInstall? Install { get; private set; }
     public SettingsVm? Settings { get => _settings; private set => SetProperty(ref _settings, value); }
     public bool IsAboutOpen { get => _isAboutOpen; set => SetProperty(ref _isAboutOpen, value); }
+    public bool IsHelpOpen { get => _isHelpOpen; set => SetProperty(ref _isHelpOpen, value); }
 
     public ICommand PatchCommand { get; }
     public ICommand RestoreCommand { get; }
     public ICommand BrowseCommand { get; }
     public ICommand OpenAboutCommand { get; }
     public ICommand CloseAboutCommand { get; }
+    public ICommand OpenHelpCommand { get; }
+    public ICommand CloseHelpCommand { get; }
 
     public MainVm()
     {
@@ -41,6 +45,8 @@ public sealed class MainVm : ObservableObject
         BrowseCommand = new RelayCommand(p => { if (p is string dir) DetectFrom(new[] { dir }); });
         OpenAboutCommand = new RelayCommand(_ => IsAboutOpen = true);
         CloseAboutCommand = new RelayCommand(_ => IsAboutOpen = false);
+        OpenHelpCommand = new RelayCommand(_ => IsHelpOpen = true);
+        CloseHelpCommand = new RelayCommand(_ => IsHelpOpen = false);
     }
 
     public void Detect() => DetectFrom(WandLocator.DefaultRoots());

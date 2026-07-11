@@ -42,6 +42,11 @@
     <s:String x:Key="S_SourceCode">Исходный код</s:String>
     <s:String x:Key="S_MadeWith">Сделано с любовью by LockBB1</s:String>
     <s:String x:Key="S_StarUs">Поставьте звезду, если WRP помог вам &lt;3</s:String>
+    <s:String x:Key="S_Help_Title">Помочь проекту</s:String>
+    <s:String x:Key="S_Help_Sub">WRP делается бесплатно и в свободное время. Лучший вклад - рассказать, что перевести дальше, и сообщать о проблемах.</s:String>
+    <s:String x:Key="S_Help_RequestGame">Запросить перевод игры</s:String>
+    <s:String x:Key="S_Help_ReportBug">Сообщить о баге</s:String>
+    <s:String x:Key="S_Help_Contribute">Сделать перевод самому (PR)</s:String>
     <s:String x:Key="S_UpdateAvailable">Доступна v{0}: скачать</s:String>
     <s:String x:Key="S_MigrateHint">Wand обновился до {0}, а русификация осталась в {1}. Нажмите «Русифицировать», чтобы перенести её на новую версию.</s:String>
 

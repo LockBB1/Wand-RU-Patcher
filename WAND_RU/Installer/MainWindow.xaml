@@ -47,6 +47,9 @@
 
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                     <Button Width="25" Height="25" Padding="5" Margin="0 0 6 0"
+                            Style="{StaticResource IconButton}" Tag="{StaticResource HeartIcon}"
+                            Command="{Binding OpenHelpCommand}"/>
+                    <Button Width="25" Height="25" Padding="5" Margin="0 0 6 0"
                             Style="{StaticResource IconButton}" Tag="{StaticResource GitHub}"
                             Command="{Binding OpenAboutCommand}"/>
                     <Button Width="25" Height="25" Padding="5.5" Margin="0 0 6 0"
@@ -207,6 +210,36 @@
                                    FontSize="12" HorizontalAlignment="Center" TextAlignment="Center" Margin="0 0 0 18"/>
                         <Button Content="{DynamicResource S_Close}" Style="{StaticResource ColoredButton}"
                                 Height="34" Width="120" Command="{Binding CloseAboutCommand}"/>
+                    </StackPanel>
+                </Border>
+            </Border>
+            <!-- Help overlay: как помочь проекту -->
+            <Border Grid.RowSpan="3" CornerRadius="7" Background="#CC000000"
+                    Visibility="{Binding IsHelpOpen, Converter={StaticResource ToVisibilityConverter}}">
+                <Border Width="360" Background="{DynamicResource Popover}" CornerRadius="8"
+                        BorderBrush="{DynamicResource Border}" BorderThickness="1"
+                        VerticalAlignment="Center" HorizontalAlignment="Center" Padding="24">
+                    <StackPanel HorizontalAlignment="Center">
+                        <Viewbox Width="40" Height="40" Margin="0 0 0 10">
+                            <Path Fill="#E25555" Data="{StaticResource HeartIcon}"/>
+                        </Viewbox>
+                        <TextBlock Text="{DynamicResource S_Help_Title}" Foreground="{DynamicResource PopoverForeground}"
+                                   FontSize="16" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0 0 0 6"/>
+                        <TextBlock Text="{DynamicResource S_Help_Sub}" Foreground="{DynamicResource MutedForeground}"
+                                   FontSize="12" TextWrapping="Wrap" TextAlignment="Center" Margin="0 0 0 16"/>
+                        <Button Content="{DynamicResource S_Help_RequestGame}" Style="{StaticResource ColoredButton}"
+                                Height="34" Width="250" Margin="0 0 0 8" Click="OnOpenUrl"
+                                Tag="/issues/new?template=game-request.yml"/>
+                        <Button Content="{DynamicResource S_Help_ReportBug}" Style="{StaticResource ColoredButton}"
+                                Height="34" Width="250" Margin="0 0 0 8" Click="OnOpenUrl"
+                                Tag="/issues/new?template=translation-bug.yml"/>
+                        <Button Content="{DynamicResource S_Help_Contribute}" Style="{StaticResource ColoredButton}"
+                                Height="34" Width="250" Margin="0 0 0 14" Click="OnOpenUrl"
+                                Tag="/blob/main/CONTRIBUTING.md"/>
+                        <TextBlock Text="{DynamicResource S_StarUs}" Foreground="{DynamicResource MutedForeground}"
+                                   FontSize="12" HorizontalAlignment="Center" TextAlignment="Center" Margin="0 0 0 14"/>
+                        <Button Content="{DynamicResource S_Close}" Style="{StaticResource ColoredButton}"
+                                Height="34" Width="120" Command="{Binding CloseHelpCommand}"/>
                     </StackPanel>
                 </Border>
             </Border>
