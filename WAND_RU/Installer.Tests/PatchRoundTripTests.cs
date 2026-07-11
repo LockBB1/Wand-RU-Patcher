@@ -31,6 +31,49 @@ public class PatchRoundTripTests
     }
 
     [Fact]
+    public void Apply_injects_cheat_hook_when_enabled()
+    {
+        var appDir = TestPaths.PristineAppCopy();
+        new RuPatcher(appDir, RuOverrides.LoadEmbedded(), translateCheats: true).Apply();
+
+        var unpacked = Path.Combine(appDir, "resources", "app.asar.unpacked");
+        Assert.True(File.Exists(Path.Combine(unpacked, "cheat-hook.js")));
+        Assert.Contains("cheat-hook.js", File.ReadAllText(Path.Combine(unpacked, "index.html")));
+
+        // cheat-hook.js должен попасть в дерево нового app.asar (так его грузит Electron).
+        var listed = Disk.ReadFilesystemSync(Path.Combine(appDir, "resources", "app.asar")).ListFiles();
+        Assert.Contains(listed, p => p.EndsWith("cheat-hook.js"));
+    }
+
+    [Fact]
+    public void Apply_skips_cheat_hook_when_disabled()
+    {
+        var appDir = TestPaths.PristineAppCopy();
+        new RuPatcher(appDir, RuOverrides.LoadEmbedded(), translateCheats: false).Apply();
+
+        var unpacked = Path.Combine(appDir, "resources", "app.asar.unpacked");
+        Assert.False(File.Exists(Path.Combine(unpacked, "cheat-hook.js")));
+        Assert.DoesNotContain("cheat-hook.js", File.ReadAllText(Path.Combine(unpacked, "index.html")));
+    }
+
+    [Fact]
+    public void CheatHook_inject_is_idempotent()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), "wru-hook-" + Path.GetRandomFileName());
+        Directory.CreateDirectory(dir);
+        try
+        {
+            File.WriteAllText(Path.Combine(dir, "index.html"), "<html><head></head><body></body></html>");
+            CheatHook.Inject(dir, "/*hook*/");
+            CheatHook.Inject(dir, "/*hook*/");
+            var html = File.ReadAllText(Path.Combine(dir, "index.html"));
+            var count = html.Split("cheat-hook.js").Length - 1;
+            Assert.Equal(1, count); // подключён ровно один раз
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    [Fact]
     public void Restore_reverts_asar_and_removes_manifest()
     {
         var appDir = TestPaths.PristineAppCopy();

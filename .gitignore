@@ -3,6 +3,9 @@
 /_ref
 CLAUDE.txt
 
+# Private working notes (handoff, start prompt) — not for repo
+/.local
+
 # .NET build artifacts (Wand-RU-Installer)
 [Bb]in/
 [Oo]bj/
@@ -20,4 +23,5 @@ Wand-RU-Installer/App.xaml
 WAND_RU/handoff.md
 WAND_RU/SMOKE.md
 WAND_RU/publish/
+WAND_RU/publish-small/
 WAND_RU/Installer/THIRD-PARTY-NOTICES.md
