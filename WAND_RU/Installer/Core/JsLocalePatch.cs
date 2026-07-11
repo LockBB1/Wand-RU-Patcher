@@ -11,8 +11,13 @@ public static class JsLocalePatch
     public const string RussianFlagDataUri =
         "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA5MDAgNjAwIj48cGF0aCBmaWxsPSIjZmZmIiBkPSJNMCAwaDkwMHY2MDBIMHoiLz48cGF0aCBmaWxsPSIjMDAzOWE2IiBkPSJNMCAyMDBoOTAwdjQwMEgweiIvPjxwYXRoIGZpbGw9IiNkNTJiMWUiIGQ9Ik0wIDQwMGg5MDB2MjAwSDB6Ii8+PC9zdmc+";
 
-    // Список локалей: массив BCP-47, начинающийся с "en-US"; вставить "ru-RU" сразу после.
-    static readonly Regex LocaleList = new("(\\[\"en-US\"(?:,\"[a-z]{2}-[A-Z]{2}\")*)", RegexOptions.Compiled);
+    // Список локалей: массив BCP-47, начинающийся с "en-US" и содержащий хотя бы ещё одну локаль
+    // (+ , не *): иначе ловит не-списки - ["en-US"], ["en-US",f] (Map), delete m["en-US"].
+    static readonly Regex LocaleList = new("(\\[\"en-US\"(?:,\"[a-z]{2}-[A-Z]{2}\")+)", RegexOptions.Compiled);
+
+    // Признак списка ЯЗЫКОВ (а не e-mail доменов): есть short-pair с не-ASCII значением (native-имя:
+    // "português"/"한국어"/"Türkçe"). E-mail typo-map (["vcom","com"]...) - весь ASCII, не подходит.
+    static readonly Regex LangListGuard = new("\\[\"[a-z]{2}\",\"[^\"]*[^\\x00-\\x7F][^\"]*\"\\]", RegexOptions.Compiled);
 
     // Метаданные языков: последняя запись xx:{name,native,locale} перед закрывающими }} (не {).
     static readonly Regex LangMetaTail = new(
@@ -42,7 +47,7 @@ public static class JsLocalePatch
             text = LangMetaTail.Replace(text,
                 m => $"{m.Groups[1].Value},ru:{{name:\"Russian\",native:\"{nativeName}\",locale:\"ru-RU\"}}{m.Groups[2].Value}", 1);
 
-        if (!Regex.IsMatch(text, "\\[\"ru\",") && ShortPairTail.IsMatch(text))
+        if (!Regex.IsMatch(text, "\\[\"ru\",") && LangListGuard.IsMatch(text) && ShortPairTail.IsMatch(text))
             text = ShortPairTail.Replace(text,
                 m => $"{m.Groups[1].Value},[\"ru\",\"{nativeName}\"]{m.Groups[2].Value}", 1);
 

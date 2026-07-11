@@ -93,4 +93,47 @@ public class JsLocalePatchTests
         var js = "console.log('hi');";
         Assert.Equal(js, JsLocalePatch.Patch(js, Native, Flag));
     }
+
+    // --- Регресс 0.15.2: жадные якоря портили не-locale-list места в бандлах Wand 12.38 ---
+
+    [Fact]
+    public void Does_not_touch_lone_enUS_array()
+    {
+        // supportedLocales:["en-US"] - не список локалей, ru-RU туда не вставлять.
+        var js = "supportedLocales:[\"en-US\"],featureFlagId:\"x\"";
+        Assert.Equal(js, JsLocalePatch.Patch(js, Native, Flag));
+    }
+
+    [Fact]
+    public void Does_not_corrupt_enUS_in_map_entry()
+    {
+        // new Map([["en-US",f],...]) - ["en-US",f] это [ключ,значение], не список локалей.
+        var js = "var y=new Map([[\"en-US\",f],[\"pt-BR\",r]]);";
+        var outp = JsLocalePatch.Patch(js, Native, Flag);
+        Assert.Contains("[\"en-US\",f]", outp);              // запись цела
+        Assert.DoesNotContain("\"en-US\",\"ru-RU\",f", outp); // не разорвана вставкой
+    }
+
+    [Fact]
+    public void Does_not_corrupt_delete_member_access()
+    {
+        var js = "var m={};delete m[\"en-US\"];const y=1;";
+        Assert.Equal(js, JsLocalePatch.Patch(js, Native, Flag)); // delete m["en-US"] не трогаем
+    }
+
+    [Fact]
+    public void Does_not_pollute_email_domain_map()
+    {
+        // Карта e-mail опечаток (все значения ASCII) - не список языков, ["ru",...] не добавлять.
+        var js = "f([[\"vcom\",\"com\"],[\"vom\",\"com\"],[\"yk\",\"uk\"]]);";
+        Assert.Equal(js, JsLocalePatch.Patch(js, Native, Flag));
+    }
+
+    [Fact]
+    public void Adds_ru_pair_to_real_language_list()
+    {
+        // Настоящий список языков (native-имена с не-ASCII) - ru-RU/Русский добавляем.
+        var js = "x([[\"pt\",\"português\"],[\"tr\",\"Türkçe\"]]);";
+        Assert.Contains("[\"ru\",\"Русский\"]", JsLocalePatch.Patch(js, Native, Flag));
+    }
 }
