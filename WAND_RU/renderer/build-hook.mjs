@@ -1,22 +1,19 @@
 // Генерирует cheat-hook.js — self-contained IIFE для инъекции в renderer Wand.
-// Источник правды: cheat-translator.js (движок) + cheat-dictionary.json (словарь).
-// Хук monkey-патчит window.fetch/XHR на /v3/games/{id}/trainer -> translateCheats -> пересборка ответа.
-// Запуск: node build-hook.mjs  (пишет cheat-hook.js рядом).
+// Источник правды: cheat-translator.js (офлайн-движок) + cheat-online.js (MT-добор) + cheat-dictionary.json.
+// Хук monkey-патчит window.fetch/XHR на /v3/games/{id}/trainer -> перевод -> пересборка ответа.
+// Онлайн-режим (MT) включается флагом TranslateCheatsOnline в %AppData%/WandRuInstaller/settings.json;
+// требует Node в renderer (nodeIntegration:true у главного окна Wand). Запуск: node build-hook.mjs.
 
 import { readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const engine = readFileSync(join(here, "cheat-translator.js"), "utf8");
-const dict = readFileSync(join(here, "cheat-dictionary.json"), "utf8");
-
-// Тело движка без ESM-экспортов (в IIFE — обычные функции).
-const engineBody = engine
-  .replace(/^export\s+/gm, "")
-  .trim();
-
-const dictMin = JSON.stringify(JSON.parse(dict)); // компактный словарь
+const strip = (f) => readFileSync(join(here, f), "utf8").replace(/^export\s+/gm, "").trim();
+const engineBody = strip("cheat-translator.js");
+const onlineBody = strip("cheat-online.js");
+const dictMin = JSON.stringify(JSON.parse(readFileSync(join(here, "cheat-dictionary.json"), "utf8")));
+const indent = (s) => s.split("\n").map((l) => "  " + l).join("\n");
 
 const hook = `/* Wand RU — перехват и перевод имён читов в renderer. Сгенерировано build-hook.mjs, не править вручную. */
 (function () {
@@ -25,20 +22,80 @@ const hook = `/* Wand RU — перехват и перевод имён чит�
   window.__wandRuCheatHook = true;
 
   var DICT = ${dictMin};
+  var TARGET_KEYS_ONLINE = new Set(["name", "displayName", "label"]);
 
-${engineBody.split("\n").map((l) => "  " + l).join("\n")}
+${indent(engineBody)}
+
+${indent(onlineBody)}
 
   var TRAINER = /\\/v3\\/games\\/\\d+\\/trainer/;
-  function translateBody(text) {
+
+  // --- Node-доступ (nodeIntegration:true у главного окна) для настроек/кэша/MT. Нет Node -> офлайн. ---
+  var NODE = (typeof require === "function") ? require : null;
+  function nodeDeps() {
+    if (!NODE) return null;
     try {
-      var data = JSON.parse(text);
-      return JSON.stringify(translateCheats(data, DICT));
-    } catch (e) {
-      return null; // не JSON или сбой — не трогаем
-    }
+      var fs = NODE("fs"), https = NODE("https"), p = NODE("path");
+      var base = (typeof process !== "undefined" && process.env && process.env.APPDATA) || "";
+      if (!base) return null;
+      var dir = p.join(base, "WandRuInstaller");
+      return { fs: fs, https: https, settings: p.join(dir, "settings.json"), cache: p.join(dir, "cheat-cache.json") };
+    } catch (e) { return null; }
+  }
+  function isOnline(d) {
+    try { var s = JSON.parse(d.fs.readFileSync(d.settings, "utf8")); return !!(s && s.TranslateCheatsOnline === true); }
+    catch (e) { return false; }
+  }
+  function loadCache(d) {
+    try { return JSON.parse(d.fs.readFileSync(d.cache, "utf8")) || {}; } catch (e) { return {}; }
+  }
+  function saveCache(d, cache) {
+    try { d.fs.writeFileSync(d.cache, JSON.stringify(cache), "utf8"); } catch (e) { /* не критично */ }
+  }
+  function httpsGetter(d) {
+    return function (url) {
+      return new Promise(function (resolve, reject) {
+        var req = d.https.get(url, { timeout: 6000 }, function (r) {
+          var body = ""; r.setEncoding("utf8");
+          r.on("data", function (c) { body += c; });
+          r.on("end", function () { resolve(body); });
+        });
+        req.on("error", reject);
+        req.on("timeout", function () { req.destroy(new Error("timeout")); });
+      });
+    };
+  }
+  function withTimeout(promise, ms, fallback) {
+    return new Promise(function (resolve) {
+      var done = false;
+      var t = setTimeout(function () { if (!done) { done = true; resolve(fallback); } }, ms);
+      var fin = function (v) { if (!done) { done = true; clearTimeout(t); resolve(v); } };
+      promise.then(fin, function () { fin(fallback); });
+    });
   }
 
-  // --- fetch ---
+  // Офлайн-перевод (синхронно) — для XHR-пути.
+  function translateOffline(text) {
+    try { return JSON.stringify(translateCheats(JSON.parse(text), DICT)); } catch (e) { return null; }
+  }
+  // Офлайн + (опц.) онлайн-MT добор — для fetch-пути. Возвращает Promise<string|null>.
+  function translateAsync(text) {
+    var data;
+    try { data = JSON.parse(text); } catch (e) { return Promise.resolve(null); }
+    var offline = translateCheats(data, DICT);
+    var d = nodeDeps();
+    if (!d || !isOnline(d)) return Promise.resolve(JSON.stringify(offline));
+    try {
+      var cache = loadCache(d);
+      return withTimeout(
+        runOnline(offline, { cache: cache, httpsGet: httpsGetter(d), targetKeys: TARGET_KEYS_ONLINE }),
+        8000, offline
+      ).then(function (result) { saveCache(d, cache); return JSON.stringify(result); },
+             function () { return JSON.stringify(offline); });
+    } catch (e) { return Promise.resolve(JSON.stringify(offline)); }
+  }
+
+  // --- fetch (офлайн + онлайн-MT) ---
   var _fetch = window.fetch;
   if (typeof _fetch === "function") {
     window.fetch = function (input, init) {
@@ -51,32 +108,30 @@ ${engineBody.split("\n").map((l) => "  " + l).join("\n")}
           var ct = (res.headers && res.headers.get("content-type")) || "";
           if (ct.indexOf("json") < 0) return res;
           return res.clone().text().then(function (text) {
-            var t = translateBody(text);
-            if (t == null) return res;
-            var headers = new Headers(res.headers);
-            headers.delete("content-length");
-            return new Response(t, { status: res.status, statusText: res.statusText, headers: headers });
+            return translateAsync(text).then(function (t) {
+              if (t == null) return res;
+              var headers = new Headers(res.headers);
+              headers.delete("content-length");
+              return new Response(t, { status: res.status, statusText: res.statusText, headers: headers });
+            });
           }).catch(function () { return res; });
         } catch (e) { return res; }
       });
     };
   }
 
-  // --- XMLHttpRequest (best-effort фолбэк) ---
+  // --- XMLHttpRequest (офлайн-only, best-effort фолбэк; онлайн-MT требует async) ---
   var XP = window.XMLHttpRequest && window.XMLHttpRequest.prototype;
   if (XP && XP.open && XP.send) {
     var _open = XP.open, _send = XP.send;
-    XP.open = function (method, url) {
-      this.__wandRuUrl = url;
-      return _open.apply(this, arguments);
-    };
+    XP.open = function (method, url) { this.__wandRuUrl = url; return _open.apply(this, arguments); };
     XP.send = function () {
       var xhr = this;
       if (xhr.__wandRuUrl && TRAINER.test(xhr.__wandRuUrl)) {
         xhr.addEventListener("readystatechange", function () {
           if (xhr.readyState === 4 && xhr.status >= 200 && xhr.status < 300) {
             try {
-              var t = translateBody(xhr.responseText);
+              var t = translateOffline(xhr.responseText);
               if (t != null) {
                 Object.defineProperty(xhr, "responseText", { value: t, configurable: true });
                 Object.defineProperty(xhr, "response", { value: t, configurable: true });
