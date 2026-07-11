@@ -1,0 +1,55 @@
+name: Release
+
+# Пуш тега вида X.Y.Z (без 'v') -> сборка -> GitHub Release с exe.
+# Кормит апдейт-баннер установщика (UpdateChecker смотрит releases/latest).
+on:
+  push:
+    tags:
+      - '[0-9]*.[0-9]*.[0-9]*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 9
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Publish self-contained exe (~130 MB, .NET inside)
+        shell: pwsh
+        run: ./WAND_RU/build.ps1 -Publish
+
+      - name: Publish framework-dependent exe (~2.4 MB, needs .NET 9 Desktop Runtime)
+        shell: pwsh
+        run: ./WAND_RU/build.ps1 -PublishSmall
+
+      - name: Stage assets with distinct names
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist | Out-Null
+          Copy-Item WAND_RU/publish/WandRuInstaller.exe dist/WandRuInstaller.exe
+          Copy-Item WAND_RU/publish-small/WandRuInstaller.exe dist/WandRuInstaller-small.exe
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ github.ref_name }}
+          generate_release_notes: true
+          body: |
+            ## Скачать
+            - **WandRuInstaller.exe** - рекомендуется: работает "из коробки", ничего ставить не надо (~130 МБ).
+            - **WandRuInstaller-small.exe** - компактный (~2.4 МБ), требует установленный [.NET 9 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/9.0).
+
+            > Windows SmartScreen может предупреждать: сборка не подписана. Качайте только из релизов этого репозитория.
+          files: |
+            dist/WandRuInstaller.exe
+            dist/WandRuInstaller-small.exe
+          fail_on_unmatched_files: true
