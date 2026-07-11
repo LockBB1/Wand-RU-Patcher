@@ -89,24 +89,31 @@ export async function translateOne(text, httpsGet, provider) {
   }
 }
 
-// Оркестрация: собрать непокрытое -> кэш-мисс через MT (параллельно) -> обновить кэш -> применить.
-// deps: { cache (obj en_lower->ru, мутируется), httpsGet, targetKeys, provider? }. Возвращает новый node.
+// Оркестрация. node - ОРИГИНАЛЬНЫЙ (английский) ответ: MT всегда получает исходную строку,
+// а не полуфабрикат офлайна («Задать Prestige» ломает MT). deps.offline (опц.) - строковый
+// офлайн-переводчик: офлайн справился целиком (нет латиницы) -> MT не нужен; иначе MT по оригиналу,
+// при его сбое - хотя бы частичный офлайн. Без deps.offline поведение прежнее (MT по всем миссам).
+// deps: { cache (obj en_lower->ru, мутируется), httpsGet, targetKeys, provider?, offline? }.
 export async function runOnline(node, deps) {
   const { cache, httpsGet, targetKeys, provider } = deps;
-  const all = [...collectUntranslated(node, targetKeys)];
-  const misses = all.filter((t) => !(t.toLowerCase() in cache));
+  const offline = deps.offline || ((s) => s);
+  const all = [...collectUntranslated(node, targetKeys)]; // исходные англ. строки
+  const map = {};
+  const misses = [];
+  for (const s of all) {
+    const off = offline(s);
+    if (!LATIN.test(off)) { map[s] = off; continue; } // офлайн перевёл целиком - MT не нужен
+    if (s.toLowerCase() in cache) map[s] = cache[s.toLowerCase()];
+    else misses.push(s);
+  }
 
   await Promise.all(
-    misses.map(async (t) => {
-      const ru = await translateOne(t, httpsGet, provider);
-      if (ru) cache[t.toLowerCase()] = ru; // кэшируем только успешные
+    misses.map(async (s) => {
+      const ru = await translateOne(s, httpsGet, provider);
+      if (ru) { cache[s.toLowerCase()] = ru; map[s] = ru; } // кэшируем только успешные
+      else { const off = offline(s); if (off !== s) map[s] = off; } // MT упал - частичный офлайн
     })
   );
 
-  const map = {};
-  for (const t of all) {
-    const ru = cache[t.toLowerCase()];
-    if (ru) map[t] = ru;
-  }
-  return applyMap(node, map, deps.targetKeys);
+  return applyMap(node, map, targetKeys);
 }

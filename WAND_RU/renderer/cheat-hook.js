@@ -206,26 +206,33 @@
     }
   }
   
-  // Оркестрация: собрать непокрытое -> кэш-мисс через MT (параллельно) -> обновить кэш -> применить.
-  // deps: { cache (obj en_lower->ru, мутируется), httpsGet, targetKeys, provider? }. Возвращает новый node.
+  // Оркестрация. node - ОРИГИНАЛЬНЫЙ (английский) ответ: MT всегда получает исходную строку,
+  // а не полуфабрикат офлайна («Задать Prestige» ломает MT). deps.offline (опц.) - строковый
+  // офлайн-переводчик: офлайн справился целиком (нет латиницы) -> MT не нужен; иначе MT по оригиналу,
+  // при его сбое - хотя бы частичный офлайн. Без deps.offline поведение прежнее (MT по всем миссам).
+  // deps: { cache (obj en_lower->ru, мутируется), httpsGet, targetKeys, provider?, offline? }.
   async function runOnline(node, deps) {
     const { cache, httpsGet, targetKeys, provider } = deps;
-    const all = [...collectUntranslated(node, targetKeys)];
-    const misses = all.filter((t) => !(t.toLowerCase() in cache));
+    const offline = deps.offline || ((s) => s);
+    const all = [...collectUntranslated(node, targetKeys)]; // исходные англ. строки
+    const map = {};
+    const misses = [];
+    for (const s of all) {
+      const off = offline(s);
+      if (!LATIN.test(off)) { map[s] = off; continue; } // офлайн перевёл целиком - MT не нужен
+      if (s.toLowerCase() in cache) map[s] = cache[s.toLowerCase()];
+      else misses.push(s);
+    }
   
     await Promise.all(
-      misses.map(async (t) => {
-        const ru = await translateOne(t, httpsGet, provider);
-        if (ru) cache[t.toLowerCase()] = ru; // кэшируем только успешные
+      misses.map(async (s) => {
+        const ru = await translateOne(s, httpsGet, provider);
+        if (ru) { cache[s.toLowerCase()] = ru; map[s] = ru; } // кэшируем только успешные
+        else { const off = offline(s); if (off !== s) map[s] = off; } // MT упал - частичный офлайн
       })
     );
   
-    const map = {};
-    for (const t of all) {
-      const ru = cache[t.toLowerCase()];
-      if (ru) map[t] = ru;
-    }
-    return applyMap(node, map, deps.targetKeys);
+    return applyMap(node, map, targetKeys);
   }
 
   var TRAINER = /\/v3\/games\/(\d+)\/trainer/;
@@ -290,17 +297,23 @@
     try { return JSON.stringify(translateCheats(JSON.parse(text), DICT, exact)); } catch (e) { return null; }
   }
   // Офлайн + (опц.) онлайн-MT добор - для fetch-пути. Возвращает Promise<string|null>.
+  // ВАЖНО: runOnline получает ОРИГИНАЛЬНЫЙ ответ + строковый офлайн-переводчик - MT видит
+  // исходный английский («Set Prestige»), а не полуфабрикат («Задать Prestige»).
   function translateAsync(text, exact) {
     var data;
     try { data = JSON.parse(text); } catch (e) { return Promise.resolve(null); }
-    var offline = translateCheats(data, DICT, exact);
+    var offline = translateCheats(data, DICT, exact); // фолбэк и офлайн-путь
     var d = nodeDeps();
     var conf = d ? onlineSettings(d) : null;
     if (!d || !conf.online) return Promise.resolve(JSON.stringify(offline));
     try {
       var cache = loadCache(d);
       return withTimeout(
-        runOnline(offline, { cache: cache, httpsGet: httpsGetter(d), targetKeys: TARGET_KEYS_ONLINE, provider: conf.provider }),
+        runOnline(data, {
+          cache: cache, httpsGet: httpsGetter(d), targetKeys: TARGET_KEYS_ONLINE,
+          provider: conf.provider,
+          offline: function (s) { return translateText(s, DICT, exact); }
+        }),
         8000, offline
       ).then(function (result) { saveCache(d, cache); return JSON.stringify(result); },
              function () { return JSON.stringify(offline); });

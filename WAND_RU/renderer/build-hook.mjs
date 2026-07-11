@@ -97,17 +97,23 @@ ${indent(onlineBody)}
     try { return JSON.stringify(translateCheats(JSON.parse(text), DICT, exact)); } catch (e) { return null; }
   }
   // Офлайн + (опц.) онлайн-MT добор - для fetch-пути. Возвращает Promise<string|null>.
+  // ВАЖНО: runOnline получает ОРИГИНАЛЬНЫЙ ответ + строковый офлайн-переводчик - MT видит
+  // исходный английский («Set Prestige»), а не полуфабрикат («Задать Prestige»).
   function translateAsync(text, exact) {
     var data;
     try { data = JSON.parse(text); } catch (e) { return Promise.resolve(null); }
-    var offline = translateCheats(data, DICT, exact);
+    var offline = translateCheats(data, DICT, exact); // фолбэк и офлайн-путь
     var d = nodeDeps();
     var conf = d ? onlineSettings(d) : null;
     if (!d || !conf.online) return Promise.resolve(JSON.stringify(offline));
     try {
       var cache = loadCache(d);
       return withTimeout(
-        runOnline(offline, { cache: cache, httpsGet: httpsGetter(d), targetKeys: TARGET_KEYS_ONLINE, provider: conf.provider }),
+        runOnline(data, {
+          cache: cache, httpsGet: httpsGetter(d), targetKeys: TARGET_KEYS_ONLINE,
+          provider: conf.provider,
+          offline: function (s) { return translateText(s, DICT, exact); }
+        }),
         8000, offline
       ).then(function (result) { saveCache(d, cache); return JSON.stringify(result); },
              function () { return JSON.stringify(offline); });
