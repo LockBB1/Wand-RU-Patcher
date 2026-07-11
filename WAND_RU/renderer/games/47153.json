@@ -1,0 +1,26 @@
+{
+  "title": "Crusader Kings III",
+  "names": {
+    "Set Money": "Задать деньги",
+    "Set Prestige": "Задать престиж",
+    "Set Piety": "Задать благочестие",
+    "Set Renown": "Задать известность",
+    "Set Dread": "Задать ужас",
+    "Set Diplomacy": "Задать дипломатию",
+    "Set Martial": "Задать военное дело",
+    "Set Stewardship": "Задать управление",
+    "Set Intrigue": "Задать интриги",
+    "Set Learning": "Задать учёность",
+    "Set Prowess": "Задать доблесть",
+    "Set King Age": "Задать возраст правителя",
+    "Set Stress": "Задать стресс",
+    "Instant Construction": "Мгновенное строительство",
+    "Construction Speed Multiplier": "Множитель скорости строительства",
+    "Fast Culture Progress": "Быстрый прогресс культуры",
+    "Instant Movement": "Мгновенное перемещение",
+    "Movement Speed Multiplier": "Множитель скорости передвижения",
+    "Max County Control": "Макс. контроль графства",
+    "Freeze Time": "Заморозить время",
+    "Enable Console": "Включить консоль"
+  }
+}

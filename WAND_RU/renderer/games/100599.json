@@ -1,0 +1,21 @@
+{
+  "title": "Hollywood Animal",
+  "names": {
+    "Unlimited Studio Fund": "Бесконечный фонд студии",
+    "Edit Studio Fund": "Изменить фонд студии",
+    "Unlimited Cash": "Бесконечные наличные",
+    "Edit Cash": "Изменить наличные",
+    "Unlimited Influence Points": "Бесконечные очки влияния",
+    "Edit Influence Points": "Изменить очки влияния",
+    "Unlimited Reputation": "Бесконечная репутация",
+    "Edit Reputation": "Изменить репутацию",
+    "Multiply Progress Speed": "Множитель скорости прогресса",
+    "Multiply EXP Gain": "Множитель получаемого опыта",
+    "Max Staff Loyalty & Happiness": "Макс. лояльность и счастье персонала",
+    "Max Staff Professional Limit": "Макс. предел профессионализма персонала",
+    "Unlimited Water": "Бесконечная вода",
+    "Unlimited Electricity": "Бесконечное электричество",
+    "Mega Negotiation Bonus": "Мегабонус на переговорах",
+    "Game Speed": "Скорость игры"
+  }
+}

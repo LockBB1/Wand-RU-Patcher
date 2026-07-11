@@ -1,0 +1,25 @@
+{
+  "title": "The Adventures of Elliot: The Millennium Tales",
+  "names": {
+    "Unlimited HP": "Бесконечное HP",
+    "Ally Damage Multiplier": "Множитель урона союзников",
+    "Ally Cannot Die": "Союзники не умирают",
+    "One-Hit Kills": "Убийство с одного удара",
+    "Enemy Damage Multiplier": "Множитель урона врагов",
+    "Unlimited Money": "Бесконечные деньги",
+    "Money Gain Multiplier": "Множитель получения денег",
+    "Money Loss Multiplier": "Множитель потери денег",
+    "Unlimited Guard Endurance": "Бесконечная стойкость блока",
+    "Chain Count Multiplier": "Множитель счётчика цепочек",
+    "Unlimited Magicite": "Бесконечный магицит",
+    "Magicite Gain Multiplier": "Множитель получения магицита",
+    "Magicite Loss Multiplier": "Множитель потери магицита",
+    "Unlimited Arrows and Bombs": "Бесконечные стрелы и бомбы",
+    "Unlimited Item: Potions": "Бесконечные зелья",
+    "Unlimited Fairy Gauge": "Бесконечная шкала феи",
+    "Instant Cooldown Fairy Gauge": "Мгновенная перезарядка шкалы феи",
+    "Edit Money": "Изменить деньги",
+    "Edit Chain Count": "Изменить счётчик цепочек",
+    "Edit Player HP": "Изменить HP игрока"
+  }
+}

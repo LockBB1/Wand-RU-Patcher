@@ -1,0 +1,33 @@
+{
+  "title": "Stellaris",
+  "names": {
+    "God Mode": "Режим бога",
+    "Unlimited Naval Capacity": "Бесконечный лимит флота",
+    "Instant Movement": "Мгновенное перемещение",
+    "Instant Colony": "Мгновенная колонизация",
+    "Instant Survey": "Мгновенное обследование",
+    "Set Energy Credits": "Задать энергокредиты",
+    "Set Minerals": "Задать минералы",
+    "Set Food": "Задать еду",
+    "Set Alloys": "Задать сплавы",
+    "Set Valatile Moles": "Задать летучие пылинки",
+    "Set Goods": "Задать товары",
+    "Set Exoticc Gases": "Задать экзотические газы",
+    "Set Zro": "Задать зро",
+    "Set Nanites": "Задать наниты",
+    "Set Rare Crystals": "Задать редкие кристаллы",
+    "Set Dark Matter": "Задать тёмную материю",
+    "Set Living Metal": "Задать живой металл",
+    "Set Trade": "Задать торговую ценность",
+    "Super Max Resources Limit": "Супер-лимит ресурсов",
+    "Set Unity": "Задать единство",
+    "Set Influence": "Задать влияние",
+    "AI Accept Any Deal": "ИИ принимает любые сделки",
+    "Fast Construction": "Быстрое строительство",
+    "Fast Recruiting": "Быстрый набор войск",
+    "Fast Station Construction": "Быстрое строительство станций",
+    "Fast Research": "Быстрые исследования",
+    "Freeze Day": "Заморозить дату",
+    "Console/Dev Mode in Ironman": "Консоль/режим разработчика в «Железной воле»"
+  }
+}
