@@ -39,9 +39,10 @@
                     <TextBlock x:Name="VersionLabel" VerticalAlignment="Bottom" Opacity="0.6"
                                FontSize="10" Margin="6 0 0 6" Foreground="{DynamicResource Foreground}"/>
                     <!-- Баннер обновления: заполняется из code-behind после тихой проверки GitHub Releases -->
+                    <!-- Клик ловим на Down с e.Handled: иначе OnDragMove шапки съедает клик (DragMove) -->
                     <TextBlock x:Name="UpdateBanner" Visibility="Collapsed" VerticalAlignment="Center"
                                FontSize="11" Margin="14 0 0 0" Cursor="Hand" TextDecorations="Underline"
-                               Foreground="#4ADE80" MouseLeftButtonUp="OnOpenReleases"/>
+                               Foreground="#4ADE80" MouseLeftButtonDown="OnOpenReleases"/>
                 </StackPanel>
 
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">

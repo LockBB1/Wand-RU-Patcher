@@ -45,6 +45,7 @@ public partial class MainWindow : Window
 
     void OnOpenReleases(object sender, MouseButtonEventArgs e)
     {
+        e.Handled = true; // не отдавать клик OnDragMove шапки - иначе DragMove съедает его
         try { Process.Start(new ProcessStartInfo(UpdateChecker.ReleasesUrl) { UseShellExecute = true }); }
         catch { /* нет браузера */ }
     }
