@@ -1,0 +1,28 @@
+name: "🐛 Баг перевода / установщика"
+description: "Кривой перевод, сломанная русификация или ошибка установщика"
+title: "[Баг] "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: Что не так?
+      placeholder: "например: в CK3 чит «Set Dread» показывается как «Задать Dread»"
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: Версии WRP и Wand
+      placeholder: "WRP 0.14.0, Wand 12.37.0"
+    validations:
+      required: true
+  - type: textarea
+    id: log
+    attributes:
+      label: Лог установщика (необязательно)
+      description: В установщике включите «Показывать лог» -> кнопка «Экспорт» -> приложите .md сюда.
+  - type: textarea
+    id: screenshot
+    attributes:
+      label: Скриншот (необязательно)

@@ -1,0 +1,31 @@
+name: "🎮 Запрос игры (100% перевод читов)"
+description: "Попросить точный русский словарь для конкретной игры"
+title: "[Игра] "
+labels: ["game-request"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Для игр из точного словаря переводятся **все** имена читов вручную.
+        Укажите игру - добавим в один из ближайших релизов.
+  - type: input
+    id: game
+    attributes:
+      label: Название игры
+      placeholder: "например: Crusader Kings III"
+    validations:
+      required: true
+  - type: textarea
+    id: cheats
+    attributes:
+      label: Какие читы остались на английском? (необязательно)
+      description: Скопируйте несколько имён из трейнера - так быстрее проверить результат.
+      placeholder: |
+        Set Prestige
+        Unlimited Renown
+  - type: checkboxes
+    id: mode
+    attributes:
+      label: Режим установки
+      options:
+        - label: Пробовал(а) режим «локально + интернет» - не помогло / качество плохое
