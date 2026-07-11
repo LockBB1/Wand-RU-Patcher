@@ -12,6 +12,7 @@ public sealed class SettingsVm : ObservableObject
     string _selectedAppVersion;
     bool _restartWandAfter;
     bool _showLog;
+    bool _translateCheats;
 
     public IReadOnlyList<string> AppVersions { get; }
 
@@ -33,12 +34,19 @@ public sealed class SettingsVm : ObservableObject
         set { if (SetProperty(ref _showLog, value)) { _appSettings.ShowLog = value; _appSettings.Save(); } }
     }
 
+    public bool TranslateCheats
+    {
+        get => _translateCheats;
+        set { if (SetProperty(ref _translateCheats, value)) { _appSettings.TranslateCheats = value; _appSettings.Save(); } }
+    }
+
     public SettingsVm(WandInstall install)
     {
         _install = install;
         _appSettings = AppSettings.Load();
         _restartWandAfter = _appSettings.RestartWandAfter;
         _showLog = _appSettings.ShowLog;
+        _translateCheats = _appSettings.TranslateCheats;
         AppVersions = install.AppDirs.Select(VersionOf).ToList();
         _selectedAppVersion = install.SelectedAppDir is not null
             ? VersionOf(install.SelectedAppDir)

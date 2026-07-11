@@ -24,6 +24,7 @@
     <s:String x:Key="S_WandFolder">Папка Wand</s:String>
     <s:String x:Key="S_RestartWand">Перезапустить Wand после установки</s:String>
     <s:String x:Key="S_ShowLog">Показывать лог</s:String>
+    <s:String x:Key="S_TranslateCheats">Переводить имена читов</s:String>
     <s:String x:Key="S_Close">Закрыть</s:String>
     <s:String x:Key="S_Log">Лог</s:String>
     <s:String x:Key="S_CopyLog">Копировать</s:String>

@@ -24,6 +24,7 @@
     <s:String x:Key="S_WandFolder">Wand folder</s:String>
     <s:String x:Key="S_RestartWand">Restart Wand after install</s:String>
     <s:String x:Key="S_ShowLog">Show log</s:String>
+    <s:String x:Key="S_TranslateCheats">Translate cheat names</s:String>
     <s:String x:Key="S_Close">Close</s:String>
     <s:String x:Key="S_Log">Log</s:String>
     <s:String x:Key="S_CopyLog">Copy</s:String>

@@ -80,7 +80,8 @@ public sealed class MainVm : ObservableObject
         Log.Clear();
         try
         {
-            await Task.Run(() => new RuPatcher(Install.SelectedAppDir, _overrides, Add).Apply());
+            var translateCheats = Settings?.TranslateCheats ?? true;
+            await Task.Run(() => new RuPatcher(Install.SelectedAppDir, _overrides, translateCheats, Add).Apply());
             State = InstallerState.Done;
             StatusText = L.Get("S_Msg_Done");
             if (Install is not null) Install.IsPatched = true;

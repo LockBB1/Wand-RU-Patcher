@@ -20,12 +20,14 @@ public sealed class RuPatcher
 
     readonly string _appDir, _resources, _asar, _unpacked, _manifestPath;
     readonly RuOverrides _ov;
+    readonly bool _translateCheats;
     readonly Action<string> _log;
 
-    public RuPatcher(string appDir, RuOverrides overrides, Action<string>? log = null)
+    public RuPatcher(string appDir, RuOverrides overrides, bool translateCheats = true, Action<string>? log = null)
     {
         _appDir = appDir;
         _ov = overrides;
+        _translateCheats = translateCheats;
         _log = log ?? (_ => { });
         _resources = Path.Combine(appDir, "resources");
         _asar = Path.Combine(_resources, "app.asar");
@@ -99,6 +101,11 @@ public sealed class RuPatcher
             if (!JsLocalePatch.NeedsPatch(src)) continue;
             var patched = JsLocalePatch.Patch(src, _ov.LanguageNative, JsLocalePatch.RussianFlagDataUri);
             if (patched != src) File.WriteAllText(js, patched, Utf8NoBom);
+        }
+        if (_translateCheats)
+        {
+            _log("Инъекция перевода читов…");
+            CheatHook.Inject(treeRoot);
         }
     }
 

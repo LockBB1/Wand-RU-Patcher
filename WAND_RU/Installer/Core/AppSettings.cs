@@ -8,6 +8,7 @@ public sealed class AppSettings
 {
     public bool RestartWandAfter { get; set; }
     public bool ShowLog { get; set; }
+    public bool TranslateCheats { get; set; } = true;
 
     static string Dir => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "WandRuInstaller");

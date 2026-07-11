@@ -196,9 +196,14 @@
                             <TextBlock Text="{DynamicResource S_RestartWand}" Foreground="{DynamicResource PopoverForeground}"
                                        VerticalAlignment="Center" Margin="10 0 0 0"/>
                         </StackPanel>
-                        <StackPanel Orientation="Horizontal" Margin="0 0 0 20">
+                        <StackPanel Orientation="Horizontal" Margin="0 0 0 10">
                             <CheckBox IsChecked="{Binding ShowLog}" VerticalAlignment="Center"/>
                             <TextBlock Text="{DynamicResource S_ShowLog}" Foreground="{DynamicResource PopoverForeground}"
+                                       VerticalAlignment="Center" Margin="10 0 0 0"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0 0 0 20">
+                            <CheckBox IsChecked="{Binding TranslateCheats}" VerticalAlignment="Center"/>
+                            <TextBlock Text="{DynamicResource S_TranslateCheats}" Foreground="{DynamicResource PopoverForeground}"
                                        VerticalAlignment="Center" Margin="10 0 0 0"/>
                         </StackPanel>
 
