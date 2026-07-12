@@ -50,7 +50,22 @@
     return false;
   }
 
-  // Перевести один текст-узел: словарь -> замена; иначе в очередь на MT.
+  // Шаблоны фильтров карты "Show/Hide [only] {C} on map" - 380+ комбо на сессию, все офлайн.
+  // Скелет по-русски всегда; категория {C} - из словаря D, иначе остаётся англ. (proper-noun ок).
+  var FT = [
+    [/^Show only (.+) on map$/, "Показывать только %C% на карте"],
+    [/^Hide (.+) on map$/, "Скрыть %C% на карте"],
+    [/^Show (.+) on map$/, "Показать %C% на карте"]
+  ];
+  function filterTr(t) {
+    for (var i = 0; i < FT.length; i++) {
+      var m = FT[i][0].exec(t);
+      if (m) return FT[i][1].replace("%C%", D[m[1]] || m[1]);
+    }
+    return null;
+  }
+
+  // Перевести один текст-узел: словарь -> шаблон фильтра -> иначе в очередь на MT.
   function tr(node) {
     var v = node.nodeValue;
     if (!v) return;
@@ -60,6 +75,8 @@
     if (skip(node)) return;
     var r = D[t];
     if (r) { node.nodeValue = v.replace(t, r); cnt++; return; }
+    var f = filterTr(t);
+    if (f) { node.nodeValue = v.replace(t, f); cnt++; return; }
     if (!sent[t] && !pending[t]) { pending[t] = 1; schedule(); }
   }
 
