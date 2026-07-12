@@ -79,13 +79,25 @@
     for (k in pending) { schedule(); break; } // остались - ещё раунд
   }
 
+  // Тайм-слайсинг: per-map словарь (1281+ записей) сделал синхронный walk блокирующим -
+  // рефлоу-шторм от массовых замен узлов тормозил загрузку карты (MT был быстрее, т.к. капал
+  // асинхронно вне критического пути). Очередь узлов + дренаж порциями <=6мс, отдаём кадр.
+  var nq = [], draining = false;
+  function enqueue(node) { nq.push(node); if (!draining) { draining = true; setTimeout(drain, 0); } }
+  function drain() {
+    var start = Date.now(), n = 0;
+    while (nq.length) {
+      tr(nq.shift());
+      if (++n >= 300 && Date.now() - start > 6) { setTimeout(drain, 0); return; } // отдать кадр рендеру
+    }
+    draining = false;
+  }
   function walk(root) {
     if (!root) return;
-    if (root.nodeType === 3) { tr(root); return; }
+    if (root.nodeType === 3) { enqueue(root); return; }
     if (root.nodeType !== 1) return;
-    var w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null, false), n, b = [];
-    while (n = w.nextNode()) b.push(n);
-    for (var i = 0; i < b.length; i++) tr(b[i]);
+    var w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null, false), n;
+    while (n = w.nextNode()) enqueue(n);
   }
 
   // Main зовёт после MT: мержим перевод в словарь и перепроходим DOM.
@@ -100,7 +112,7 @@
     new MutationObserver(function (ms) {
       for (var i = 0; i < ms.length; i++) {
         var m = ms[i];
-        if (m.type === "characterData") tr(m.target);
+        if (m.type === "characterData") enqueue(m.target);
         else for (var j = 0; j < m.addedNodes.length; j++) walk(m.addedNodes[j]);
       }
     }).observe(document, { childList: true, subtree: true, characterData: true });
