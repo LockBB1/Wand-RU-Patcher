@@ -33,11 +33,17 @@ try {
     if (!MTON) { cb(null); return; }           // онлайн-перевод карт выключен -> только офлайн
     Q.push([q, cb]); pump();
   }
+  // Бренд-гвард: MT коверкает "Wand" -> "Палочка"/"Ванде". Чиним ТОЛЬКО когда исходник содержал Wand
+  // (иначе не трогаем - у настоящих слов на "Ванд" ложных срабатываний нет).
+  function brandFix(q, r) {
+    if (!r || !/Wand/.test(q)) return r;
+    return r.replace(/Палочк[а-яё]*/gi, "Wand").replace(/Ванд[а-яё]*/gi, "Wand");
+  }
   function pump() {
     while (inflight < MAXC && Q.length) {
       var it = Q.shift(); inflight++;
       (function (q, cb) {
-        one(q, function (r) { inflight--; CACHE[q] = r; cb(r); setTimeout(pump, 120); }); // ~throttle
+        one(q, function (r) { inflight--; r = brandFix(q, r); CACHE[q] = r; cb(r); setTimeout(pump, 120); }); // ~throttle + бренд
       })(it[0], it[1]);
     }
   }
