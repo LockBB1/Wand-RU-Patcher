@@ -98,12 +98,10 @@ try {
       for (kk in _m) dict[kk] = _m[kk];
       try {
         MF = __EL__.webFrameMain.fromId(pi, ri);
-        MF.executeJavaScript(__DUMP__)
-          .then(function () {
-            _p("STAGE3 inject resolved; dict " + sl + "=" + Object.keys(dict).length);
-            /* seed пер-карта словарём: мгновенный офлайн на POI, без MT-шторма */
-            try { MF.executeJavaScript("window.__wandruApply&&window.__wandruApply(" + JSON.stringify(dict) + ")"); } catch (_) {}
-          })
+        /* Словарь ставим ПЕРЕД переводчиком (window.__WANDRU_SEED) - иначе гонка: translator arms и
+           очередит строки в MT до прихода seed (лишний MT + бренд утекал через Google). Один executeJavaScript. */
+        MF.executeJavaScript("window.__WANDRU_SEED=" + JSON.stringify(dict) + ";" + __DUMP__)
+          .then(function () { _p("STAGE3 inject resolved; dict " + sl + "=" + Object.keys(dict).length); })
           .catch(function (e) { _p("STAGE3 inject ERR " + e); });
       } catch (e) { _p("STAGE2 throw " + e); }
     }

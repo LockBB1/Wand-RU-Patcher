@@ -29,6 +29,10 @@
     "Red Dead Redemption 2": "Red Dead Redemption 2", "Beta": "Бета", "NEW": "НОВОЕ"
   };
 
+  // Пер-карта словарь: main ставит window.__WANDRU_SEED ДО этого скрипта -> в D до первого walk
+  // (иначе гонка: строки очередятся в MT раньше, чем придёт seed).
+  try { var _sd = window.__WANDRU_SEED; if (_sd) for (var _sk in _sd) if (_sd[_sk]) D[_sk] = _sd[_sk]; } catch (e) {}
+
   var pending = {}, sent = {}, timer = null, cnt = 0;
   var cyr = /[а-яёА-ЯЁ]/, lat = /[A-Za-z]/;
 
