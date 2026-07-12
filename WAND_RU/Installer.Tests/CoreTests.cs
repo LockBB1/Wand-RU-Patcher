@@ -240,6 +240,17 @@ public class MapFrameHookTests
     }
 
     [Fact]
+    public void Repatch_removes_legacy_no_end_block()
+    {
+        // легаси-блок 0.16.3-0.16.8: без END-маркера, заканчивался FATAL-фоллбэком -> тоже снять
+        var legacy = "Me=new o.BrowserWindow(p.windowOptions);/*__WANDRU_MAPHOOK__*/try{OLD_LEGACY_BODY}catch(e){try{o.dialog.showErrorBox(\"WANDRU\",\"FATAL \"+e)}catch(_){}};Me.setMenu(null);";
+        var outp = MapFrameHook.Patch(legacy);
+        Assert.DoesNotContain("OLD_LEGACY_BODY", outp);                                                    // легаси снято
+        Assert.Equal(1, System.Text.RegularExpressions.Regex.Matches(outp, "__WANDRU_MAPHOOK__\\*/").Count); // один блок, не задвоен
+        Assert.Contains("Me.setMenu(null)", outp);                                                         // оригинал цел
+    }
+
+    [Fact]
     public void Patch_captures_alternate_minified_names()
     {
         // Другая версия Wand могла переименовать win/electron -> захват групп должен подстроиться.
