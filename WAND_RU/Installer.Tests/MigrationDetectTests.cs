@@ -6,6 +6,10 @@ namespace WandRuInstaller.Tests;
 
 public class MigrationDetectTests
 {
+    // Синтетические версии: младшая / старшая / отсутствующая. НЕ привязаны к реальным номерам Wand
+    // (dirs создаются в temp, а не из установленного Wand) - при обновлении Wand править не нужно.
+    const string Old = "1.0.0", New = "2.0.0", Absent = "9.9.9";
+
     static string MakeRoot(params (string ver, bool patched)[] apps)
     {
         var root = Path.Combine(Path.GetTempPath(), "wru-mig-" + Path.GetRandomFileName());
@@ -22,13 +26,13 @@ public class MigrationDetectTests
     [Fact]
     public void Detect_flags_patched_old_version_when_newest_is_clean()
     {
-        var root = MakeRoot(("12.37.0", true), ("12.38.0", false));
+        var root = MakeRoot((Old, true), (New, false));
         try
         {
             var install = WandLocator.Detect(new[] { root })!;
             Assert.False(install.IsPatched);
-            Assert.EndsWith("app-12.38.0", install.SelectedAppDir);
-            Assert.EndsWith("app-12.37.0", install.PatchedOtherAppDir);
+            Assert.EndsWith($"app-{New}", install.SelectedAppDir);
+            Assert.EndsWith($"app-{Old}", install.PatchedOtherAppDir);
         }
         finally { Directory.Delete(root, true); }
     }
@@ -36,8 +40,8 @@ public class MigrationDetectTests
     [Fact]
     public void Detect_no_migration_hint_when_newest_is_patched_or_nothing_patched()
     {
-        var patchedNew = MakeRoot(("12.37.0", true), ("12.38.0", true));
-        var cleanAll = MakeRoot(("12.37.0", false), ("12.38.0", false));
+        var patchedNew = MakeRoot((Old, true), (New, true));
+        var cleanAll = MakeRoot((Old, false), (New, false));
         try
         {
             Assert.Null(WandLocator.Detect(new[] { patchedNew })!.PatchedOtherAppDir);
@@ -53,14 +57,14 @@ public class MigrationDetectTests
     [Fact]
     public void Detect_honors_pinned_version_over_latest()
     {
-        var root = MakeRoot(("12.37.0", true), ("12.38.0", false));
+        var root = MakeRoot((Old, true), (New, false));
         try
         {
-            var pinned = WandLocator.Detect(new[] { root }, "12.37.0")!;
-            Assert.EndsWith("app-12.37.0", pinned.SelectedAppDir);   // закреплённая, не последняя
-            Assert.True(pinned.IsPatched);                           // манифест закреплённой версии
-            Assert.EndsWith("app-12.38.0", WandLocator.Detect(new[] { root }, null)!.SelectedAppDir);   // без пина - последняя
-            Assert.EndsWith("app-12.38.0", WandLocator.Detect(new[] { root }, "9.9.9")!.SelectedAppDir); // несуществующая -> фолбэк
+            var pinned = WandLocator.Detect(new[] { root }, Old)!;
+            Assert.EndsWith($"app-{Old}", pinned.SelectedAppDir);   // закреплённая, не последняя
+            Assert.True(pinned.IsPatched);                          // манифест закреплённой версии
+            Assert.EndsWith($"app-{New}", WandLocator.Detect(new[] { root }, null)!.SelectedAppDir);    // без пина - последняя
+            Assert.EndsWith($"app-{New}", WandLocator.Detect(new[] { root }, Absent)!.SelectedAppDir);  // несуществующая -> фолбэк
         }
         finally { Directory.Delete(root, true); }
     }
