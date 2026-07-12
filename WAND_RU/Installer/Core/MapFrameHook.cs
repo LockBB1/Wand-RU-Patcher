@@ -8,15 +8,18 @@ namespace WandRuInstaller.Core;
 /// (wand.com), SOP не даёт renderer-хуку до неё дотянуться. Из main-процесса же
 /// webFrameMain.executeJavaScript впрыскивает скрипт прямо в контекст фрейма (обход SOP).
 ///
-/// Вешаем did-frame-navigate на главное окно; при навигации подфрейма на wand.com/maps впрыск.
-/// ШАГ 1 PoC = скрипт-дампер: ловит попап POI (крупнейший добавленный узел ~600мс после клика),
-/// шлёт outerHTML в main через console.log, main пишет в ~/wand-ru-map-dump.log. Так узнаём
-/// точные DOM-селекторы title/description до написания переводчика (Шаг 2).
+/// Вешаем did-frame-navigate на главное окно; при навигации подфрейма на wand.com/maps впрыск
+/// скрипта-дампера (ловит попап POI, шлёт outerHTML в main через console.log). main пишет всё в
+/// ~/wand-ru-map-dump.log. Так узнаём точные DOM-селекторы title/description до переводчика (Шаг 2).
 ///
-/// Дампер за env-флагом WANDRU_MAP_DUMP - у релизных юзеров код инертен (нет дампа/файла).
+/// ДИАГНОСТИКА (Шаг 1): staged-логи на каждой границе (STAGE1 хук встал -> NAV навигации фреймов ->
+/// STAGE2 матч карты -> STAGE3 инъект резолв/ошибка -> STAGE4 дамп принят). Один прогон покажет где
+/// рвётся. env-гейт снят (тест на контролируемом dev-ПК). Дампер шлёт "ARMED" сразу при загрузке -
+/// подтверждает весь пайп инъект->console-relay ещё до клика.
+///
 /// Якорь структурный с захватом минифицированных имён (win/electron) - устойчив к ренейму
-/// (Wand 12.36-12.38 сверено). integrity-fuse не нужен отдельно: index.js внутри asar,
-/// AsarIntegrity пере-синкает хэш после repack.
+/// (Wand 12.36-12.38 сверено). integrity-fuse не нужен: index.js внутри asar, AsarIntegrity
+/// пере-синкает хэш после repack.
 /// </summary>
 public static class MapFrameHook
 {
@@ -26,9 +29,16 @@ public static class MapFrameHook
     static readonly Regex MainWindow = new(
         @"(\w+)=new (\w+)\.BrowserWindow\((\w+)\.windowOptions\)", RegexOptions.Compiled);
 
-    // Впрыскивается В map-фрейм. Ванильный ES5, без внешних зависимостей и fetch (CSP wand.com).
+    // Впрыскивается В map-фрейм. ES5, без fetch (CSP wand.com). Шлёт ARMED сразу + попап по клику.
+    // (raw-литерал: бэкслеши литеральные -> "\n" остаётся JS-эскейпом новой строки, как надо)
     const string DumpScript = """
-(function(){if(window.__wandruDumper)return;window.__wandruDumper=1;var recent=[];new MutationObserver(function(ms){ms.forEach(function(m){for(var i=0;i<m.addedNodes.length;i++){var n=m.addedNodes[i];if(n.nodeType===1&&n.textContent&&n.textContent.trim().length>40)recent.push(n);}});}).observe(document.documentElement,{childList:true,subtree:true});document.addEventListener("click",function(){recent=[];setTimeout(function(){var b=recent.sort(function(a,c){return c.textContent.length-a.textContent.length;})[0];if(b){try{console.log("WANDRU_DUMP::"+btoa(unescape(encodeURIComponent(b.outerHTML.slice(0,6000)))));}catch(e){}}},600);},true);})();
+(function(){if(window.__wandruDumper)return;window.__wandruDumper=1;try{console.log("WANDRU_DUMP::"+btoa(unescape(encodeURIComponent("ARMED@"+location.href))))}catch(e){}var recent=[];new MutationObserver(function(ms){ms.forEach(function(m){for(var i=0;i<m.addedNodes.length;i++){var n=m.addedNodes[i];if(n.nodeType===1&&n.textContent&&n.textContent.trim().length>40)recent.push(n);}});}).observe(document.documentElement,{childList:true,subtree:true});document.addEventListener("click",function(){recent=[];setTimeout(function(){var b=recent.sort(function(a,c){return c.textContent.length-a.textContent.length;})[0];if(b){try{console.log("WANDRU_DUMP::"+btoa(unescape(encodeURIComponent(b.outerHTML.slice(0,6000)))));}catch(e){}}},600);},true);})();
+""";
+
+    // Инъекция в main-процесс. Плейсхолдеры __WIN__/__EL__/__DUMP__ подставляются в Patch.
+    // raw-литерал: JS-бэкслеши (\n, \., \/) сохраняются как есть -> валидный JS.
+    const string InjectTemplate = """
+;/*__WANDRU_MAPHOOK__*/try{var _W=require("fs"),_P=require("path"),_O=require("os"),_L=_P.join(_O.homedir(),"wand-ru-map-dump.log");function _w(s){try{_W.appendFileSync(_L,"["+new Date().toISOString()+"] "+s+"\n")}catch(_){}}_w("STAGE1 main hook installed");__WIN__.webContents.on("did-frame-navigate",function(ev,u,c,t,mn,pi,ri){_w("NAV "+(mn?"main":"sub")+" "+u);if(!mn&&/wand\.com\/maps\//.test(u)){_w("STAGE2 map matched, injecting");try{__EL__.webFrameMain.fromId(pi,ri).executeJavaScript(__DUMP__).then(function(){_w("STAGE3 inject resolved")}).catch(function(e){_w("STAGE3 inject ERR "+e)})}catch(e){_w("STAGE2 throw "+e)}}});__WIN__.webContents.on("console-message",function(ev,l,ms){var s=typeof ms=="string"?ms:(ev&&ev.message);if(typeof s=="string"&&s.indexOf("WANDRU_DUMP::")===0){_w("STAGE4 dump received");try{_W.appendFileSync(_L,"=== POI DUMP ===\n"+Buffer.from(s.slice(13),"base64").toString("utf8")+"\n\n")}catch(e){_w("STAGE4 decode ERR "+e)}}});_w("STAGE1b listeners attached");}catch(e){try{require("fs").appendFileSync(require("path").join(require("os").homedir(),"wand-ru-map-dump.log"),"FATAL "+e+"\n")}catch(_){}}
 """;
 
     public static bool IsPatched(string js) => js.Contains(Marker);
@@ -44,16 +54,10 @@ public static class MapFrameHook
         {
             var win = m.Groups[1].Value;   // главное окно (минифиц. имя)
             var el = m.Groups[2].Value;    // алиас require("electron")
-            var inject =
-                $";/*{Marker}*/try{{if(process.env.WANDRU_MAP_DUMP){{" +
-                $"{win}.webContents.on(\"did-frame-navigate\",function(ev,u,c,t,mn,pi,ri){{" +
-                $"if(!mn&&/wand\\.com\\/maps\\//.test(u)){{try{{{el}.webFrameMain.fromId(pi,ri).executeJavaScript({dumpLit})}}catch(_){{}}}}}});" +
-                $"{win}.webContents.on(\"console-message\",function(ev,l,ms){{" +
-                "var s=typeof ms==\"string\"?ms:(ev&&ev.message);" +
-                "if(typeof s==\"string\"&&s.indexOf(\"WANDRU_DUMP::\")===0){try{" +
-                "require(\"fs\").appendFileSync(require(\"path\").join(require(\"os\").homedir(),\"wand-ru-map-dump.log\")," +
-                "Buffer.from(s.slice(13),\"base64\").toString(\"utf8\")+\"\\n\\n\")}catch(_){}}" +
-                "});}}catch(_){}";
+            var inject = InjectTemplate
+                .Replace("__WIN__", win)
+                .Replace("__EL__", el)
+                .Replace("__DUMP__", dumpLit);
             return m.Value + inject;
         }, 1);
     }

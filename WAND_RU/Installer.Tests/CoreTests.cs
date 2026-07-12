@@ -198,7 +198,7 @@ public class MapFrameHookTests
         Assert.Contains(MapFrameHook.Marker, outp);
         Assert.Contains("Me.webContents.on(\"did-frame-navigate\"", outp);   // захвачено имя окна
         Assert.Contains("o.webFrameMain.fromId", outp);                       // захвачен алиас electron
-        Assert.Contains("process.env.WANDRU_MAP_DUMP", outp);                 // за env-флагом
+        Assert.Contains("STAGE1 main hook installed", outp);                  // staged-диагностика
     }
 
     [Fact]
