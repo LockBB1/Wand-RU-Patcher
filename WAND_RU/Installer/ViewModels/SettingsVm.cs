@@ -15,6 +15,8 @@ public sealed class SettingsVm : ObservableObject
     bool _showLog;
     bool _translateCheats;
     bool _translateCheatsOnline;
+    bool _translateMaps;
+    bool _translateMapsOnline;
     string _onlineProvider = "auto";
     string _cacheInfo = "";
 
@@ -53,6 +55,18 @@ public sealed class SettingsVm : ObservableObject
         set { if (SetProperty(ref _translateCheatsOnline, value)) { _appSettings.TranslateCheatsOnline = value; _appSettings.Save(); } }
     }
 
+    public bool TranslateMaps
+    {
+        get => _translateMaps;
+        set { if (SetProperty(ref _translateMaps, value)) { _appSettings.TranslateMaps = value; _appSettings.Save(); } }
+    }
+
+    public bool TranslateMapsOnline
+    {
+        get => _translateMapsOnline;
+        set { if (SetProperty(ref _translateMapsOnline, value)) { _appSettings.TranslateMapsOnline = value; _appSettings.Save(); } }
+    }
+
     public string OnlineProvider
     {
         get => _onlineProvider;
@@ -77,6 +91,8 @@ public sealed class SettingsVm : ObservableObject
         _showLog = _appSettings.ShowLog;
         _translateCheats = _appSettings.TranslateCheats;
         _translateCheatsOnline = _appSettings.TranslateCheatsOnline;
+        _translateMaps = _appSettings.TranslateMaps;
+        _translateMapsOnline = _appSettings.TranslateMapsOnline;
         _onlineProvider = string.IsNullOrEmpty(_appSettings.OnlineProvider) ? "auto" : _appSettings.OnlineProvider;
         ClearCacheCommand = new RelayCommand(_ => { CheatCache.Clear(); RefreshCacheInfo(); });
         RefreshCacheInfo();

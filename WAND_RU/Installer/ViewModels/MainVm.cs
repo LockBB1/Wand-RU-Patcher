@@ -112,7 +112,10 @@ public sealed class MainVm : ObservableObject
         try
         {
             var translateCheats = Settings?.TranslateCheats ?? true;
-            await Task.Run(() => new RuPatcher(Install.SelectedAppDir, _overrides, translateCheats, Add).Apply());
+            var maps = Settings?.TranslateMaps ?? true;
+            var mapsOnline = Settings?.TranslateMapsOnline ?? true;
+            var mapDiag = Settings?.ShowLog ?? false;   // диагностику карт шлём в лог только если он показан
+            await Task.Run(() => new RuPatcher(Install.SelectedAppDir, _overrides, translateCheats, maps, mapsOnline, mapDiag, Add).Apply());
             State = InstallerState.Done;
             StatusText = L.Get("S_Msg_Done");
             if (Install is not null) Install.IsPatched = true;

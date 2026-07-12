@@ -10,6 +10,10 @@ public sealed class AppSettings
     public bool ShowLog { get; set; }
     public bool TranslateCheats { get; set; } = true;
     public bool TranslateCheatsOnline { get; set; }
+    /// <summary>Перевод игровых карт: встраивать map-хук (офлайн-словарь + шаблоны фильтров).</summary>
+    public bool TranslateMaps { get; set; } = true;
+    /// <summary>Онлайн-добор карт: Google gtx -> MyMemory на остаток (POI-описания вне словаря).</summary>
+    public bool TranslateMapsOnline { get; set; } = true;
     /// <summary>Провайдер онлайн-MT: "auto" (Google -> MyMemory), "google", "mymemory". Читает хук.</summary>
     public string OnlineProvider { get; set; } = "auto";
     /// <summary>Закреплённая версия Wand ("12.37.0"): патчим/показываем её, а не последнюю. Пусто = последняя.

@@ -272,6 +272,27 @@ public class MapFrameHookTests
         Assert.Contains("MAPS[sl]", outp);                                   // выбор словаря по slug карты
         Assert.Contains("window.__wandruApply&&window.__wandruApply(", outp); // seed переводчика по slug
     }
+
+    [Fact]
+    public void Patch_bakes_online_and_diag_flags()
+    {
+        var on = MapFrameHook.Patch(MainWin, mapOnline: true, diag: false);
+        Assert.Contains("var MTON = true", on);
+        Assert.Contains("DIAG = false", on);
+        Assert.DoesNotContain("__MTON__", on);
+        Assert.DoesNotContain("__DIAG__", on);
+        var off = MapFrameHook.Patch(MainWin, mapOnline: false, diag: true);
+        Assert.Contains("var MTON = false", off);   // онлайн-добор карт выключен
+        Assert.Contains("DIAG = true", off);        // диагностика в инсталлер
+    }
+
+    [Fact]
+    public void Strip_removes_hook_keeps_original()
+    {
+        var stripped = MapFrameHook.Strip(MapFrameHook.Patch(MainWin));
+        Assert.DoesNotContain(MapFrameHook.Marker, stripped);   // хук снят (перевод карт выключен)
+        Assert.Contains("BrowserWindow", stripped);             // оригинальный код цел
+    }
 }
 
 public class MapDiagServerTests

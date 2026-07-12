@@ -9,9 +9,13 @@ try {
   /* Пер-карта офлайн-словари {slug:{en:ru}} - подставляет MapFrameHook.Patch (__MAPS__).
      Мгновенный офлайн-перевод POI/событий: seed переводчика по slug из URL, MT только на остаток. */
   var MAPS = __MAPS__;
+  /* Флаги подставляет MapFrameHook.Patch по настройкам: MTON = онлайн-добор карт (Google/MyMemory),
+     DIAG = диагностика в инсталлер (:39271, STAGE/NAV/HV). В релизе DIAG=false -> тихо. */
+  var MTON = __MTON__, DIAG = __DIAG__;
 
-  /* Строка в лог инсталлера (MapDiagServer). */
+  /* Строка в лог инсталлера (MapDiagServer). Только при DIAG - иначе релиз молчит. */
   function _p(l) {
+    if (!DIAG) return;
     try {
       var r = __EL__.net.request({ method: "POST", url: "http://127.0.0.1:39271/" });
       r.on("error", function () {});
@@ -20,18 +24,59 @@ try {
     } catch (_) {}
   }
 
-  /* Перевод одной строки en->ru через Google gtx (main-процесс, без CSP). Кэш in-mem. */
+  /* --- Онлайн-MT с устойчивостью: throttle (<=2 в полёте) + Google-gtx с 429-backoff -> MyMemory-фолбэк.
+     A+B (офлайн-словарь + шаблоны фильтров) уже срезали ~90% запросов; тут - остаток (описания POI). --- */
+  var Q = [], inflight = 0, MAXC = 2, gCoolUntil = 0;
+
   function _mt(q, cb) {
     if (CACHE[q] !== undefined) { cb(CACHE[q]); return; }
+    if (!MTON) { cb(null); return; }           // онлайн-перевод карт выключен -> только офлайн
+    Q.push([q, cb]); pump();
+  }
+  function pump() {
+    while (inflight < MAXC && Q.length) {
+      var it = Q.shift(); inflight++;
+      (function (q, cb) {
+        one(q, function (r) { inflight--; CACHE[q] = r; cb(r); setTimeout(pump, 120); }); // ~throttle
+      })(it[0], it[1]);
+    }
+  }
+  // Google в кулдауне (после 429) -> сразу MyMemory; иначе Google, при 429/ошибке -> MyMemory.
+  function one(q, cb) {
+    if (Date.now() < gCoolUntil) { mymemory(q, cb); return; }
+    google(q, function (r, code) {
+      if (code === 429) { gCoolUntil = Date.now() + 60000; mymemory(q, cb); return; }
+      if (r != null) { cb(r); return; }
+      mymemory(q, cb);
+    });
+  }
+  function google(q, cb) {
     try {
-      var rq = __EL__.net.request("https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=ru&dt=t&q=" + encodeURIComponent(q)), data = "";
+      var rq = __EL__.net.request("https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=ru&dt=t&q=" + encodeURIComponent(q)), data = "", code = 0;
       rq.on("response", function (res) {
+        code = res.statusCode || 0;
         res.on("data", function (c) { data += c.toString(); });
         res.on("end", function () {
           var out = null;
           try { var j = JSON.parse(data), i; out = ""; for (i = 0; i < j[0].length; i++) out += j[0][i][0]; }
           catch (e) { out = null; }
-          CACHE[q] = out; cb(out);
+          cb(out, code);
+        });
+      });
+      rq.on("error", function () { cb(null, 0); });
+      rq.end();
+    } catch (e) { cb(null, 0); }
+  }
+  function mymemory(q, cb) {
+    try {
+      var rq = __EL__.net.request("https://api.mymemory.translated.net/get?langpair=en%7Cru&q=" + encodeURIComponent(q)), data = "";
+      rq.on("response", function (res) {
+        res.on("data", function (c) { data += c.toString(); });
+        res.on("end", function () {
+          var out = null;
+          try { var t = JSON.parse(data).responseData.translatedText; if (t && t.toUpperCase().indexOf("MYMEMORY WARNING") < 0) out = t; }
+          catch (e) { out = null; }
+          cb(out);
         });
       });
       rq.on("error", function () { cb(null); });

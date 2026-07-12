@@ -87,12 +87,19 @@ public static class MapFrameHook
     /// <summary>Есть якорь главного окна - патчим (пере-инжектим для актуальности, даже если хук уже стоит).</summary>
     public static bool NeedsPatch(string js) => MainWindow.IsMatch(js);
 
-    /// <summary>Снимает прошлый хук-блок и вставляет актуальный после создания главного окна. Идемпотентно.</summary>
-    public static string Patch(string js)
+    /// <summary>Снять прошлый хук-блок без реинжекта (перевод карт выключён -> убираем хук из index.js).</summary>
+    public static string Strip(string js)
+    {
+        var clean = ExistingBlock.Replace(js, "");   // END-маркированные блоки (0.16.9+)
+        return LegacyBlock.Replace(clean, "");        // легаси-блоки без END (0.16.3-0.16.8)
+    }
+
+    /// <summary>Снимает прошлый хук-блок и вставляет актуальный после создания главного окна. Идемпотентно.
+    /// mapOnline = онлайн-добор карт (Google/MyMemory); diag = диагностика в инсталлер (:39271).</summary>
+    public static string Patch(string js, bool mapOnline = true, bool diag = false)
     {
         if (!MainWindow.IsMatch(js)) return js;
-        var clean = ExistingBlock.Replace(js, "");            // снять END-маркированные блоки (0.16.9+)
-        clean = LegacyBlock.Replace(clean, "");               // снять легаси-блоки без END (0.16.3-0.16.8)
+        var clean = Strip(js);
         var dumpLit = JsonSerializer.Serialize(Translator);   // переводчик как JS-строковый литерал
         return MainWindow.Replace(clean, m =>
         {
@@ -102,6 +109,8 @@ public static class MapFrameHook
                 .Replace("__WIN__", win)
                 .Replace("__EL__", el)
                 .Replace("__DUMP__", dumpLit)
+                .Replace("__MTON__", mapOnline ? "true" : "false")
+                .Replace("__DIAG__", diag ? "true" : "false")
                 .Replace("__MAPS__", MapsJson);   // последним: контент словаря не должен ре-подставляться
             return m.Value + inject;
         }, 1);

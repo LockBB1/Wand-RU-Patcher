@@ -20,14 +20,18 @@ public sealed class RuPatcher
 
     readonly string _appDir, _resources, _asar, _unpacked, _manifestPath;
     readonly RuOverrides _ov;
-    readonly bool _translateCheats;
+    readonly bool _translateCheats, _translateMaps, _translateMapsOnline, _mapDiag;
     readonly Action<string> _log;
 
-    public RuPatcher(string appDir, RuOverrides overrides, bool translateCheats = true, Action<string>? log = null)
+    public RuPatcher(string appDir, RuOverrides overrides, bool translateCheats = true,
+        bool translateMaps = true, bool translateMapsOnline = true, bool mapDiag = false, Action<string>? log = null)
     {
         _appDir = appDir;
         _ov = overrides;
         _translateCheats = translateCheats;
+        _translateMaps = translateMaps;
+        _translateMapsOnline = translateMapsOnline;
+        _mapDiag = mapDiag;
         _log = log ?? (_ => { });
         _resources = Path.Combine(appDir, "resources");
         _asar = Path.Combine(_resources, "app.asar");
@@ -125,10 +129,17 @@ public sealed class RuPatcher
         if (File.Exists(indexJs))
         {
             var main = File.ReadAllText(indexJs);
-            if (MapFrameHook.NeedsPatch(main))
+            if (!_translateMaps)
+            {
+                // Перевод карт выключен: убрать прошлый хук, если был (иначе останется от прошлой установки).
+                var stripped = MapFrameHook.Strip(main);
+                if (stripped != main) { File.WriteAllText(indexJs, stripped, Utf8NoBom); _log("Карты: перевод выключен - map-хук убран."); }
+                else _log("Карты: перевод выключен - пропуск.");
+            }
+            else if (MapFrameHook.NeedsPatch(main))
             {
                 var wasPatched = MapFrameHook.IsPatched(main);
-                var patched = MapFrameHook.Patch(main); // strip прошлого + актуальный хук
+                var patched = MapFrameHook.Patch(main, _translateMapsOnline, _mapDiag); // strip прошлого + актуальный хук
                 if (patched != main)
                 {
                     File.WriteAllText(indexJs, patched, Utf8NoBom);
