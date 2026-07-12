@@ -185,3 +185,51 @@ public class JsLocalePatchTests
         Assert.Equal(js, JsLocalePatch.NeutralizeEmbedLocale(js));
     }
 }
+
+public class MapFrameHookTests
+{
+    // Минифицированный шейп создания главного окна (как в реальном index.js Wand 12.36-12.38).
+    const string MainWin = "function z(){Me=new o.BrowserWindow(p.windowOptions);Me.setMenu(null);}";
+
+    [Fact]
+    public void Patch_inserts_hook_after_main_window()
+    {
+        var outp = MapFrameHook.Patch(MainWin);
+        Assert.Contains(MapFrameHook.Marker, outp);
+        Assert.Contains("Me.webContents.on(\"did-frame-navigate\"", outp);   // захвачено имя окна
+        Assert.Contains("o.webFrameMain.fromId", outp);                       // захвачен алиас electron
+        Assert.Contains("process.env.WANDRU_MAP_DUMP", outp);                 // за env-флагом
+    }
+
+    [Fact]
+    public void Patch_is_idempotent()
+    {
+        var once = MapFrameHook.Patch(MainWin);
+        Assert.Equal(once, MapFrameHook.Patch(once));
+    }
+
+    [Fact]
+    public void No_anchor_returns_input_unchanged()
+    {
+        var js = "const app=require('electron');console.log('no window here');";
+        Assert.Equal(js, MapFrameHook.Patch(js));
+        Assert.False(MapFrameHook.NeedsPatch(js));
+    }
+
+    [Fact]
+    public void NeedsPatch_true_only_for_unpatched_anchor()
+    {
+        Assert.True(MapFrameHook.NeedsPatch(MainWin));
+        Assert.False(MapFrameHook.NeedsPatch(MapFrameHook.Patch(MainWin)));
+    }
+
+    [Fact]
+    public void Patch_captures_alternate_minified_names()
+    {
+        // Другая версия Wand могла переименовать win/electron -> захват групп должен подстроиться.
+        var js = "W=new E.BrowserWindow(Q.windowOptions);";
+        var outp = MapFrameHook.Patch(js);
+        Assert.Contains("W.webContents.on(\"did-frame-navigate\"", outp);
+        Assert.Contains("E.webFrameMain.fromId", outp);
+    }
+}

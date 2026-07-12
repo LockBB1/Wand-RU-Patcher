@@ -118,6 +118,21 @@ public sealed class RuPatcher
             _log("Инъекция перевода читов…");
             CheatHook.Inject(treeRoot);
         }
+
+        // Path D (перевод карт, Шаг 1 PoC): main-процесс index.js - инъектор в map-фрейм.
+        // Best-effort: якорь не нашёлся на новой версии Wand -> карты не хукаются, но патч цел.
+        var indexJs = Path.Combine(treeRoot, "index.js");
+        if (File.Exists(indexJs))
+        {
+            var main = File.ReadAllText(indexJs);
+            if (MapFrameHook.NeedsPatch(main))
+            {
+                var patched = MapFrameHook.Patch(main);
+                if (patched != main) File.WriteAllText(indexJs, patched, Utf8NoBom);
+            }
+            else if (!MapFrameHook.IsPatched(main))
+                _log("Карты: якорь главного окна в index.js не найден (новая версия Wand?) - пропуск map-хука.");
+        }
     }
 
     /// <summary>
