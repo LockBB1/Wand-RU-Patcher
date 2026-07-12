@@ -47,7 +47,10 @@ try {
     if (!mn && /wand\.com\/maps\//.test(u)) {
       _p("STAGE2 map matched: " + u);
       var sl = (u.match(/\/maps\/([^\/?]+)/) || [])[1] || "";  // slug карты из URL (/maps/<slug>/)
-      var dict = MAPS[sl] || {};
+      // Общий UI-хром (_common, все карты) + per-map словарь; per-map перекрывает.
+      var dict = {}, kk, _c = MAPS["_common"] || {}, _m = MAPS[sl] || {};
+      for (kk in _c) dict[kk] = _c[kk];
+      for (kk in _m) dict[kk] = _m[kk];
       try {
         MF = __EL__.webFrameMain.fromId(pi, ri);
         MF.executeJavaScript(__DUMP__)
