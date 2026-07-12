@@ -6,9 +6,9 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
-    <Version>0.16.14</Version>
-    <FileVersion>0.16.14.69</FileVersion>
-    <AssemblyVersion>0.16.14.0</AssemblyVersion>
+    <Version>0.16.15</Version>
+    <FileVersion>0.16.15.70</FileVersion>
+    <AssemblyVersion>0.16.15.0</AssemblyVersion>
     <ApplicationIcon>app.ico</ApplicationIcon>
   </PropertyGroup>
 
@@ -24,6 +24,12 @@
     <EmbeddedResource Include="Assets\ru-overrides.json" />
     <EmbeddedResource Include="..\renderer\cheat-hook.js">
       <LogicalName>cheat-hook.js</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\renderer\map-translator.mjs">
+      <LogicalName>map-translator.js</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\renderer\map-mainhook.mjs">
+      <LogicalName>map-mainhook.js</LogicalName>
     </EmbeddedResource>
     <Resource Include="Style\Inter_18pt-Regular.ttf" />
     <Resource Include="Assets\logo.png" />
