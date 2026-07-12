@@ -39,6 +39,25 @@ public static class JsLocalePatch
     /// <summary>Патч попал не в список локалей (регресс якоря на новой версии Wand)?</summary>
     public static bool HasCorruption(string js) => LocaleCorruption.IsMatch(js);
 
+    // --- Внешние embed-URL wand.com/mist.wand.com: локаль UI течёт в path-сегмент ---
+    // Wand строит карту как `${base}${lang!=="en"?"/"+lang:""}/maps/...` и ассистента как
+    // `${base}/${lang}/assistant/embed`. С патчем lang="ru" -> /ru/maps, /ru/assistant/embed, но
+    // сайты не имеют /ru роутов -> 404 (BLOCKED) -> карта и ассистент не грузятся вовсе.
+    // Нормализуем сегмент к рабочему дефолту: карта - без префикса (англ.-сайт, как у EN-юзера),
+    // ассистент - /en. Оба - точечные минифицированные шейпы, стабильны на Wand 12.36-12.38.
+    static readonly Regex MapLocalePrefix = new(
+        "([a-z])\\.language&&\"en\"!==\\1\\.language\\?`/\\$\\{\\1\\.language\\}`:\"\"",
+        RegexOptions.Compiled);
+    static readonly Regex AssistantLocaleSeg = new(
+        "/\\$\\{[a-z]+\\}/assistant/embed", RegexOptions.Compiled);
+
+    /// <summary>Убирает ru-префикс из внешних embed-URL (иначе 404 -> карта/ассистент не грузятся). Идемпотентно.</summary>
+    public static string NeutralizeEmbedLocale(string js)
+    {
+        var text = MapLocalePrefix.Replace(js, "\"\"");
+        return AssistantLocaleSeg.Replace(text, "/en/assistant/embed");
+    }
+
     public static bool NeedsPatch(string js) =>
         !js.Contains("\"ru-RU\"") &&
         (LocaleList.IsMatch(js) || LangMetaTail.IsMatch(js) || ShortPairTail.IsMatch(js));

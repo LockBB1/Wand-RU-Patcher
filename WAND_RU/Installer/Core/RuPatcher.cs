@@ -106,8 +106,11 @@ public sealed class RuPatcher
         foreach (var js in Directory.EnumerateFiles(treeRoot, "*.js", SearchOption.AllDirectories))
         {
             var src = File.ReadAllText(js);
-            if (!JsLocalePatch.NeedsPatch(src)) continue;
-            var patched = JsLocalePatch.Patch(src, _ov.LanguageNative, JsLocalePatch.RussianFlagDataUri);
+            // Локаль-патч - только по своим якорям; embed-fix - на всех JS (билдеры URL в др. бандлах).
+            var patched = JsLocalePatch.NeedsPatch(src)
+                ? JsLocalePatch.Patch(src, _ov.LanguageNative, JsLocalePatch.RussianFlagDataUri)
+                : src;
+            patched = JsLocalePatch.NeutralizeEmbedLocale(patched);
             if (patched != src) File.WriteAllText(js, patched, Utf8NoBom);
         }
         if (_translateCheats)

@@ -147,4 +147,41 @@ public class JsLocalePatchTests
     [InlineData("var a=[\"en-US\",\"ru-RU\",\"zh-CN\",\"de-DE\"];")] // валидный список локалей
     [InlineData("var a=[\"en-US\",\"zh-CN\"];")]                      // без ru-RU
     public void HasCorruption_passes_valid_locale_list(string js) => Assert.False(JsLocalePatch.HasCorruption(js));
+
+    // --- Регресс: локаль ru течёт в embed-URL wand.com -> /ru/maps + /ru/assistant/embed -> 404 ---
+
+    [Fact]
+    public void Neutralizes_map_locale_prefix()
+    {
+        // Билдер карты: r=lang&&"en"!==lang?`/${lang}`:"" -> с ru даёт /ru/maps (404). Форсим "".
+        var js = "function a(t,e){const r=t.language&&\"en\"!==t.language?`/${t.language}`:\"\",i=new URL(`${r}/maps/${t.titleSlug}/${t.mapSlug}`,e);}";
+        var outp = JsLocalePatch.NeutralizeEmbedLocale(js);
+        Assert.Contains("const r=\"\",i=new URL", outp);      // сегмент занулён
+        Assert.DoesNotContain(".language", outp);
+    }
+
+    [Fact]
+    public void Neutralizes_assistant_locale_segment()
+    {
+        // Ассистент: `${base}/${a}/assistant/embed` -> с ru даёт /ru/assistant/embed (404). Форсим /en.
+        var js = "const a=this.x.getEffectiveLocale().language,i=new URL(`${this.S}/${a}/assistant/embed`);";
+        var outp = JsLocalePatch.NeutralizeEmbedLocale(js);
+        Assert.Contains("/en/assistant/embed", outp);
+        Assert.DoesNotContain("/${a}/assistant/embed", outp);
+    }
+
+    [Fact]
+    public void Embed_neutralize_is_idempotent()
+    {
+        var js = "r=e.language&&\"en\"!==e.language?`/${e.language}`:\"\";u=`${b}/${t}/assistant/embed`;";
+        var once = JsLocalePatch.NeutralizeEmbedLocale(js);
+        Assert.Equal(once, JsLocalePatch.NeutralizeEmbedLocale(once));
+    }
+
+    [Fact]
+    public void Embed_neutralize_leaves_unrelated_js_untouched()
+    {
+        var js = "console.log(x.language);const u=`${b}/maps/${id}`;";
+        Assert.Equal(js, JsLocalePatch.NeutralizeEmbedLocale(js));
+    }
 }
