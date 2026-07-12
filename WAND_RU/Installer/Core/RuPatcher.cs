@@ -127,15 +127,16 @@ public sealed class RuPatcher
             var main = File.ReadAllText(indexJs);
             if (MapFrameHook.NeedsPatch(main))
             {
-                var patched = MapFrameHook.Patch(main);
+                var wasPatched = MapFrameHook.IsPatched(main);
+                var patched = MapFrameHook.Patch(main); // strip прошлого + актуальный хук
                 if (patched != main)
                 {
                     File.WriteAllText(indexJs, patched, Utf8NoBom);
-                    _log("Карты: map-хук встроен в index.js (якорь найден).");
+                    _log(wasPatched ? "Карты: map-хук обновлён в index.js." : "Карты: map-хук встроен в index.js (якорь найден).");
                 }
+                else if (wasPatched)
+                    _log("Карты: map-хук уже актуален в index.js.");
             }
-            else if (MapFrameHook.IsPatched(main))
-                _log("Карты: map-хук уже присутствует в index.js.");
             else
                 _log("Карты: якорь главного окна в index.js не найден (новая версия Wand?) - пропуск map-хука.");
         }

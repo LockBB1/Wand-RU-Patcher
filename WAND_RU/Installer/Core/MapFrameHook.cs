@@ -41,19 +41,27 @@ public static class MapFrameHook
     // Канал: __EL__.net (electron main HTTP) POST на 127.0.0.1:39271 -> лог инсталлера. Без fs/require.
     // raw-литерал: JS-бэкслеши (\n, \., \/) сохраняются как есть -> валидный JS.
     const string InjectTemplate = """
-;/*__WANDRU_MAPHOOK__*/try{function _p(l){try{var r=__EL__.net.request({method:"POST",url:"http://127.0.0.1:39271/"});r.on("error",function(){});r.write(typeof l=="string"?l:String(l));r.end()}catch(_){}}_p("STAGE1 main hook installed");__WIN__.webContents.on("did-frame-navigate",function(ev,u,c,t,mn,pi,ri){_p("NAV "+(mn?"main":"sub")+" "+u);if(!mn&&/wand\.com\/maps\//.test(u)){_p("STAGE2 map matched: "+u);try{__EL__.webFrameMain.fromId(pi,ri).executeJavaScript(__DUMP__).then(function(){_p("STAGE3 inject resolved")}).catch(function(e){_p("STAGE3 inject ERR "+e)})}catch(e){_p("STAGE2 throw "+e)}}});__WIN__.webContents.on("console-message",function(ev,l,ms){var s=typeof ms=="string"?ms:(ev&&ev.message);if(typeof s=="string"&&s.indexOf("WANDRU_DUMP::")===0){var txt;try{txt=Buffer.from(s.slice(13),"base64").toString("utf8")}catch(e){txt="(decode fail)"}_p("STAGE4 dump:\n"+txt)}});_p("STAGE1b listeners attached");}catch(e){try{__EL__.dialog.showErrorBox("WANDRU","FATAL "+e)}catch(_){}}
+;/*__WANDRU_MAPHOOK__*/try{function _p(l){try{var r=__EL__.net.request({method:"POST",url:"http://127.0.0.1:39271/"});r.on("error",function(){});r.write(typeof l=="string"?l:String(l));r.end()}catch(_){}}_p("STAGE1 main hook installed");__WIN__.webContents.on("did-frame-navigate",function(ev,u,c,t,mn,pi,ri){_p("NAV "+(mn?"main":"sub")+" "+u);if(!mn&&/wand\.com\/maps\//.test(u)){_p("STAGE2 map matched: "+u);try{__EL__.webFrameMain.fromId(pi,ri).executeJavaScript(__DUMP__).then(function(){_p("STAGE3 inject resolved")}).catch(function(e){_p("STAGE3 inject ERR "+e)})}catch(e){_p("STAGE2 throw "+e)}}});__WIN__.webContents.on("console-message",function(ev,l,ms){var s=typeof ms=="string"?ms:(ev&&ev.message);if(typeof s=="string"&&s.indexOf("WANDRU_DUMP::")===0){var txt;try{txt=Buffer.from(s.slice(13),"base64").toString("utf8")}catch(e){txt="(decode fail)"}_p("STAGE4 dump:\n"+txt)}});_p("STAGE1b listeners attached");}catch(e){try{__EL__.dialog.showErrorBox("WANDRU","FATAL "+e)}catch(_){}}/*__WANDRU_MAPHOOK_END__*/
 """;
+
+    // Прошлый блок хука (парные маркеры) - для strip-then-reinject: пере-патч ставит АКТУАЛЬНЫЙ хук,
+    // а не сохраняет старый (иначе обновление дампера/переводчика не встанет поверх). Singleline на всякий.
+    static readonly Regex ExistingBlock = new(
+        @";/\*__WANDRU_MAPHOOK__\*/.*?/\*__WANDRU_MAPHOOK_END__\*/",
+        RegexOptions.Compiled | RegexOptions.Singleline);
 
     public static bool IsPatched(string js) => js.Contains(Marker);
 
-    public static bool NeedsPatch(string js) => !IsPatched(js) && MainWindow.IsMatch(js);
+    /// <summary>Есть якорь главного окна - патчим (пере-инжектим для актуальности, даже если хук уже стоит).</summary>
+    public static bool NeedsPatch(string js) => MainWindow.IsMatch(js);
 
-    /// <summary>Вставляет did-frame-navigate инъектор + console-relay после создания главного окна. Идемпотентно.</summary>
+    /// <summary>Снимает прошлый хук-блок и вставляет актуальный после создания главного окна. Идемпотентно.</summary>
     public static string Patch(string js)
     {
-        if (IsPatched(js) || !MainWindow.IsMatch(js)) return js;
-        var dumpLit = JsonSerializer.Serialize(DumpScript); // валидный JS-строковый литерал
-        return MainWindow.Replace(js, m =>
+        if (!MainWindow.IsMatch(js)) return js;
+        var clean = ExistingBlock.Replace(js, "");           // снять прошлую версию хука (обновляемость)
+        var dumpLit = JsonSerializer.Serialize(DumpScript);  // валидный JS-строковый литерал
+        return MainWindow.Replace(clean, m =>
         {
             var win = m.Groups[1].Value;   // главное окно (минифиц. имя)
             var el = m.Groups[2].Value;    // алиас require("electron")

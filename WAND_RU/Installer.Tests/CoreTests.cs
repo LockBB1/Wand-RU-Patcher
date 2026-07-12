@@ -220,10 +220,23 @@ public class MapFrameHookTests
     }
 
     [Fact]
-    public void NeedsPatch_true_only_for_unpatched_anchor()
+    public void NeedsPatch_true_when_anchor_present()
     {
         Assert.True(MapFrameHook.NeedsPatch(MainWin));
-        Assert.False(MapFrameHook.NeedsPatch(MapFrameHook.Patch(MainWin)));
+        Assert.True(MapFrameHook.NeedsPatch(MapFrameHook.Patch(MainWin))); // пере-инжект для актуальности
+        Assert.False(MapFrameHook.NeedsPatch("const x=1;console.log('no window');"));
+    }
+
+    [Fact]
+    public void Repatch_replaces_stale_hook_block()
+    {
+        // index.js с прошлой версией хука (устаревшее тело между парными маркерами)
+        var stale = "Me=new o.BrowserWindow(p.windowOptions);/*__WANDRU_MAPHOOK__*/try{OLD_STALE_BODY}catch(_){}/*__WANDRU_MAPHOOK_END__*/;Me.setMenu(null);";
+        var outp = MapFrameHook.Patch(stale);
+        Assert.DoesNotContain("OLD_STALE_BODY", outp);                                                    // старьё снято
+        Assert.Equal(1, System.Text.RegularExpressions.Regex.Matches(outp, "__WANDRU_MAPHOOK__\\*/").Count); // один блок, не задвоен
+        Assert.Contains("did-frame-navigate", outp);                                                       // актуальный хук встал
+        Assert.Contains("Me.setMenu(null)", outp);                                                         // оригинальный код цел
     }
 
     [Fact]
