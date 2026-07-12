@@ -19,12 +19,15 @@ public class RuOverridesTests
 
 public class WandLocatorTests
 {
+    // Version-agnostic: реальная Wand-папка обновляется (12.36->12.38...), не хардкодим версию.
+    static Version Ver(string appDir) => new(new System.IO.DirectoryInfo(appDir).Name.Replace("app-", ""));
+
     [Fact]
     public void FindAppDirs_sorted_desc_by_version()
     {
         var dirs = WandLocator.FindAppDirs(TestPaths.WandRoot());
-        Assert.EndsWith("app-12.37.0", dirs[0]);
-        Assert.Contains(dirs, d => d.EndsWith("app-12.36.0"));
+        Assert.NotEmpty(dirs);
+        for (var i = 1; i < dirs.Length; i++) Assert.True(Ver(dirs[i - 1]) >= Ver(dirs[i])); // по убыванию
     }
 
     [Fact]
@@ -33,7 +36,7 @@ public class WandLocatorTests
         var w = WandLocator.Detect(new[] { TestPaths.WandRoot() });
         Assert.NotNull(w);
         Assert.EndsWith("Wand", w!.RootDir);
-        Assert.EndsWith("app-12.37.0", w.SelectedAppDir!);
+        Assert.Equal(w.AppDirs[0], w.SelectedAppDir); // без пина - последняя (dirs[0])
     }
 }
 

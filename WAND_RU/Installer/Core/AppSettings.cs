@@ -12,6 +12,9 @@ public sealed class AppSettings
     public bool TranslateCheatsOnline { get; set; }
     /// <summary>Провайдер онлайн-MT: "auto" (Google -> MyMemory), "google", "mymemory". Читает хук.</summary>
     public string OnlineProvider { get; set; } = "auto";
+    /// <summary>Закреплённая версия Wand ("12.37.0"): патчим/показываем её, а не последнюю. Пусто = последняя.
+    /// Даёт играть на старой версии, пока WRP не поддержал новую.</summary>
+    public string? PinnedAppVersion { get; set; }
 
     static string Dir => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "WandRuInstaller");

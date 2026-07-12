@@ -37,13 +37,20 @@ public static class WandLocator
         yield return Path.Combine(lad, "Programs", "Wand");
     }
 
-    public static WandInstall? Detect(IEnumerable<string> candidateRoots)
+    /// <summary>Версия app-дира ("12.38.0") из имени "app-12.38.0".</summary>
+    public static string VersionOf(string appDir) => new DirectoryInfo(appDir).Name.Replace("app-", "");
+
+    public static PatchManifest? Manifest(string appDir) => ReadManifest(appDir);
+
+    public static WandInstall? Detect(IEnumerable<string> candidateRoots, string? pinnedVersion = null)
     {
         foreach (var root in candidateRoots)
         {
             var dirs = FindAppDirs(root);
             if (dirs.Length == 0) continue;
-            var sel = dirs[0];
+            // Закреплённая версия имеет приоритет над последней (играть на старой, пока новую не поддержали).
+            var sel = (pinnedVersion is not null
+                ? dirs.FirstOrDefault(d => VersionOf(d) == pinnedVersion) : null) ?? dirs[0];
             var man = ReadManifest(sel);
             // Wand обновился: новая версия без патча, а в старой он есть -> предложим перенос.
             var patchedOther = man is null

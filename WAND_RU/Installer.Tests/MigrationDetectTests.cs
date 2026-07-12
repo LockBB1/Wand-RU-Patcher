@@ -51,6 +51,21 @@ public class MigrationDetectTests
     }
 
     [Fact]
+    public void Detect_honors_pinned_version_over_latest()
+    {
+        var root = MakeRoot(("12.37.0", true), ("12.38.0", false));
+        try
+        {
+            var pinned = WandLocator.Detect(new[] { root }, "12.37.0")!;
+            Assert.EndsWith("app-12.37.0", pinned.SelectedAppDir);   // закреплённая, не последняя
+            Assert.True(pinned.IsPatched);                           // манифест закреплённой версии
+            Assert.EndsWith("app-12.38.0", WandLocator.Detect(new[] { root }, null)!.SelectedAppDir);   // без пина - последняя
+            Assert.EndsWith("app-12.38.0", WandLocator.Detect(new[] { root }, "9.9.9")!.SelectedAppDir); // несуществующая -> фолбэк
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
+    [Fact]
     public void VerifyTree_throws_on_unsupported_layout_and_passes_on_patched()
     {
         var tree = Path.Combine(Path.GetTempPath(), "wru-vt-" + Path.GetRandomFileName());
@@ -61,9 +76,10 @@ public class MigrationDetectTests
             File.WriteAllText(Path.Combine(tree, "bundle.js"), "var locales=[\"en-US\",\"de-DE\"];");
             Assert.Throws<NotSupportedException>(() => RuPatcher.VerifyTree(tree));
 
-            // Патч прошёл: локаль на месте + ru-RU в JS.
+            // Патч прошёл: локаль на месте + ru-RU в JS. 3-я локаль после ru-RU - иначе HasCorruption
+            // (guard 0.15.3) примет `["en-US","ru-RU"]` за порчу (список локалей без следующей за ru-RU).
             File.WriteAllText(Path.Combine(tree, "static", "strings", "ru-RU.json"), "{}");
-            File.WriteAllText(Path.Combine(tree, "bundle.js"), "var locales=[\"en-US\",\"ru-RU\"];");
+            File.WriteAllText(Path.Combine(tree, "bundle.js"), "var locales=[\"en-US\",\"ru-RU\",\"de-DE\"];");
             RuPatcher.VerifyTree(tree); // не бросает
         }
         finally { Directory.Delete(tree, true); }

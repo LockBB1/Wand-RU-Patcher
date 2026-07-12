@@ -72,7 +72,7 @@ public sealed class MainVm : ObservableObject
     public void DetectFrom(IEnumerable<string> roots)
     {
         State = InstallerState.Detecting;
-        Install = WandLocator.Detect(roots);
+        Install = WandLocator.Detect(roots, AppSettings.Load().PinnedAppVersion);
         if (Install is null)
         {
             State = InstallerState.NotFound;
@@ -80,13 +80,24 @@ public sealed class MainVm : ObservableObject
             return;
         }
         Settings = new SettingsVm(Install);
-        var ver = new DirectoryInfo(Install.SelectedAppDir!).Name.Replace("app-", "");
+        Settings.OnAppDirSelected = _ => RefreshSelection();   // смена версии в настройках -> обновить шапку/состояние
+        RefreshSelection();
+    }
+
+    /// <summary>Пересчитать состояние/шапку/подсказку из Install.SelectedAppDir (после Detect или смены версии).</summary>
+    void RefreshSelection()
+    {
+        if (Install?.SelectedAppDir is null) return;
+        var man = WandLocator.Manifest(Install.SelectedAppDir);
+        Install.IsPatched = man is not null;
+        Install.Manifest = man;
+        var ver = WandLocator.VersionOf(Install.SelectedAppDir);
+        var pinned = ver != WandLocator.VersionOf(Install.AppDirs[0]);   // выбрана не последняя -> закреплена
         State = Install.IsPatched ? InstallerState.Patched : InstallerState.Ready;
-        StatusText = $"Wand {ver}";
+        StatusText = pinned ? $"Wand {ver} (закреплено)" : $"Wand {ver}";
         MigrationHint = Install.PatchedOtherAppDir is null
             ? ""
-            : string.Format(L.Get("S_MigrateHint"),
-                ver, new DirectoryInfo(Install.PatchedOtherAppDir).Name.Replace("app-", ""));
+            : string.Format(L.Get("S_MigrateHint"), ver, WandLocator.VersionOf(Install.PatchedOtherAppDir));
     }
 
     // mode: "local" -> офлайн-перевод, "online" -> +интернет, null -> оставить текущий (переустановка).

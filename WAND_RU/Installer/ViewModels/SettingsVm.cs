@@ -20,6 +20,9 @@ public sealed class SettingsVm : ObservableObject
 
     public IReadOnlyList<string> AppVersions { get; }
 
+    /// <summary>MainVm подписывается: смена версии -> обновить шапку/состояние (без пере-Detect).</summary>
+    public Action<string>? OnAppDirSelected { get; set; }
+
     public string SelectedAppVersion
     {
         get => _selectedAppVersion;
@@ -88,6 +91,11 @@ public sealed class SettingsVm : ObservableObject
     void ApplySelection()
     {
         var match = _install.AppDirs.FirstOrDefault(d => VersionOf(d) == _selectedAppVersion);
-        if (match is not null) _install.SelectedAppDir = match;
+        if (match is null) return;
+        _install.SelectedAppDir = match;
+        // Закрепляем выбор: переживает рестарт, Detect берёт её вместо последней (играть на старой версии).
+        _appSettings.PinnedAppVersion = _selectedAppVersion == VersionOf(_install.AppDirs[0]) ? null : _selectedAppVersion;
+        _appSettings.Save();
+        OnAppDirSelected?.Invoke(match);
     }
 }
