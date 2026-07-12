@@ -191,10 +191,20 @@ public sealed class MainVm : ObservableObject
         catch (Exception ex) { Add("Не удалось перезапустить Wand: " + ex.Message); }
     }
 
+    // Лог карт может расти тысячами строк (STAGE/NAV/HV на активной карте) - чистим при пороге,
+    // чтобы ObservableCollection не забивал память у юзера.
+    const int LogCap = 5000;
+
     void Add(string message)
     {
         var app = System.Windows.Application.Current;
-        if (app is not null) app.Dispatcher.Invoke(() => Log.Add(message));
-        else Log.Add(message);
+        if (app is not null) app.Dispatcher.Invoke(() => AppendLog(message));
+        else AppendLog(message);
+    }
+
+    internal void AppendLog(string message)
+    {
+        if (Log.Count >= LogCap) { Log.Clear(); Log.Add("[лог очищен: достигнут предел 5000 строк]"); }
+        Log.Add(message);
     }
 }

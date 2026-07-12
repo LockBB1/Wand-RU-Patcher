@@ -51,4 +51,13 @@ public class MainVmTests
         vm.RestoreAsync().GetAwaiter().GetResult();
         Assert.Equal(InstallerState.Ready, vm.State);
     }
+
+    [Fact]
+    public void Log_auto_clears_at_cap()
+    {
+        var vm = new MainVm();
+        for (var i = 0; i <= 5000; i++) vm.AppendLog("line " + i);
+        Assert.True(vm.Log.Count < 5000);        // очистилось при пороге, не копится
+        Assert.Equal("line 5000", vm.Log[^1]);   // последняя строка на месте после очистки
+    }
 }
