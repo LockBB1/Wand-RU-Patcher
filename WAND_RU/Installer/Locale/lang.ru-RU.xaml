@@ -20,6 +20,16 @@
     <s:String x:Key="S_Done_Title">Готово!</s:String>
     <s:String x:Key="S_Error_Title">Ошибка</s:String>
     <s:String x:Key="S_Retry">Повторить</s:String>
+    <!-- Диалог «Что будем русифицировать?» + кнопки после установки -->
+    <s:String x:Key="S_PatchOptions_Title">Что будем русифицировать?</s:String>
+    <s:String x:Key="S_Opt_CheatsLocal">Локальный перевод (из словарей)</s:String>
+    <s:String x:Key="S_Opt_CheatsOnline">Перевод читов через интернет</s:String>
+    <s:String x:Key="S_Opt_MapsLocal">Локальный перевод карт</s:String>
+    <s:String x:Key="S_Opt_MapsOnline">Перевод карт через интернет</s:String>
+    <s:String x:Key="S_Opt_RestartWand">Запустить Wand после установки</s:String>
+    <s:String x:Key="S_Opt_MapsHint">Для точного перевода карт держите WRP открытым и запускайте Wand через него.</s:String>
+    <s:String x:Key="S_LaunchWand">Запустить Wand</s:String>
+    <s:String x:Key="S_BackToMenu">В меню</s:String>
 
     <!-- Settings -->
     <s:String x:Key="S_Settings">Настройки</s:String>

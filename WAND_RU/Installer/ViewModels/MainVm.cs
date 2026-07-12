@@ -15,6 +15,7 @@ public sealed class MainVm : ObservableObject
     string _migrationHint = "";
     bool _isAboutOpen;
     bool _isHelpOpen;
+    bool _isPatchOptionsOpen;
     SettingsVm? _settings;
     readonly RuOverrides _overrides = RuOverrides.LoadEmbedded();
 
@@ -27,6 +28,8 @@ public sealed class MainVm : ObservableObject
     public SettingsVm? Settings { get => _settings; private set => SetProperty(ref _settings, value); }
     public bool IsAboutOpen { get => _isAboutOpen; set => SetProperty(ref _isAboutOpen, value); }
     public bool IsHelpOpen { get => _isHelpOpen; set => SetProperty(ref _isHelpOpen, value); }
+    /// <summary>Открыт диалог «Что будем русифицировать?» (выбор компонентов перед патчем).</summary>
+    public bool IsPatchOptionsOpen { get => _isPatchOptionsOpen; set => SetProperty(ref _isPatchOptionsOpen, value); }
 
     public ICommand PatchCommand { get; }
     public ICommand RestoreCommand { get; }
@@ -35,6 +38,11 @@ public sealed class MainVm : ObservableObject
     public ICommand CloseAboutCommand { get; }
     public ICommand OpenHelpCommand { get; }
     public ICommand CloseHelpCommand { get; }
+    public ICommand OpenPatchOptionsCommand { get; }
+    public ICommand ClosePatchOptionsCommand { get; }
+    public ICommand ConfirmPatchCommand { get; }
+    public ICommand LaunchWandCommand { get; }
+    public ICommand BackToMenuCommand { get; }
 
     public MainVm()
     {
@@ -47,6 +55,13 @@ public sealed class MainVm : ObservableObject
         CloseAboutCommand = new RelayCommand(_ => IsAboutOpen = false);
         OpenHelpCommand = new RelayCommand(_ => IsHelpOpen = true);
         CloseHelpCommand = new RelayCommand(_ => IsHelpOpen = false);
+        OpenPatchOptionsCommand = new RelayCommand(_ => IsPatchOptionsOpen = true,
+            _ => State is InstallerState.Ready or InstallerState.Patched or InstallerState.Done or InstallerState.Error);
+        ClosePatchOptionsCommand = new RelayCommand(_ => IsPatchOptionsOpen = false);
+        ConfirmPatchCommand = new AsyncRelayCommand(async _ => { IsPatchOptionsOpen = false; await PatchAsync(null); });
+        LaunchWandCommand = new RelayCommand(_ => TryRestartWand());
+        // После установки: вернуться в меню (откат/переустановка) без перезапуска WRP - просто пере-детект.
+        BackToMenuCommand = new RelayCommand(_ => { if (Install is not null) DetectFrom(new[] { Install.RootDir }); });
     }
 
     MapDiagServer? _mapDiag;

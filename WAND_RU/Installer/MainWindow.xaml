@@ -75,15 +75,9 @@
                     <TextBlock Text="{Binding MigrationHint}" Foreground="#FACC15" FontSize="12"
                                HorizontalAlignment="Center" TextWrapping="Wrap" MaxWidth="320"
                                TextAlignment="Center" Margin="0 -12 0 14"/>
-                    <Button Content="{DynamicResource S_PatchLocal}" Style="{StaticResource ColoredButton}"
-                            Width="280" Height="42" FontSize="15" FontWeight="SemiBold" Margin="0 0 0 10"
-                            Command="{Binding PatchCommand}" CommandParameter="local"/>
-                    <Button Content="{DynamicResource S_PatchOnline}" Style="{StaticResource ColoredButton}"
-                            Width="280" Height="42" FontSize="14"
-                            Command="{Binding PatchCommand}" CommandParameter="online"/>
-                    <TextBlock Text="{DynamicResource S_PatchOnlineHint}" Foreground="{DynamicResource MutedForeground}"
-                               FontSize="11" HorizontalAlignment="Center" TextWrapping="Wrap"
-                               MaxWidth="300" TextAlignment="Center" Margin="0 8 0 0"/>
+                    <Button Content="{DynamicResource S_Patch}" Style="{StaticResource ColoredButton}"
+                            Width="280" Height="46" FontSize="16" FontWeight="SemiBold"
+                            Command="{Binding OpenPatchOptionsCommand}"/>
                 </StackPanel>
 
                 <!-- Patched -->
@@ -96,11 +90,13 @@
                                FontSize="16" HorizontalAlignment="Center" Margin="0 0 0 4"/>
                     <TextBlock Text="{Binding StatusText}" Foreground="{DynamicResource MutedForeground}"
                                FontSize="12" HorizontalAlignment="Center" Margin="0 0 0 22"/>
+                    <Button Content="{DynamicResource S_LaunchWand}" Width="310" Height="42" Margin="0 0 0 10"
+                            FontWeight="SemiBold" Style="{StaticResource ColoredButton}" Command="{Binding LaunchWandCommand}"/>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                         <Button Content="{DynamicResource S_Restore}" Width="150" Height="40" Margin="0 0 10 0"
                                 Style="{StaticResource ColoredButton}" Command="{Binding RestoreCommand}"/>
                         <Button Content="{DynamicResource S_Reinstall}" Width="150" Height="40"
-                                Style="{StaticResource ColoredButton}" Command="{Binding PatchCommand}"/>
+                                Style="{StaticResource ColoredButton}" Command="{Binding OpenPatchOptionsCommand}"/>
                     </StackPanel>
                 </StackPanel>
 
@@ -137,6 +133,12 @@
                                FontSize="18" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0 0 0 6"/>
                     <TextBlock Text="{Binding StatusText}" Foreground="{DynamicResource MutedForeground}"
                                FontSize="12" TextWrapping="Wrap" TextAlignment="Center" MaxWidth="360"/>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0 20 0 0">
+                        <Button Content="{DynamicResource S_LaunchWand}" Width="170" Height="40" Margin="0 0 10 0"
+                                FontWeight="SemiBold" Style="{StaticResource ColoredButton}" Command="{Binding LaunchWandCommand}"/>
+                        <Button Content="{DynamicResource S_BackToMenu}" Width="140" Height="40"
+                                Style="{StaticResource ColoredButton}" Command="{Binding BackToMenuCommand}"/>
+                    </StackPanel>
                 </StackPanel>
 
                 <!-- Error -->
@@ -240,6 +242,49 @@
                                    FontSize="12" HorizontalAlignment="Center" TextAlignment="Center" Margin="0 0 0 14"/>
                         <Button Content="{DynamicResource S_Close}" Style="{StaticResource ColoredButton}"
                                 Height="34" Width="120" Command="{Binding CloseHelpCommand}"/>
+                    </StackPanel>
+                </Border>
+            </Border>
+            <!-- Диалог «Что будем русифицировать?»: выбор компонентов перед патчем -->
+            <Border Grid.RowSpan="3" CornerRadius="7" Background="#CC000000"
+                    Visibility="{Binding IsPatchOptionsOpen, Converter={StaticResource ToVisibilityConverter}}">
+                <Border Width="390" Background="{DynamicResource Popover}" CornerRadius="8"
+                        BorderBrush="{DynamicResource Border}" BorderThickness="1"
+                        VerticalAlignment="Center" HorizontalAlignment="Center" Padding="24">
+                    <StackPanel>
+                        <TextBlock Text="{DynamicResource S_PatchOptions_Title}" Foreground="{DynamicResource PopoverForeground}"
+                                   FontSize="16" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0 0 0 18"/>
+                        <StackPanel Orientation="Horizontal" Margin="0 0 0 11">
+                            <CheckBox IsChecked="{Binding Settings.TranslateCheats}" VerticalAlignment="Center"/>
+                            <TextBlock Text="{DynamicResource S_Opt_CheatsLocal}" Foreground="{DynamicResource PopoverForeground}"
+                                       FontSize="13" Margin="8 0 0 0"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0 0 0 11">
+                            <CheckBox IsChecked="{Binding Settings.TranslateCheatsOnline}" VerticalAlignment="Center"/>
+                            <TextBlock Text="{DynamicResource S_Opt_CheatsOnline}" Foreground="{DynamicResource PopoverForeground}"
+                                       FontSize="13" Margin="8 0 0 0"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0 0 0 11">
+                            <CheckBox IsChecked="{Binding Settings.TranslateMaps}" VerticalAlignment="Center"/>
+                            <TextBlock Text="{DynamicResource S_Opt_MapsLocal}" Foreground="{DynamicResource PopoverForeground}"
+                                       FontSize="13" Margin="8 0 0 0"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0 0 0 11">
+                            <CheckBox IsChecked="{Binding Settings.TranslateMapsOnline}" VerticalAlignment="Center"/>
+                            <TextBlock Text="{DynamicResource S_Opt_MapsOnline}" Foreground="{DynamicResource PopoverForeground}"
+                                       FontSize="13" Margin="8 0 0 0"/>
+                        </StackPanel>
+                        <TextBlock Text="{DynamicResource S_Opt_MapsHint}" Foreground="{DynamicResource MutedForeground}"
+                                   FontSize="11" TextWrapping="Wrap" Margin="24 -4 0 12"/>
+                        <StackPanel Orientation="Horizontal" Margin="0 0 0 18">
+                            <CheckBox IsChecked="{Binding Settings.RestartWandAfter}" VerticalAlignment="Center"/>
+                            <TextBlock Text="{DynamicResource S_Opt_RestartWand}" Foreground="{DynamicResource PopoverForeground}"
+                                       FontSize="13" Margin="8 0 0 0"/>
+                        </StackPanel>
+                        <Button Content="{DynamicResource S_Patch}" Style="{StaticResource ColoredButton}"
+                                Height="42" FontWeight="SemiBold" Margin="0 0 0 8" Command="{Binding ConfirmPatchCommand}"/>
+                        <Button Content="{DynamicResource S_Close}" Style="{StaticResource ColoredButton}"
+                                Height="32" Width="120" HorizontalAlignment="Center" Command="{Binding ClosePatchOptionsCommand}"/>
                     </StackPanel>
                 </Border>
             </Border>
