@@ -30,9 +30,35 @@ public static class MapFrameHook
     // JS-хуки вынесены в читаемые renderer/*.mjs (встроены как ресурсы map-translator.js /
     // map-mainhook.js). map-translator = переводчик текст-узлов (в map-фрейм), map-mainhook =
     // main-процесс (did-frame-navigate инъектор + o.net Google MT + relay). Ленивая загрузка + кэш.
-    static string? _translator, _mainhook;
+    static string? _translator, _mainhook, _mapsJson;
     static string Translator => _translator ??= LoadEmbedded("map-translator.js");
     static string MainHook => _mainhook ??= LoadEmbedded("map-mainhook.js");
+    // Пер-карта офлайн-словари {slug:{en:ru}} из ресурсов maps.<slug>.json -> JS-объект (__MAPS__).
+    static string MapsJson => _mapsJson ??= BuildMapsJson();
+
+    // Кириллица литеральная (не \uXXXX) - втрое компактнее в index.js, как оригинальные локали.
+    static readonly JsonSerializerOptions MapsOpts = new()
+    {
+        Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+    };
+
+    // ceiling: все карты бакуются в index.js целиком (RDR2 ~350КБ ок). При десятках карт (видение 190)
+    // это раздует index.js - тогда грузить словарь по slug иначе (напр. отдельный файл в asar). Пока YAGNI.
+    static string BuildMapsJson()
+    {
+        var asm = System.Reflection.Assembly.GetExecutingAssembly();
+        var maps = new Dictionary<string, JsonElement>();
+        foreach (var n in asm.GetManifestResourceNames()
+            .Where(n => n.StartsWith("maps.", StringComparison.OrdinalIgnoreCase)
+                     && n.EndsWith(".json", StringComparison.OrdinalIgnoreCase)))
+        {
+            var slug = n.Substring("maps.".Length, n.Length - "maps.".Length - ".json".Length);
+            using var s = asm.GetManifestResourceStream(n)!;
+            using var r = new System.IO.StreamReader(s);
+            maps[slug] = JsonSerializer.Deserialize<JsonElement>(r.ReadToEnd());
+        }
+        return JsonSerializer.Serialize(maps, MapsOpts);   // валидный JS-литерал в index.js
+    }
 
     static string LoadEmbedded(string suffix)
     {
@@ -75,7 +101,8 @@ public static class MapFrameHook
             var inject = MainHook
                 .Replace("__WIN__", win)
                 .Replace("__EL__", el)
-                .Replace("__DUMP__", dumpLit);
+                .Replace("__DUMP__", dumpLit)
+                .Replace("__MAPS__", MapsJson);   // последним: контент словаря не должен ре-подставляться
             return m.Value + inject;
         }, 1);
     }

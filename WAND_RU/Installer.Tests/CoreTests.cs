@@ -259,6 +259,16 @@ public class MapFrameHookTests
         Assert.Contains("W.webContents.on(\"did-frame-navigate\"", outp);
         Assert.Contains("E.webFrameMain.fromId", outp);
     }
+
+    [Fact]
+    public void Patch_injects_per_map_dict_and_slug_seed()
+    {
+        var outp = MapFrameHook.Patch(MainWin);
+        Assert.Contains("var MAPS =", outp);                                  // словарь встроен (__MAPS__ подставлен)
+        Assert.DoesNotContain("__MAPS__", outp);                             // плейсхолдер не остался
+        Assert.Contains("MAPS[sl]", outp);                                   // выбор словаря по slug карты
+        Assert.Contains("window.__wandruApply&&window.__wandruApply(", outp); // seed переводчика по slug
+    }
 }
 
 public class MapDiagServerTests

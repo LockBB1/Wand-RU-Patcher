@@ -6,6 +6,9 @@
    Парные маркеры __WANDRU_MAPHOOK__ ... _END - для strip-then-reinject (обновляемость). */
 try {
   var MF = null, CACHE = {};
+  /* Пер-карта офлайн-словари {slug:{en:ru}} - подставляет MapFrameHook.Patch (__MAPS__).
+     Мгновенный офлайн-перевод POI/событий: seed переводчика по slug из URL, MT только на остаток. */
+  var MAPS = __MAPS__;
 
   /* Строка в лог инсталлера (MapDiagServer). */
   function _p(l) {
@@ -43,10 +46,16 @@ try {
     _p("NAV " + (mn ? "main" : "sub") + " " + u);
     if (!mn && /wand\.com\/maps\//.test(u)) {
       _p("STAGE2 map matched: " + u);
+      var sl = (u.match(/\/maps\/([^\/?]+)/) || [])[1] || "";  // slug карты из URL (/maps/<slug>/)
+      var dict = MAPS[sl] || {};
       try {
         MF = __EL__.webFrameMain.fromId(pi, ri);
         MF.executeJavaScript(__DUMP__)
-          .then(function () { _p("STAGE3 inject resolved"); })
+          .then(function () {
+            _p("STAGE3 inject resolved; dict " + sl + "=" + Object.keys(dict).length);
+            /* seed пер-карта словарём: мгновенный офлайн на POI, без MT-шторма */
+            try { MF.executeJavaScript("window.__wandruApply&&window.__wandruApply(" + JSON.stringify(dict) + ")"); } catch (_) {}
+          })
           .catch(function (e) { _p("STAGE3 inject ERR " + e); });
       } catch (e) { _p("STAGE2 throw " + e); }
     }
