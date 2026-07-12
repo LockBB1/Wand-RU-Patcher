@@ -29,6 +29,7 @@ public partial class MainWindow : Window
         Loaded += (_, _) =>
         {
             ViewModel.Detect();
+            ViewModel.StartMapDiag(); // PoC: приёмник диагностики map-хука в лог
             _ = ShowUpdateBannerAsync(ver);
         };
     }

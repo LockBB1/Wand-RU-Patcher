@@ -12,10 +12,12 @@ namespace WandRuInstaller.Core;
 /// скрипта-дампера (ловит попап POI, шлёт outerHTML в main через console.log). main пишет всё в
 /// ~/wand-ru-map-dump.log. Так узнаём точные DOM-селекторы title/description до переводчика (Шаг 2).
 ///
-/// ДИАГНОСТИКА (Шаг 1): staged-логи на каждой границе (STAGE1 хук встал -> NAV навигации фреймов ->
-/// STAGE2 матч карты -> STAGE3 инъект резолв/ошибка -> STAGE4 дамп принят). Один прогон покажет где
-/// рвётся. env-гейт снят (тест на контролируемом dev-ПК). Дампер шлёт "ARMED" сразу при загрузке -
-/// подтверждает весь пайп инъект->console-relay ещё до клика.
+/// ДИАГНОСТИКА (Шаг 1): staged-строки на каждой границе (STAGE1 хук встал -> NAV навигации
+/// фреймов -> STAGE2 матч карты -> STAGE3 инъект резолв/ошибка -> STAGE4 дамп). Канал - НЕ fs
+/// (require/fs в этой ncc-точке не в scope; запись в профиль режет OneDrive), а o.net POST на
+/// локальный приёмник инсталлера (MapDiagServer :39271) -> строки в лог инсталлера с Copy/Export.
+/// o.net (electron main HTTP) не требует require/fs, loopback без CORS. Дампер шлёт "ARMED" сразу -
+/// подтверждает пайп инъект->relay ещё до клика.
 ///
 /// Якорь структурный с захватом минифицированных имён (win/electron) - устойчив к ренейму
 /// (Wand 12.36-12.38 сверено). integrity-fuse не нужен: index.js внутри asar, AsarIntegrity
@@ -36,9 +38,10 @@ public static class MapFrameHook
 """;
 
     // Инъекция в main-процесс. Плейсхолдеры __WIN__/__EL__/__DUMP__ подставляются в Patch.
+    // Канал: __EL__.net (electron main HTTP) POST на 127.0.0.1:39271 -> лог инсталлера. Без fs/require.
     // raw-литерал: JS-бэкслеши (\n, \., \/) сохраняются как есть -> валидный JS.
     const string InjectTemplate = """
-;/*__WANDRU_MAPHOOK__*/try{var _W=require("fs"),_P=require("path"),_O=require("os"),_L=_P.join(_O.homedir(),"wand-ru-map-dump.log");function _w(s){try{_W.appendFileSync(_L,"["+new Date().toISOString()+"] "+s+"\n")}catch(_){}}_w("STAGE1 main hook installed");__WIN__.webContents.on("did-frame-navigate",function(ev,u,c,t,mn,pi,ri){_w("NAV "+(mn?"main":"sub")+" "+u);if(!mn&&/wand\.com\/maps\//.test(u)){_w("STAGE2 map matched, injecting");try{__EL__.webFrameMain.fromId(pi,ri).executeJavaScript(__DUMP__).then(function(){_w("STAGE3 inject resolved")}).catch(function(e){_w("STAGE3 inject ERR "+e)})}catch(e){_w("STAGE2 throw "+e)}}});__WIN__.webContents.on("console-message",function(ev,l,ms){var s=typeof ms=="string"?ms:(ev&&ev.message);if(typeof s=="string"&&s.indexOf("WANDRU_DUMP::")===0){_w("STAGE4 dump received");try{_W.appendFileSync(_L,"=== POI DUMP ===\n"+Buffer.from(s.slice(13),"base64").toString("utf8")+"\n\n")}catch(e){_w("STAGE4 decode ERR "+e)}}});_w("STAGE1b listeners attached");}catch(e){try{require("fs").appendFileSync(require("path").join(require("os").homedir(),"wand-ru-map-dump.log"),"FATAL "+e+"\n")}catch(_){}}
+;/*__WANDRU_MAPHOOK__*/try{function _p(l){try{var r=__EL__.net.request({method:"POST",url:"http://127.0.0.1:39271/"});r.on("error",function(){});r.write(typeof l=="string"?l:String(l));r.end()}catch(_){}}_p("STAGE1 main hook installed");__WIN__.webContents.on("did-frame-navigate",function(ev,u,c,t,mn,pi,ri){_p("NAV "+(mn?"main":"sub")+" "+u);if(!mn&&/wand\.com\/maps\//.test(u)){_p("STAGE2 map matched: "+u);try{__EL__.webFrameMain.fromId(pi,ri).executeJavaScript(__DUMP__).then(function(){_p("STAGE3 inject resolved")}).catch(function(e){_p("STAGE3 inject ERR "+e)})}catch(e){_p("STAGE2 throw "+e)}}});__WIN__.webContents.on("console-message",function(ev,l,ms){var s=typeof ms=="string"?ms:(ev&&ev.message);if(typeof s=="string"&&s.indexOf("WANDRU_DUMP::")===0){var txt;try{txt=Buffer.from(s.slice(13),"base64").toString("utf8")}catch(e){txt="(decode fail)"}_p("STAGE4 dump:\n"+txt)}});_p("STAGE1b listeners attached");}catch(e){try{__EL__.dialog.showErrorBox("WANDRU","FATAL "+e)}catch(_){}}
 """;
 
     public static bool IsPatched(string js) => js.Contains(Marker);

@@ -49,6 +49,16 @@ public sealed class MainVm : ObservableObject
         CloseHelpCommand = new RelayCommand(_ => IsHelpOpen = false);
     }
 
+    MapDiagServer? _mapDiag;
+
+    /// <summary>PoC Шаг 1: поднять приёмник диагностики map-хука (Wand шлёт по o.net в лог). Один раз.</summary>
+    public void StartMapDiag()
+    {
+        if (_mapDiag is not null) return;
+        _mapDiag = new MapDiagServer(line => Add("[map] " + line));
+        if (_mapDiag.Start()) Add($"[map] диагностика карт слушает :{MapDiagServer.Port} - открой карту в Wand");
+    }
+
     public void Detect() => DetectFrom(WandLocator.DefaultRoots());
 
     /// <summary>Ручной выбор папки: пробуем саму папку и её подпапки (вдруг выбрали родителя Wand).</summary>

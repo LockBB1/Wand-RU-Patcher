@@ -199,6 +199,9 @@ public class MapFrameHookTests
         Assert.Contains("Me.webContents.on(\"did-frame-navigate\"", outp);   // захвачено имя окна
         Assert.Contains("o.webFrameMain.fromId", outp);                       // захвачен алиас electron
         Assert.Contains("STAGE1 main hook installed", outp);                  // staged-диагностика
+        Assert.Contains("o.net.request", outp);                               // канал - electron net, не fs
+        Assert.Contains($"127.0.0.1:{MapDiagServer.Port}", outp);             // -> приёмник инсталлера
+        Assert.DoesNotContain("require(\"fs\")", outp);                       // fs/require не в scope точки
     }
 
     [Fact]
@@ -231,5 +234,23 @@ public class MapFrameHookTests
         var outp = MapFrameHook.Patch(js);
         Assert.Contains("W.webContents.on(\"did-frame-navigate\"", outp);
         Assert.Contains("E.webFrameMain.fromId", outp);
+    }
+}
+
+public class MapDiagServerTests
+{
+    // Round-trip: сервер поднимается, принимает POST-строку (как шлёт o.net из Wand), отдаёт в колбэк.
+    [Fact]
+    public async Task Receives_posted_line()
+    {
+        var got = new TaskCompletionSource<string>();
+        using var srv = new MapDiagServer(line => got.TrySetResult(line));
+        Assert.True(srv.Start());
+        using (var http = new System.Net.Http.HttpClient())
+            await http.PostAsync($"http://127.0.0.1:{MapDiagServer.Port}/",
+                new System.Net.Http.StringContent("STAGE1 main hook installed"));
+        var completed = await Task.WhenAny(got.Task, Task.Delay(3000));
+        Assert.True(completed == got.Task, "приёмник не получил строку за 3с");
+        Assert.Equal("STAGE1 main hook installed", got.Task.Result);
     }
 }
