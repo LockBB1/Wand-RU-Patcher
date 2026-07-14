@@ -42,6 +42,14 @@ public static class WandLocator
 
     public static PatchManifest? Manifest(string appDir) => ReadManifest(appDir);
 
+    /// <summary>Пропатчен по-настоящему: манифест есть И заголовок app.asar - наш. Манифест мог остаться
+    /// от прерванного патча, где атомарная подмена asar не прошла - тогда «пропатчено» было бы ложью.</summary>
+    public static bool IsActuallyPatched(string appDir, PatchManifest? man = null)
+    {
+        man ??= ReadManifest(appDir);
+        return man is not null && RuPatcher.IsAsarPatched(Path.Combine(appDir, "resources", "app.asar"));
+    }
+
     public static WandInstall? Detect(IEnumerable<string> candidateRoots, string? pinnedVersion = null)
     {
         foreach (var root in candidateRoots)
@@ -61,7 +69,7 @@ public static class WandLocator
                 RootDir = root,
                 AppDirs = dirs,
                 SelectedAppDir = sel,
-                IsPatched = man is not null,
+                IsPatched = IsActuallyPatched(sel, man),
                 Manifest = man,
                 PatchedOtherAppDir = patchedOther,
             };

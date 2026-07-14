@@ -44,6 +44,22 @@ public class MainVmTests
         Assert.Equal(InstallerState.Patched, vm.State);
     }
 
+    // Регресс от манифест-до-подмены (0.17.8): если File.Replace упал ПОСЛЕ записи манифеста, на диске
+    // остаётся манифест + оригинальный asar. «Пропатчено» = ложь. IsPatched теперь сверяется с заголовком
+    // asar, а не с одним фактом манифеста -> UI показывает Ready, а не мнимо-русифицированный Wand.
+    [Fact]
+    public void Detect_ignores_stale_manifest_when_asar_not_actually_patched()
+    {
+        var appDir = TestPaths.PristineAppCopy();
+        var res = Path.Combine(appDir, "resources");
+        File.WriteAllText(Path.Combine(res, "wand-ru-patch.json"),
+            "{\"Name\":\"Wand RU\",\"BackupRoot\":\"\"}");   // манифест есть, asar - оригинальный
+
+        var vm = new MainVm();
+        vm.DetectFrom(new[] { RootOf(appDir) });
+        Assert.Equal(InstallerState.Ready, vm.State);       // не Patched: asar реально не наш
+    }
+
     [Fact]
     public void Detect_notfound_when_no_wand()
     {

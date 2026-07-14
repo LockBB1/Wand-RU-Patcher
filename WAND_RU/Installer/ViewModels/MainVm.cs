@@ -120,7 +120,9 @@ public sealed class MainVm : ObservableObject
     {
         if (Install?.SelectedAppDir is null) return;
         var man = WandLocator.Manifest(Install.SelectedAppDir);
-        Install.IsPatched = man is not null;
+        // Не «манифест есть», а «манифест есть И asar реально наш»: прерванный патч (подмена asar не
+        // прошла после записи манифеста) не должен выдавать оригинальный Wand за русифицированный.
+        Install.IsPatched = WandLocator.IsActuallyPatched(Install.SelectedAppDir, man);
         Install.Manifest = man;
         var ver = WandLocator.VersionOf(Install.SelectedAppDir);
         var pinned = ver != WandLocator.VersionOf(Install.AppDirs[0]);   // выбрана не последняя -> закреплена
