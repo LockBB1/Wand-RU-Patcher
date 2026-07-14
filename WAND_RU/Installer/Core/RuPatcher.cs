@@ -108,10 +108,15 @@ public sealed class RuPatcher
         return man;
     }
 
-    /// <summary>Уже наш app.asar? Смотрим заголовок (ru-RU.json кладём только мы) - без распаковки.</summary>
-    internal static bool IsAsarPatched(string asarPath) =>
-        File.Exists(asarPath) &&
-        AsarIntegrity.ReadHeaderJson(asarPath).Contains(RuLocaleEntry, StringComparison.Ordinal);
+    /// <summary>Уже наш app.asar? Смотрим заголовок (ru-RU.json кладём только мы) - без распаковки.
+    /// Битый/обрезанный asar (ReadHeaderJson бросает) = НЕ наш патч, а не краш: метод зовётся из Detect
+    /// на старте (без try/catch) и из BackupLost до патча - нечитаемый заголовок должен дать false.</summary>
+    internal static bool IsAsarPatched(string asarPath)
+    {
+        if (!File.Exists(asarPath)) return false;
+        try { return AsarIntegrity.ReadHeaderJson(asarPath).Contains(RuLocaleEntry, StringComparison.Ordinal); }
+        catch { return false; }
+    }
 
     /// <summary>
     /// Бэкап утерян (антивирус/клинер/юзер), а app.asar - уже наш патч. Копировать его как «оригинал»

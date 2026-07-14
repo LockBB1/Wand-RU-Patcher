@@ -74,6 +74,22 @@ public class PatchRoundTripTests
         Assert.DoesNotContain("cheat-hook.js", File.ReadAllText(Path.Combine(unpacked, "index.html")));
     }
 
+    // Регресс от 0.17.12 (IsPatched сверяется с заголовком asar): Detect зовёт IsAsarPatched на старте
+    // без try/catch. Битый/обрезанный asar не должен ронять запуск WRP - только давать «не наш патч».
+    [Fact]
+    public void IsAsarPatched_returns_false_on_unreadable_asar_instead_of_throwing()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), "wru-badasar-" + Path.GetRandomFileName());
+        Directory.CreateDirectory(dir);
+        try
+        {
+            var asar = Path.Combine(dir, "app.asar");
+            File.WriteAllBytes(asar, new byte[8]);          // обрезанный - ReadHeaderJson бросил бы
+            Assert.False(RuPatcher.IsAsarPatched(asar));    // false, а не исключение
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
     [Fact]
     public void CheatHook_inject_is_idempotent()
     {
