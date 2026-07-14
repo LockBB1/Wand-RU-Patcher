@@ -27,6 +27,16 @@ public static class RuUnpatcher
         if (!File.Exists(backupAsar))
             throw new InvalidOperationException($"Нет бэкапа: {backupAsar}");
 
+        // Бэкап мог быть обрезан (антивирус/сбой копирования) - читаем заголовок ДО того, как затрём
+        // рабочий app.asar. Иначе копия обрезанного бэкапа поверх живого asar = кирпич необратимо.
+        try { _ = AsarIntegrity.ReadHeaderJson(backupAsar); }
+        catch (Exception e)
+        {
+            throw new InvalidOperationException(
+                $"Бэкап повреждён ({backupAsar}): {e.Message}. Откат отменён, app.asar не тронут. " +
+                "Чистый Wand вернёт переустановка Wand.", e);
+        }
+
         log("Восстановление app.asar…");
         var asar = Path.Combine(resources, "app.asar");
         File.Copy(backupAsar, asar, true);

@@ -124,6 +124,27 @@ public class PatchRoundTripTests
         Assert.False(File.Exists(Path.Combine(appDir, "resources", "wand-ru-patch.json")));
     }
 
+    // CRIT-4: бэкап обрезан (антивирус/сбой) - откат обязан отказаться ДО перезаписи живого asar,
+    // иначе копия огрызка поверх рабочего Wand = кирпич необратимо.
+    [Fact]
+    public void Restore_refuses_corrupt_backup_and_keeps_live_asar()
+    {
+        var appDir = TestPaths.PristineAppCopy();
+        new RuPatcher(appDir, RuOverrides.LoadEmbedded()).Apply();
+        var res = Path.Combine(appDir, "resources");
+        var asar = Path.Combine(res, "app.asar");
+        var patched = File.ReadAllBytes(asar);
+
+        var man = System.Text.Json.JsonSerializer.Deserialize<PatchManifest>(
+            File.ReadAllText(Path.Combine(res, "wand-ru-patch.json")))!;
+        File.WriteAllBytes(Path.Combine(man.BackupRoot, "app.asar"), new byte[8]); // обрезали бэкап
+
+        var ex = Assert.Throws<InvalidOperationException>(() => RuUnpatcher.Restore(appDir));
+        Assert.Contains("повреждён", ex.Message);
+        Assert.Equal(patched, File.ReadAllBytes(asar));                                // asar не тронут
+        Assert.True(File.Exists(Path.Combine(res, "wand-ru-patch.json")));             // откат не состоялся
+    }
+
     [Fact]
     public void Apply_without_backup_when_user_confirms_marks_restore_unavailable()
     {
