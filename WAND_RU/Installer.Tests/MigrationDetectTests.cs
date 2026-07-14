@@ -1,4 +1,6 @@
+using System;
 using System.IO;
+using System.Text;
 using WandRuInstaller.Core;
 using Xunit;
 
@@ -18,9 +20,24 @@ public class MigrationDetectTests
             var res = Path.Combine(root, "app-" + ver, "resources");
             Directory.CreateDirectory(res);
             if (patched)
+            {
                 File.WriteAllText(Path.Combine(res, "wand-ru-patch.json"), """{"Name":"Wand RU"}""");
+                // IsPatched теперь = манифест И заголовок asar наш (ru-RU.json). Синтетическому патчу
+                // нужен реальный asar с этим маркером, иначе IsAsarPatched вернёт false (File.Exists=false).
+                WriteFakePatchedAsar(Path.Combine(res, "app.asar"));
+            }
         }
         return root;
+    }
+
+    // Минимальный asar: 16-байт префикс (headerLen в bytes[12..16]) + JSON-заголовок с "ru-RU.json".
+    static void WriteFakePatchedAsar(string path)
+    {
+        var header = Encoding.UTF8.GetBytes("""{"files":{"ru-RU.json":{}}}""");
+        var buf = new byte[16 + header.Length];
+        BitConverter.GetBytes(header.Length).CopyTo(buf, 12);
+        header.CopyTo(buf, 16);
+        File.WriteAllBytes(path, buf);
     }
 
     [Fact]
