@@ -147,10 +147,12 @@ public sealed class MainVm : ObservableObject
             var mapsOnline = Settings?.TranslateMapsOnline ?? true;
             var mapDiag = Settings?.ShowLog ?? false;   // диагностику карт шлём в лог только если он показан
             var backupless = _backuplessOk;
-            await Task.Run(() => new RuPatcher(Install.SelectedAppDir, _overrides, translateCheats, maps, mapsOnline,
-                mapDiag, backupless, Add).Apply());
+            var patcher = new RuPatcher(Install.SelectedAppDir, _overrides, translateCheats, maps, mapsOnline,
+                mapDiag, backupless, Add);
+            await Task.Run(() => patcher.Apply());
             State = InstallerState.Done;
-            StatusText = L.Get("S_Msg_Done");
+            // Честный итог вместо безусловного «Готово»: якорь читов/карт мог не найтись на новой версии Wand.
+            StatusText = FormatReport(patcher.Report);
             if (Install is not null) Install.IsPatched = true;
             MigrationHint = ""; // патч теперь в актуальной версии
             if (Settings?.RestartWandAfter == true) TryRestartWand();
@@ -182,6 +184,23 @@ public sealed class MainVm : ObservableObject
             StatusText = L.Get("S_Msg_ErrorPrefix") + ex.Message;
             Add(ex.ToString());
         }
+    }
+
+    /// <summary>Строка итога для экрана «Готово»: «локаль ✓ · читы ✓ · карты - якорь не найден».
+    /// Выключенные компоненты в отчёт не попадают (их никто не просил).</summary>
+    internal static string FormatReport(PatchReport? report)
+    {
+        if (report is null) return L.Get("S_Msg_Done");
+        var parts = new List<string> { L.Get("S_Rep_Locale") + Mark(report.Locale) };
+        // Флаг и native-имя - косметика списка языков: в отчёт попадают, только если якорь промахнулся
+        // (на части версий Wand флаг-пары лежат в бандле без якорей локали - патч их не достаёт).
+        if (!report.LangName) parts.Add(L.Get("S_Rep_LangName") + Mark(false));
+        if (!report.Flag) parts.Add(L.Get("S_Rep_Flag") + Mark(false));
+        if (report.Cheats is bool cheats) parts.Add(L.Get("S_Rep_Cheats") + Mark(cheats));
+        if (report.Maps is bool maps) parts.Add(L.Get("S_Rep_Maps") + Mark(maps));
+        return string.Join(" · ", parts);
+
+        static string Mark(bool ok) => ok ? " ✓" : " - " + L.Get("S_Rep_NoAnchor");
     }
 
     // Wand залочивает файлы (app.asar.unpacked/*.exe). Если включён авто-перезапуск - закрываем сами,

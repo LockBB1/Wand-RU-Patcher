@@ -128,6 +128,40 @@ public class PatchRoundTripTests
         Assert.False(RuPatcher.BackupLost(appDir));   // патч с живым бэкапом: откат на месте
     }
 
+    // Регресс: «Готово» печаталось безусловно - якорь читов/карт мог не найтись (CheatHook молча
+    // `continue`, map-хук молча «пропуск»), и юзер уходил с недопатченным Wand. Теперь Apply отдаёт
+    // отчёт: что запросили и что реально легло.
+    [Fact]
+    public void Apply_reports_what_actually_landed()
+    {
+        var appDir = TestPaths.PristineAppCopy();
+        var patcher = new RuPatcher(appDir, RuOverrides.LoadEmbedded(), translateCheats: true, translateMaps: true);
+
+        patcher.Apply();
+
+        var r = patcher.Report!;
+        Assert.True(r.Locale);      // ru-RU.json + регистрация в JS
+        Assert.True(r.LangName);    // якорь native-имени языка
+        Assert.True(r.Cheats);      // cheat-hook.js подключён в index.html
+        Assert.True(r.Maps);        // map-хук в index.js
+        // r.Flag намеренно не утверждаем: флаг-пары живут в отдельном бандле, и на части версий Wand
+        // (напр. 12.37 = фикстура) в нём нет якорей локали -> флаг не ложится. Отчёт это и показывает.
+    }
+
+    [Fact]
+    public void Apply_report_marks_disabled_components_as_not_requested()
+    {
+        var appDir = TestPaths.PristineAppCopy();
+        var patcher = new RuPatcher(appDir, RuOverrides.LoadEmbedded(), translateCheats: false, translateMaps: false);
+
+        patcher.Apply();
+
+        var r = patcher.Report!;
+        Assert.True(r.Locale);
+        Assert.Null(r.Cheats);   // не просили - в отчёт не попадает
+        Assert.Null(r.Maps);
+    }
+
     /// <summary>Пропатченный Wand, у которого снесли и бэкап, и manifest (антивирус/клинер/юзер).</summary>
     static string PatchedAppWithBackupLost()
     {

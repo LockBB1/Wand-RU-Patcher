@@ -85,6 +85,25 @@ public class MigrationDetectTests
             File.WriteAllText(Path.Combine(tree, "static", "strings", "ru-RU.json"), "{}");
             File.WriteAllText(Path.Combine(tree, "bundle.js"), "var locales=[\"en-US\",\"ru-RU\",\"de-DE\"];");
             RuPatcher.VerifyTree(tree); // не бросает
+
+            // Читы/карты просили, но их якоря не легли: это best-effort - НЕ фейл, а честный отчёт.
+            // Флаг и native-имя тоже не легли (в бандле только список локалей).
+            var report = RuPatcher.VerifyTree(tree, wantCheats: true, wantMaps: true);
+            Assert.True(report.Locale);
+            Assert.False(report.Cheats);
+            Assert.False(report.Maps);
+            Assert.False(report.Flag);
+            Assert.False(report.LangName);
+            Assert.False(report.AllOk);   // «Готово» больше не безусловно
+
+            // Легли и флаг, и native-имя (якоря JsLocalePatch) -> отчёт это видит.
+            File.WriteAllText(Path.Combine(tree, "flags.js"),
+                "var f=[[\"en-US\",a],[\"ru-RU\",\"" + JsLocalePatch.RussianFlagDataUri + "\"]]);");
+            File.WriteAllText(Path.Combine(tree, "meta.js"),
+                "var m={en:{name:\"English\",native:\"English\",locale:\"en-US\"},ru:{name:\"Russian\",native:\"Русский\",locale:\"ru-RU\"}};");
+            var full = RuPatcher.VerifyTree(tree);
+            Assert.True(full.Flag);
+            Assert.True(full.LangName);
         }
         finally { Directory.Delete(tree, true); }
     }

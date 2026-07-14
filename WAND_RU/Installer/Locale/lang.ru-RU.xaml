@@ -30,6 +30,13 @@
     <s:String x:Key="S_Opt_MapsHint">Для точного перевода карт держите WRP открытым и запускайте Wand через него.</s:String>
     <s:String x:Key="S_LaunchWand">Запустить Wand</s:String>
     <s:String x:Key="S_BackToMenu">В меню</s:String>
+    <!-- Итог патча на экране «Готово»: что реально легло -->
+    <s:String x:Key="S_Rep_Locale">локаль</s:String>
+    <s:String x:Key="S_Rep_Cheats">читы</s:String>
+    <s:String x:Key="S_Rep_Maps">карты</s:String>
+    <s:String x:Key="S_Rep_Flag">флаг</s:String>
+    <s:String x:Key="S_Rep_LangName">имя языка</s:String>
+    <s:String x:Key="S_Rep_NoAnchor">якорь не найден</s:String>
     <!-- Бэкап оригинала утерян, а Wand уже русифицирован -->
     <s:String x:Key="S_BackupLost_Title">Бэкап не найден, а Wand уже русифицирован</s:String>
     <s:String x:Key="S_BackupLost_Body">Резервная копия оригинального app.asar утеряна (антивирус, чистильщик или удаление вручную). Русификацию можно обновить, но ОТКАТ будет недоступен: чистый Wand вернёт только его переустановка.</s:String>

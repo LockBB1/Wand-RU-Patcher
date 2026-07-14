@@ -30,6 +30,13 @@
     <s:String x:Key="S_Opt_MapsHint">For accurate map translation, keep WRP open and launch Wand through it.</s:String>
     <s:String x:Key="S_LaunchWand">Launch Wand</s:String>
     <s:String x:Key="S_BackToMenu">Back to menu</s:String>
+    <!-- Patch result on the Done screen: what actually landed -->
+    <s:String x:Key="S_Rep_Locale">locale</s:String>
+    <s:String x:Key="S_Rep_Cheats">cheats</s:String>
+    <s:String x:Key="S_Rep_Maps">maps</s:String>
+    <s:String x:Key="S_Rep_Flag">flag</s:String>
+    <s:String x:Key="S_Rep_LangName">language name</s:String>
+    <s:String x:Key="S_Rep_NoAnchor">anchor not found</s:String>
     <!-- Original backup lost while Wand is already patched -->
     <s:String x:Key="S_BackupLost_Title">Backup missing, Wand is already patched</s:String>
     <s:String x:Key="S_BackupLost_Body">The backup of the original app.asar is gone (antivirus, cleaner or manual deletion). The patch can still be updated, but RESTORE will be unavailable: only reinstalling Wand brings back a clean copy.</s:String>

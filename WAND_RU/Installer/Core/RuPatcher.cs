@@ -45,6 +45,9 @@ public sealed class RuPatcher
         _manifestPath = Path.Combine(_resources, ManifestName);
     }
 
+    /// <summary>Что легло по итогам последнего Apply (для честного «Готово» в UI). null до Apply.</summary>
+    public PatchReport? Report { get; private set; }
+
     public PatchManifest Apply()
     {
         if (!File.Exists(_asar)) throw new FileNotFoundException($"Нет app.asar: {_asar}");
@@ -56,7 +59,8 @@ public sealed class RuPatcher
 
         _log("Патч локали и JS…");
         PatchTree(_unpacked);
-        VerifyTree(_unpacked); // до repack: оригинальный app.asar ещё не тронут
+        Report = VerifyTree(_unpacked, _translateCheats, _translateMaps); // до repack: app.asar ещё цел
+        LogReport(Report);
 
         _log("Сборка app.asar…");
         var newAsar = Path.Combine(Path.GetTempPath(), "app-ru-" + Guid.NewGuid().ToString("N") + ".asar");
@@ -193,14 +197,16 @@ public sealed class RuPatcher
     }
 
     /// <summary>
-    /// Честный фейл-детект: если якоря патча не нашлись в новой версии Wand, кидаем понятную
-    /// ошибку ВМЕСТО тихого «успеха» без русского. Зовётся до repack - app.asar остаётся цел.
+    /// Честный фейл-детект + отчёт. Локаль не легла или якорь испортил бандл -> понятная ошибка ВМЕСТО
+    /// тихого «успеха» (зовётся до repack, app.asar цел). Читы/карты - best-effort: их промах не фейл,
+    /// но он попадает в отчёт, а не тонет в «Готово».
     /// </summary>
-    internal static void VerifyTree(string treeRoot)
+    internal static PatchReport VerifyTree(string treeRoot, bool wantCheats = false, bool wantMaps = false)
     {
         var ruJson = Path.Combine(treeRoot, "static", "strings", "ru-RU.json");
         var jsFiles = Directory.EnumerateFiles(treeRoot, "*.js", SearchOption.AllDirectories).ToList();
-        var ok = File.Exists(ruJson) && jsFiles.Any(f => File.ReadAllText(f).Contains("\"ru-RU\""));
+        var jsTexts = jsFiles.ToDictionary(f => f, File.ReadAllText);
+        var ok = File.Exists(ruJson) && jsTexts.Values.Any(t => t.Contains("\"ru-RU\""));
         if (!ok)
             throw new NotSupportedException(
                 "Эта версия Wand пока не поддерживается: не найдены точки для вставки русской локали. " +
@@ -208,11 +214,40 @@ public sealed class RuPatcher
 
         // Guard: жадный якорь мог попасть не в список локалей (регресс на новой версии Wand).
         // Ловим ДО repack - app.asar ещё оригинальный, Wand не сломан.
-        var corrupt = jsFiles.FirstOrDefault(f => JsLocalePatch.HasCorruption(File.ReadAllText(f)));
+        var corrupt = jsTexts.FirstOrDefault(kv => JsLocalePatch.HasCorruption(kv.Value)).Key;
         if (corrupt is not null)
             throw new NotSupportedException(
                 $"Патч локали дал сбой на этой версии Wand (якорь попал не в список локалей: {Path.GetFileName(corrupt)}). " +
                 "app.asar не изменён. Обновите WRP или создайте issue с экспортом лога.");
+
+        // Флаг и native-имя языка - отдельные якоря JsLocalePatch: без них локаль есть, но в списке
+        // языков Wand она безымянна/без флага (юзер её не выберет).
+        var flag = jsTexts.Values.Any(t => t.Contains("[\"ru-RU\",\"" + JsLocalePatch.RussianFlagDataUri));
+        var langName = jsTexts.Values.Any(t => t.Contains("ru:{name:\"Russian\""));
+
+        bool? cheats = wantCheats
+            ? File.Exists(Path.Combine(treeRoot, CheatHook.FileName))
+              && File.Exists(Path.Combine(treeRoot, "index.html"))
+              && File.ReadAllText(Path.Combine(treeRoot, "index.html")).Contains(CheatHook.FileName)
+            : null;
+
+        var indexJs = Path.Combine(treeRoot, "index.js");
+        bool? maps = wantMaps
+            ? File.Exists(indexJs) && MapFrameHook.IsPatched(File.ReadAllText(indexJs))
+            : null;
+
+        return new PatchReport(Locale: true, flag, langName, cheats, maps);
+    }
+
+    /// <summary>Пункты отчёта в лог - юзеру видно, что реально легло (лог экспортируется в issue).</summary>
+    void LogReport(PatchReport r)
+    {
+        _log($"Итог: локаль {(r.Locale ? "ok" : "НЕТ")}" +
+             $" · флаг {(r.Flag ? "ok" : "НЕ найден якорь")}" +
+             $" · имя языка {(r.LangName ? "ok" : "НЕ найден якорь")}" +
+             $" · читы {Mark(r.Cheats)}" +
+             $" · карты {Mark(r.Maps)}");
+        static string Mark(bool? v) => v switch { true => "ok", false => "НЕ найден якорь", null => "выключено" };
     }
 
     static void CopyDir(string s, string d)

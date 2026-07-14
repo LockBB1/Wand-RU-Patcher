@@ -1,4 +1,5 @@
 using System.IO;
+using WandRuInstaller.Models;
 using WandRuInstaller.ViewModels;
 using Xunit;
 
@@ -7,6 +8,23 @@ namespace WandRuInstaller.Tests;
 public class MainVmTests
 {
     static string RootOf(string appDir) => Path.GetDirectoryName(appDir)!;
+
+    // Экран «Готово» показывает, что реально легло. Вне WPF L.Get отдаёт сам ключ - проверяем структуру:
+    // выключенный компонент в отчёт не попадает, промах якоря виден.
+    [Fact]
+    public void FormatReport_lists_only_requested_components_and_shows_misses()
+    {
+        var full = MainVm.FormatReport(new PatchReport(Locale: true, Flag: true, LangName: true, Cheats: true, Maps: true));
+        Assert.Equal("S_Rep_Locale ✓ · S_Rep_Cheats ✓ · S_Rep_Maps ✓", full);
+
+        // карты просили, но якорь не нашёлся (best-effort, не фейл); читы выключены - пункта нет.
+        var partial = MainVm.FormatReport(new PatchReport(Locale: true, Flag: true, LangName: true, Cheats: null, Maps: false));
+        Assert.Equal("S_Rep_Locale ✓ · S_Rep_Maps - S_Rep_NoAnchor", partial);
+
+        // флаг не лёг (на части версий Wand его бандл без якорей) - отдельный пункт, а не тишина.
+        var noFlag = MainVm.FormatReport(new PatchReport(Locale: true, Flag: false, LangName: true, Cheats: true, Maps: null));
+        Assert.Equal("S_Rep_Locale ✓ · S_Rep_Flag - S_Rep_NoAnchor · S_Rep_Cheats ✓", noFlag);
+    }
 
     [Fact]
     public void Detect_ready_then_patch_done_then_patched()
