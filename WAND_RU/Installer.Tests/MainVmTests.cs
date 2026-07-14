@@ -70,6 +70,23 @@ public class MainVmTests
         Assert.Equal(InstallerState.Ready, vm.State);
     }
 
+    // CRIT-3: из состояния Error откат должен оставаться доступным (патч мог упасть ПОСЛЕ подмены asar -
+    // Wand кирпич, откат - единственный путь назад). Раньше RestoreCommand разрешал только Patched.
+    [Fact]
+    public void Restore_stays_available_from_error_state()
+    {
+        var appDir = TestPaths.PristineAppCopy();
+        var vm = new MainVm();
+        vm.DetectFrom(new[] { RootOf(appDir) });
+        Assert.Equal(InstallerState.Ready, vm.State);
+
+        // Откат без установленного патча -> исключение -> Error (реальный путь в это состояние).
+        vm.RestoreAsync().GetAwaiter().GetResult();
+        Assert.Equal(InstallerState.Error, vm.State);
+
+        Assert.True(vm.RestoreCommand.CanExecute(null));
+    }
+
     [Fact]
     public void Log_auto_clears_at_cap()
     {

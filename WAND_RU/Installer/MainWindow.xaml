@@ -151,8 +151,13 @@
                                FontSize="16" HorizontalAlignment="Center" Margin="0 0 0 6"/>
                     <TextBlock Text="{Binding StatusText}" Foreground="{DynamicResource MutedForeground}"
                                FontSize="12" TextWrapping="Wrap" TextAlignment="Center" MaxWidth="380" Margin="0 0 0 18"/>
-                    <Button Content="{DynamicResource S_Retry}" Width="180" Height="38"
-                            Style="{StaticResource ColoredButton}" Command="{Binding PatchCommand}"/>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                        <Button Content="{DynamicResource S_Retry}" Width="170" Height="38" Margin="0 0 10 0"
+                                Style="{StaticResource ColoredButton}" Command="{Binding PatchCommand}"/>
+                        <!-- Патч мог упасть после подмены asar -> Wand кирпич, откат единственный путь назад. -->
+                        <Button Content="{DynamicResource S_Restore}" Width="170" Height="38"
+                                Style="{StaticResource ColoredButton}" Command="{Binding RestoreCommand}"/>
+                    </StackPanel>
                 </StackPanel>
 
             </Grid>

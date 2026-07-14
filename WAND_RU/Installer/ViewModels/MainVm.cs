@@ -54,8 +54,10 @@ public sealed class MainVm : ObservableObject
     {
         PatchCommand = new AsyncRelayCommand(async p => await PatchAsync(p as string),
             _ => State is InstallerState.Ready or InstallerState.Patched or InstallerState.Done or InstallerState.Error);
+        // Error тоже: патч мог упасть ПОСЛЕ подмены asar (синк exe-хэша, залоченный AV) - Wand кирпич,
+        // откат из бэкапа - единственный путь назад. Из Error давать не только «Повторить».
         RestoreCommand = new AsyncRelayCommand(async _ => await RestoreAsync(),
-            _ => State is InstallerState.Patched);
+            _ => State is InstallerState.Patched or InstallerState.Error);
         BrowseCommand = new RelayCommand(p => { if (p is string dir) DetectFrom(new[] { dir }); });
         OpenAboutCommand = new RelayCommand(_ => IsAboutOpen = true);
         CloseAboutCommand = new RelayCommand(_ => IsAboutOpen = false);
