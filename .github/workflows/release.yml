@@ -1,8 +1,8 @@
 name: Release
 
-# Пуш тега вида X.Y.Z (без 'v') -> GitHub Release БЕЗ файлов.
-# Готовых exe мы не раздаём: юзер собирает сам (Fork -> Actions -> Build executable).
+# Пуш тега вида X.Y.Z (без 'v') -> GitHub Release без файлов (exe собирает юзер: Actions -> Build executable).
 # Релиз нужен для апдейт-баннера установщика (UpdateChecker читает tag_name из releases/latest).
+# Тело релиза = секция тега из CHANGELOG.md (нет секции -> список коммитов) + .github/release-body.md.
 on:
   push:
     tags:
@@ -16,34 +16,38 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # нужна история: фолбэк на список коммитов между тегами
+
+      - name: Build release notes
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          # Секция «## <тег>» из CHANGELOG.md до следующего «## ».
+          notes=$(awk -v want="## $TAG" '$0 == want {on=1; next} /^## /{on=0} on' CHANGELOG.md || true)
+
+          if [ -z "$(printf '%s' "$notes" | tr -d '[:space:]')" ]; then
+            # Секции нет - не выпускаем пустой релиз: показываем коммиты с прошлого тега.
+            prev=$(git describe --tags --abbrev=0 "$TAG^" 2>/dev/null || true)
+            range="$TAG"
+            [ -n "$prev" ] && range="$prev..$TAG"
+            notes=$(git log --no-merges --pretty='- %s' "$range")
+            echo "CHANGELOG.md: секции '## $TAG' нет - беру коммиты ($range)"
+          fi
+
+          {
+            echo "## Что нового в $TAG"
+            echo
+            printf '%s\n' "$notes"
+            echo
+            cat .github/release-body.md
+          } > release-notes.md
+          cat release-notes.md
+
       - name: Create GitHub Release (no binaries)
         uses: softprops/action-gh-release@v2
         with:
           name: ${{ github.ref_name }}
-          generate_release_notes: true
-          body: |
-            ## Как получить `WandRuInstaller.exe`
-
-            **Готовых сборок здесь нет - вы собираете `.exe` сами, из этого исходного кода.**
-            Так вы точно знаете, что запускаете: никаких чужих бинарников.
-
-            1. Нажмите **Fork** вверху страницы репозитория.
-            2. В своём форке откройте вкладку **Actions** и подтвердите включение workflow-ов
-               (`I understand my workflows, go ahead and enable them`).
-            3. Слева выберите **Build executable** -> справа **Run workflow**.
-            4. В поле `variant` выберите сборку:
-               - `classic` - работает «из коробки», ничего ставить не надо (~130 МБ);
-               - `small` - компактная (~2.4 МБ), нужен [.NET 9 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/9.0);
-               - `both` - обе.
-            5. Дождитесь зелёной галочки (~3-5 мин), откройте запуск и скачайте артефакт из блока **Artifacts**.
-            6. Распакуйте zip - внутри `WandRuInstaller.exe`.
-
-            > Windows SmartScreen может предупреждать: сборка не подписана. Это нормально для
-            > свежесобранного редкого exe - вы собрали его сами, из кода, который открыт.
-
-            ---
-
-            🔖 **Чтобы не потерять проект.** Обновляться вы будете отсюда же (`Sync fork` → `Run workflow`),
-            а свой форк легко теряется среди прочих репозиториев. ⭐ **Star** кладёт оригинал в ваше
-            [избранное](https://github.com/stars) - закладка в один клик. 🔔 **Watch → Custom → Releases** -
-            и GitHub сам напишет о новой версии.
+          body_path: release-notes.md
