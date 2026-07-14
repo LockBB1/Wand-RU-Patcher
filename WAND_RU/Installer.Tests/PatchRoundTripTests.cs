@@ -124,6 +124,21 @@ public class PatchRoundTripTests
         Assert.False(File.Exists(Path.Combine(appDir, "resources", "wand-ru-patch.json")));
     }
 
+    // RES-C: второй процесс WRP на том же Wand не должен гонять патч по общему app.asar.unpacked.
+    // Удержанный .wru-lock (FileShare.None) -> Apply отказывает понятной ошибкой ДО любой мутации.
+    [Fact]
+    public void Apply_refuses_when_another_instance_holds_lock()
+    {
+        var appDir = TestPaths.PristineAppCopy();
+        var lockPath = Path.Combine(appDir, "resources", ".wru-lock");
+        using var held = new FileStream(lockPath, FileMode.Create, FileAccess.ReadWrite, FileShare.None);
+
+        var ex = Assert.Throws<InvalidOperationException>(
+            () => new RuPatcher(appDir, RuOverrides.LoadEmbedded()).Apply());
+        Assert.Contains("экземпляр", ex.Message);
+        Assert.False(File.Exists(Path.Combine(appDir, "resources", "wand-ru-patch.json"))); // не тронул
+    }
+
     // CRIT-4: бэкап обрезан (антивирус/сбой) - откат обязан отказаться ДО перезаписи живого asar,
     // иначе копия огрызка поверх рабочего Wand = кирпич необратимо.
     [Fact]
@@ -143,6 +158,12 @@ public class PatchRoundTripTests
         Assert.Contains("повреждён", ex.Message);
         Assert.Equal(patched, File.ReadAllBytes(asar));                                // asar не тронут
         Assert.True(File.Exists(Path.Combine(res, "wand-ru-patch.json")));             // откат не состоялся
+
+        // Та же защита на нулевой заголовок: 16 валидных байт префикса, headerLen=0 -> пустой header
+        // (ReadHeaderJson НЕ бросает, вернёт "") - ловим по проверке пустоты, а не только по исключению.
+        File.WriteAllBytes(Path.Combine(man.BackupRoot, "app.asar"), new byte[16]);
+        Assert.Throws<InvalidOperationException>(() => RuUnpatcher.Restore(appDir));
+        Assert.Equal(patched, File.ReadAllBytes(asar));
     }
 
     [Fact]

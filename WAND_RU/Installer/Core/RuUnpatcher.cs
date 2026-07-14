@@ -12,6 +12,7 @@ public static class RuUnpatcher
     {
         log ??= _ => { };
         var resources = Path.Combine(appDir, "resources");
+        using var _lock = RuPatcher.AcquireLock(resources);   // не откатывать, пока другой процесс патчит
         var manifestPath = Path.Combine(resources, "wand-ru-patch.json");
         if (!File.Exists(manifestPath))
             throw new InvalidOperationException("Патч не установлен (нет manifest).");
@@ -27,15 +28,15 @@ public static class RuUnpatcher
         if (!File.Exists(backupAsar))
             throw new InvalidOperationException($"Нет бэкапа: {backupAsar}");
 
-        // Бэкап мог быть обрезан (антивирус/сбой копирования) - читаем заголовок ДО того, как затрём
-        // рабочий app.asar. Иначе копия обрезанного бэкапа поверх живого asar = кирпич необратимо.
-        try { _ = AsarIntegrity.ReadHeaderJson(backupAsar); }
-        catch (Exception e)
-        {
-            throw new InvalidOperationException(
-                $"Бэкап повреждён ({backupAsar}): {e.Message}. Откат отменён, app.asar не тронут. " +
-                "Чистый Wand вернёт переустановка Wand.", e);
-        }
+        // Бэкап мог быть обрезан/побит (антивирус/сбой копирования) - проверяем заголовок ДО того, как
+        // затрём рабочий app.asar. Иначе копия битого бэкапа поверх живого asar = кирпич необратимо.
+        // Заголовок asar = JSON-объект дерева файлов; пустой (нулевой headerLen) или не-JSON = бэкап негоден.
+        // Потолок: порчу ТЕЛА (заголовок цел, файлы биты) дёшево не поймать - нужна полная распаковка.
+        string header;
+        try { header = AsarIntegrity.ReadHeaderJson(backupAsar); }
+        catch (Exception e) { throw CorruptBackup(backupAsar, e.Message, e); }
+        if (string.IsNullOrWhiteSpace(header) || header[0] != '{')
+            throw CorruptBackup(backupAsar, "пустой или нечитаемый заголовок", null);
 
         log("Восстановление app.asar…");
         var asar = Path.Combine(resources, "app.asar");
@@ -56,6 +57,10 @@ public static class RuUnpatcher
         File.Delete(manifestPath);
         log("Откат завершён.");
     }
+
+    static InvalidOperationException CorruptBackup(string path, string why, Exception? inner) =>
+        new($"Бэкап повреждён ({path}): {why}. Откат отменён, app.asar не тронут. " +
+            "Чистый Wand вернёт переустановка Wand.", inner);
 
     static void CopyDir(string s, string d)
     {

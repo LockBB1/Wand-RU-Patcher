@@ -52,6 +52,7 @@ public sealed class RuPatcher
     public PatchManifest Apply()
     {
         if (!File.Exists(_asar)) throw new FileNotFoundException($"Нет app.asar: {_asar}");
+        using var _lock = AcquireLock(_resources);   // второй процесс WRP на этом же Wand -> понятный отказ
 
         var backupRoot = EnsureBackup();
 
@@ -272,6 +273,20 @@ public sealed class RuPatcher
         Directory.CreateDirectory(d);
         foreach (var f in Directory.GetFiles(s)) File.Copy(f, Path.Combine(d, Path.GetFileName(f)), true);
         foreach (var sub in Directory.GetDirectories(s)) CopyDir(sub, Path.Combine(d, Path.GetFileName(sub)));
+    }
+
+    // Эксклюзивная блокировка на время мутации Wand: второй процесс WRP на этом же install получает
+    // понятный отказ, а не гонку по общему app.asar.unpacked / .wru-build. DeleteOnClose снимает лок и
+    // при краше (OS закрывает хэндл). Внутри одного процесса двойной клик и так заблокирован (State=Working).
+    internal static FileStream AcquireLock(string resources)
+    {
+        var lockPath = Path.Combine(resources, ".wru-lock");
+        try { return new FileStream(lockPath, FileMode.Create, FileAccess.ReadWrite, FileShare.None, 1, FileOptions.DeleteOnClose); }
+        catch (IOException)
+        {
+            throw new InvalidOperationException(
+                "Другой экземпляр WRP уже патчит или откатывает этот Wand. Дождитесь его завершения.");
+        }
     }
 
     // Best-effort уборка временной сборки: AV может держать .unpacked-сиблинг. Провал уборки не должен
