@@ -16,6 +16,8 @@ public sealed class MainVm : ObservableObject
     bool _isAboutOpen;
     bool _isHelpOpen;
     bool _isPatchOptionsOpen;
+    bool _isBackupWarnOpen;
+    bool _backuplessOk;   // юзер согласился патчить без бэкапа (откат будет недоступен)
     SettingsVm? _settings;
     readonly RuOverrides _overrides = RuOverrides.LoadEmbedded();
 
@@ -30,6 +32,8 @@ public sealed class MainVm : ObservableObject
     public bool IsHelpOpen { get => _isHelpOpen; set => SetProperty(ref _isHelpOpen, value); }
     /// <summary>Открыт диалог «Что будем русифицировать?» (выбор компонентов перед патчем).</summary>
     public bool IsPatchOptionsOpen { get => _isPatchOptionsOpen; set => SetProperty(ref _isPatchOptionsOpen, value); }
+    /// <summary>Открыто предупреждение «бэкап утерян, откат будет недоступен» (решает юзер).</summary>
+    public bool IsBackupWarnOpen { get => _isBackupWarnOpen; set => SetProperty(ref _isBackupWarnOpen, value); }
 
     public ICommand PatchCommand { get; }
     public ICommand RestoreCommand { get; }
@@ -41,6 +45,8 @@ public sealed class MainVm : ObservableObject
     public ICommand OpenPatchOptionsCommand { get; }
     public ICommand ClosePatchOptionsCommand { get; }
     public ICommand ConfirmPatchCommand { get; }
+    public ICommand ConfirmBacklessPatchCommand { get; }
+    public ICommand CloseBackupWarnCommand { get; }
     public ICommand LaunchWandCommand { get; }
     public ICommand BackToMenuCommand { get; }
 
@@ -59,6 +65,14 @@ public sealed class MainVm : ObservableObject
             _ => State is InstallerState.Ready or InstallerState.Patched or InstallerState.Done or InstallerState.Error);
         ClosePatchOptionsCommand = new RelayCommand(_ => IsPatchOptionsOpen = false);
         ConfirmPatchCommand = new AsyncRelayCommand(async _ => { IsPatchOptionsOpen = false; await PatchAsync(null); });
+        // «Продолжить без отката»: патчим, но фальшивый бэкап не создаём (RuPatcher.BackupLost).
+        ConfirmBacklessPatchCommand = new AsyncRelayCommand(async _ =>
+        {
+            IsBackupWarnOpen = false;
+            _backuplessOk = true;
+            await PatchAsync(null);
+        });
+        CloseBackupWarnCommand = new RelayCommand(_ => IsBackupWarnOpen = false);
         LaunchWandCommand = new RelayCommand(_ => TryRestartWand());
         // После установки: вернуться в меню (откат/переустановка) без перезапуска WRP - просто пере-детект.
         BackToMenuCommand = new RelayCommand(_ => { if (Install is not null) DetectFrom(new[] { Install.RootDir }); });
@@ -121,6 +135,8 @@ public sealed class MainVm : ObservableObject
         if (Install?.SelectedAppDir is null) return;
         if (Settings is not null && mode is not null)
             Settings.TranslateCheatsOnline = mode.Equals("online", StringComparison.OrdinalIgnoreCase);
+        // Бэкап утерян, а Wand уже русифицирован: патч возможен, но откат мёртв - цена решения юзера.
+        if (!_backuplessOk && RuPatcher.BackupLost(Install.SelectedAppDir)) { IsBackupWarnOpen = true; return; }
         if (!await EnsureWandClosedAsync()) return;
         State = InstallerState.Working;
         Log.Clear();
@@ -130,7 +146,9 @@ public sealed class MainVm : ObservableObject
             var maps = Settings?.TranslateMaps ?? true;
             var mapsOnline = Settings?.TranslateMapsOnline ?? true;
             var mapDiag = Settings?.ShowLog ?? false;   // диагностику карт шлём в лог только если он показан
-            await Task.Run(() => new RuPatcher(Install.SelectedAppDir, _overrides, translateCheats, maps, mapsOnline, mapDiag, Add).Apply());
+            var backupless = _backuplessOk;
+            await Task.Run(() => new RuPatcher(Install.SelectedAppDir, _overrides, translateCheats, maps, mapsOnline,
+                mapDiag, backupless, Add).Apply());
             State = InstallerState.Done;
             StatusText = L.Get("S_Msg_Done");
             if (Install is not null) Install.IsPatched = true;
@@ -143,6 +161,7 @@ public sealed class MainVm : ObservableObject
             StatusText = L.Get("S_Msg_ErrorPrefix") + ex.Message;
             Add(ex.ToString());
         }
+        finally { _backuplessOk = false; }   // согласие разовое: следующая установка спросит заново
     }
 
     internal async Task RestoreAsync()

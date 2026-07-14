@@ -17,6 +17,12 @@ public static class RuUnpatcher
             throw new InvalidOperationException("Патч не установлен (нет manifest).");
         var man = JsonSerializer.Deserialize<PatchManifest>(File.ReadAllText(manifestPath))
                   ?? throw new InvalidOperationException("Битый manifest.");
+        // Патч ставился поверх уже русифицированного Wand с утерянным бэкапом (юзер согласился) -
+        // оригинала нет. Честная ошибка вместо восстановления мусора.
+        if (string.IsNullOrEmpty(man.BackupRoot))
+            throw new InvalidOperationException(
+                "Откат невозможен: бэкап оригинального app.asar утерян (патч ставился без него). " +
+                "Чистый Wand вернёт только переустановка Wand.");
         var backupAsar = Path.Combine(man.BackupRoot, "app.asar");
         if (!File.Exists(backupAsar))
             throw new InvalidOperationException($"Нет бэкапа: {backupAsar}");

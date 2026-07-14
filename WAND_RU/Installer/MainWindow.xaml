@@ -288,6 +288,27 @@
                     </StackPanel>
                 </Border>
             </Border>
+            <!-- Бэкап утерян, а Wand уже русифицирован: откат вернуть нечем - решает юзер -->
+            <Border Grid.RowSpan="3" CornerRadius="7" Background="#CC000000"
+                    Visibility="{Binding IsBackupWarnOpen, Converter={StaticResource ToVisibilityConverter}}">
+                <Border Width="390" Background="{DynamicResource Popover}" CornerRadius="8"
+                        BorderBrush="{DynamicResource Border}" BorderThickness="1"
+                        VerticalAlignment="Center" HorizontalAlignment="Center" Padding="24">
+                    <StackPanel>
+                        <TextBlock Text="{DynamicResource S_BackupLost_Title}" Foreground="{DynamicResource PopoverForeground}"
+                                   FontSize="16" FontWeight="SemiBold" TextWrapping="Wrap"
+                                   HorizontalAlignment="Center" TextAlignment="Center" Margin="0 0 0 12"/>
+                        <TextBlock Text="{DynamicResource S_BackupLost_Body}" Foreground="{DynamicResource MutedForeground}"
+                                   FontSize="13" TextWrapping="Wrap" Margin="0 0 0 18"/>
+                        <Button Content="{DynamicResource S_BackupLost_Continue}" Style="{StaticResource ColoredButton}"
+                                Height="42" FontWeight="SemiBold" Margin="0 0 0 8"
+                                Command="{Binding ConfirmBacklessPatchCommand}"/>
+                        <Button Content="{DynamicResource S_Close}" Style="{StaticResource ColoredButton}"
+                                Height="32" Width="120" HorizontalAlignment="Center"
+                                Command="{Binding CloseBackupWarnCommand}"/>
+                    </StackPanel>
+                </Border>
+            </Border>
         </Grid>
     </Border>
 </Window>

@@ -88,6 +88,57 @@ public class PatchRoundTripTests
         Assert.False(File.Exists(Path.Combine(appDir, "resources", "wand-ru-patch.json")));
     }
 
+    // Регресс (фальшивый бэкап): бэкап снесли (антивирус/клинер), а app.asar - уже НАШ патч.
+    // Копия патча как «оригинал» убивает откат навсегда и молча. Теперь: детект + отказ, а с явного
+    // согласия юзера - патч без бэкапа (BackupRoot пуст), откат честно недоступен.
+    [Fact]
+    public void Apply_refuses_to_back_up_patched_asar_when_backup_lost()
+    {
+        var appDir = PatchedAppWithBackupLost();
+
+        Assert.True(RuPatcher.BackupLost(appDir));   // UI спросит юзера до патча
+        var ex = Assert.Throws<InvalidOperationException>(
+            () => new RuPatcher(appDir, RuOverrides.LoadEmbedded()).Apply());
+        Assert.Contains("бэкап", ex.Message, System.StringComparison.OrdinalIgnoreCase);
+
+        // Ничего не сохранили: фальшивого бэкапа нет, manifest не переписан.
+        Assert.False(Directory.Exists(Path.Combine(appDir, "resources", "wand-ru-backup")));
+        Assert.False(File.Exists(Path.Combine(appDir, "resources", "wand-ru-patch.json")));
+    }
+
+    [Fact]
+    public void Apply_without_backup_when_user_confirms_marks_restore_unavailable()
+    {
+        var appDir = PatchedAppWithBackupLost();
+
+        var man = new RuPatcher(appDir, RuOverrides.LoadEmbedded(), allowMissingBackup: true).Apply();
+
+        Assert.Equal("", man.BackupRoot);   // патч поверх патча, но за оригинал его НЕ выдаём
+        var ex = Assert.Throws<InvalidOperationException>(() => RuUnpatcher.Restore(appDir));
+        Assert.Contains("Откат невозможен", ex.Message);
+    }
+
+    [Fact]
+    public void BackupLost_is_false_on_pristine_and_on_healthy_patch()
+    {
+        var appDir = TestPaths.PristineAppCopy();
+        Assert.False(RuPatcher.BackupLost(appDir));   // чистый Wand: бэкапить есть что
+
+        new RuPatcher(appDir, RuOverrides.LoadEmbedded()).Apply();
+        Assert.False(RuPatcher.BackupLost(appDir));   // патч с живым бэкапом: откат на месте
+    }
+
+    /// <summary>Пропатченный Wand, у которого снесли и бэкап, и manifest (антивирус/клинер/юзер).</summary>
+    static string PatchedAppWithBackupLost()
+    {
+        var appDir = TestPaths.PristineAppCopy();
+        var res = Path.Combine(appDir, "resources");
+        new RuPatcher(appDir, RuOverrides.LoadEmbedded()).Apply();
+        Directory.Delete(Path.Combine(res, "wand-ru-backup"), true);
+        File.Delete(Path.Combine(res, "wand-ru-patch.json"));
+        return appDir;
+    }
+
     // Регресс: патченый Wand молча не стартует, если хэш заголовка app.asar в Wand.exe не обновлён
     // (Electron fuse integrity). После Apply exe должен указывать на хэш ПАТЧЕНОГО заголовка, после
     // Restore - вернуться к оригинальному.

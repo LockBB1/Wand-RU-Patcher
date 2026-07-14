@@ -20,7 +20,13 @@ public static class AsarIntegrity
     const int HashHexLen = 64; // sha256 в hex
 
     /// <summary>SHA256 (hex, lower) строки-заголовка asar - ровно то, что Electron кладёт в value.</summary>
-    public static string ComputeHeaderHash(string asarPath)
+    public static string ComputeHeaderHash(string asarPath) =>
+        Convert.ToHexString(SHA256.HashData(ReadHeaderBytes(asarPath))).ToLowerInvariant();
+
+    /// <summary>Заголовок asar как JSON-текст (дерево файлов). Дёшево: без распаковки asar.</summary>
+    public static string ReadHeaderJson(string asarPath) => Encoding.UTF8.GetString(ReadHeaderBytes(asarPath));
+
+    static byte[] ReadHeaderBytes(string asarPath)
     {
         using var fs = File.OpenRead(asarPath);
         Span<byte> size = stackalloc byte[16];
@@ -28,7 +34,7 @@ public static class AsarIntegrity
         int headerLen = BitConverter.ToInt32(size[12..]);
         var header = new byte[headerLen];
         fs.ReadExactly(header);
-        return Convert.ToHexString(SHA256.HashData(header)).ToLowerInvariant();
+        return header;
     }
 
     /// <summary>

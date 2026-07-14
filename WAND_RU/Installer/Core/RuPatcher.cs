@@ -18,13 +18,18 @@ public sealed class RuPatcher
     // Только оригинально-unpacked дерево остаётся вне asar; всё остальное паковать обратно.
     static readonly Regex UnpackDirs = new(@"^static\\unpacked.*$", RegexOptions.Compiled);
 
+    public const string ManifestName = "wand-ru-patch.json";
+    // Наш след в заголовке asar: ru-RU.json появляется в static/strings только от патча (Wand везёт 14 локалей без RU).
+    const string RuLocaleEntry = "\"ru-RU.json\"";
+
     readonly string _appDir, _resources, _asar, _unpacked, _manifestPath;
     readonly RuOverrides _ov;
-    readonly bool _translateCheats, _translateMaps, _translateMapsOnline, _mapDiag;
+    readonly bool _translateCheats, _translateMaps, _translateMapsOnline, _mapDiag, _allowMissingBackup;
     readonly Action<string> _log;
 
     public RuPatcher(string appDir, RuOverrides overrides, bool translateCheats = true,
-        bool translateMaps = true, bool translateMapsOnline = true, bool mapDiag = false, Action<string>? log = null)
+        bool translateMaps = true, bool translateMapsOnline = true, bool mapDiag = false,
+        bool allowMissingBackup = false, Action<string>? log = null)
     {
         _appDir = appDir;
         _ov = overrides;
@@ -32,11 +37,12 @@ public sealed class RuPatcher
         _translateMaps = translateMaps;
         _translateMapsOnline = translateMapsOnline;
         _mapDiag = mapDiag;
+        _allowMissingBackup = allowMissingBackup;
         _log = log ?? (_ => { });
         _resources = Path.Combine(appDir, "resources");
         _asar = Path.Combine(_resources, "app.asar");
         _unpacked = Path.Combine(_resources, "app.asar.unpacked");
-        _manifestPath = Path.Combine(_resources, "wand-ru-patch.json");
+        _manifestPath = Path.Combine(_resources, ManifestName);
     }
 
     public PatchManifest Apply()
@@ -83,14 +89,50 @@ public sealed class RuPatcher
         return man;
     }
 
+    /// <summary>Уже наш app.asar? Смотрим заголовок (ru-RU.json кладём только мы) - без распаковки.</summary>
+    internal static bool IsAsarPatched(string asarPath) =>
+        File.Exists(asarPath) &&
+        AsarIntegrity.ReadHeaderJson(asarPath).Contains(RuLocaleEntry, StringComparison.Ordinal);
+
+    /// <summary>
+    /// Бэкап утерян (антивирус/клинер/юзер), а app.asar - уже наш патч. Копировать его как «оригинал»
+    /// нельзя: откат навсегда вернёт патч вместо чистого Wand. UI зовёт ДО патча - спросить юзера.
+    /// </summary>
+    public static bool BackupLost(string appDir)
+    {
+        var resources = Path.Combine(appDir, "resources");
+        return !HasUsableBackup(Path.Combine(resources, ManifestName))
+               && IsAsarPatched(Path.Combine(resources, "app.asar"));
+    }
+
+    static bool HasUsableBackup(string manifestPath) =>
+        ReadManifest(manifestPath) is { BackupRoot: var root }
+        && !string.IsNullOrEmpty(root) && Directory.Exists(root);
+
+    static PatchManifest? ReadManifest(string manifestPath)
+    {
+        if (!File.Exists(manifestPath)) return null;
+        try { return JsonSerializer.Deserialize<PatchManifest>(File.ReadAllText(manifestPath)); }
+        catch (JsonException) { return null; } // битый manifest = бэкапа считай нет
+    }
+
+    /// <summary>Путь бэкапа: существующий, свежий или "" (бэкап утерян, откат недоступен - по согласию юзера).</summary>
     string EnsureBackup()
     {
-        if (File.Exists(_manifestPath))
+        if (HasUsableBackup(_manifestPath)) return ReadManifest(_manifestPath)!.BackupRoot;
+
+        if (IsAsarPatched(_asar))
         {
-            var prev = JsonSerializer.Deserialize<PatchManifest>(File.ReadAllText(_manifestPath));
-            if (prev is not null && !string.IsNullOrEmpty(prev.BackupRoot) && Directory.Exists(prev.BackupRoot))
-                return prev.BackupRoot;
+            // Оригинала нет: текущий asar - наш патч. Молча бэкапить его = убить откат навсегда.
+            if (!_allowMissingBackup)
+                throw new InvalidOperationException(
+                    "Бэкап оригинального app.asar утерян, а Wand уже русифицирован - оригинал взять неоткуда. " +
+                    "Переустановите Wand, затем русифицируйте заново.");
+            _log("ВНИМАНИЕ: бэкап утерян, а app.asar уже русифицирован - оригинал НЕ сохраняем " +
+                 "(копия патча - не оригинал). ОТКАТ БУДЕТ НЕДОСТУПЕН: чистый Wand вернёт только его переустановка.");
+            return "";
         }
+
         var root = Path.Combine(_resources, "wand-ru-backup", DateTime.Now.ToString("yyyyMMdd-HHmmss"));
         Directory.CreateDirectory(root);
         File.Copy(_asar, Path.Combine(root, "app.asar"));
