@@ -68,11 +68,8 @@ public sealed class RuPatcher
         Disk.UncacheFilesystem(_asar);
 
         // Wand.exe хранит SHA256 заголовка app.asar (Electron fuse integrity). Заголовок изменился -
-        // без обновления хэша Electron молча не стартует. Прописываем актуальный хэш в exe.
-        if (AsarIntegrity.SyncAppDir(_appDir, _asar, _log) == 0)
-            _log("Целостность: встроенная проверка не обнаружена (старая версия Wand) - пропуск.");
-        else
-            AsarIntegrity.VerifyExesMatch(_appDir, _asar); // read-back: хэш реально записан (иначе тихий не-старт)
+        // без обновления хэша Electron молча не стартует. Пишем актуальный хэш в exe + read-back.
+        AsarIntegrity.SyncAndVerify(_appDir, _asar, _log);
 
         var man = new PatchManifest
         {

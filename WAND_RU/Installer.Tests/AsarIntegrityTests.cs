@@ -94,6 +94,45 @@ public class AsarIntegrityTests
         finally { Directory.Delete(dir, true); }
     }
 
+    // Общая точка патча и отката: пишем хэш и тут же читаем обратно. Раньше read-back был только
+    // в Apply - откат мог отрапортовать успех, оставив Wand с несходящимся хэшем (тихий не-старт).
+    [Fact]
+    public void SyncAndVerify_writes_hash_and_passes_readback()
+    {
+        var dir = NewDir();
+        try
+        {
+            var res = Path.Combine(dir, "resources");
+            Directory.CreateDirectory(res);
+            var asar = WriteFakeAsar(res, "{\"files\":{\"a.js\":{\"size\":1,\"offset\":\"0\"}}}");
+            var exe = WriteExeWithBlob(dir, "Wand.exe", new string('0', 64)); // стартовый хэш чужой
+
+            AsarIntegrity.SyncAndVerify(dir, asar);
+
+            Assert.Equal(AsarIntegrity.ComputeHeaderHash(asar), AsarIntegrity.ReadHash(exe));
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    [Fact]
+    public void SyncAndVerify_is_noop_on_old_wand_without_blob()
+    {
+        var dir = NewDir();
+        try
+        {
+            var res = Path.Combine(dir, "resources");
+            Directory.CreateDirectory(res);
+            var asar = WriteFakeAsar(res, "{\"files\":{}}");
+            File.WriteAllBytes(Path.Combine(dir, "Launcher.exe"), Encoding.ASCII.GetBytes("no integrity blob here"));
+
+            var log = new List<string>();
+            AsarIntegrity.SyncAndVerify(dir, asar, log.Add);   // старая версия Wand: не кидаем
+
+            Assert.Contains(log, l => l.Contains("не обнаружена"));
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
     static string NewDir()
     {
         var d = Path.Combine(Path.GetTempPath(), "wru-int-" + Path.GetRandomFileName());

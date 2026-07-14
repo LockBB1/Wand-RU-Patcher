@@ -33,7 +33,8 @@ public static class RuUnpatcher
         Disk.UncacheFilesystem(asar);
 
         // Вернуть встроенный в Wand.exe хэш целостности к оригинальному заголовку app.asar.
-        AsarIntegrity.SyncAppDir(appDir, asar, log);
+        // Read-back обязателен: запись не прошла -> «Откат завершён» + Wand молча не стартует.
+        AsarIntegrity.SyncAndVerify(appDir, asar, log);
 
         var backupUnpacked = Path.Combine(man.BackupRoot, "app.asar.unpacked");
         var unpacked = Path.Combine(resources, "app.asar.unpacked");

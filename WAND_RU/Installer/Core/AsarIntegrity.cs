@@ -52,6 +52,19 @@ public static class AsarIntegrity
     }
 
     /// <summary>
+    /// Единая точка для патча И отката: записать хэш + прочитать обратно. Без read-back запись могла
+    /// не пройти (AV, залоченный exe) - и Wand молча не стартует, а мы рапортуем успех.
+    /// </summary>
+    public static void SyncAndVerify(string appDir, string asarPath, Action<string>? log = null)
+    {
+        log ??= _ => { };
+        if (SyncAppDir(appDir, asarPath, log) == 0)
+            log("Целостность: встроенная проверка не обнаружена (старая версия Wand) - пропуск.");
+        else
+            VerifyExesMatch(appDir, asarPath);
+    }
+
+    /// <summary>
     /// Read-back: у каждого exe с blob хэш совпадает с текущим app.asar. Иначе Wand молча не стартует -
     /// кидаем понятную ошибку сразу после патча, а не оставляем юзеру чёрный экран.
     /// </summary>
