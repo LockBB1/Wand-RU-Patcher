@@ -1,8 +1,19 @@
 name: Build executable
 
-# Ручной запуск: Actions -> Build executable -> Run workflow
+# Единственный способ получить .exe: форкнуть репо и запустить этот workflow у себя.
+# Actions -> Build executable -> Run workflow -> выбрать variant -> скачать артефакт.
 on:
   workflow_dispatch:
+    inputs:
+      variant:
+        description: 'Какую сборку собрать'
+        type: choice
+        required: true
+        default: classic
+        options:
+          - classic
+          - small
+          - both
 
 jobs:
   build:
@@ -17,13 +28,60 @@ jobs:
         with:
           dotnet-version: '9.0.x'
 
-      - name: Publish single-file exe
+      - name: Build classic exe (~130 MB, .NET inside)
+        if: inputs.variant == 'classic' || inputs.variant == 'both'
         shell: pwsh
         run: ./WAND_RU/build.ps1 -Publish
 
-      - name: Upload artifact
+      - name: Upload classic artifact
+        if: inputs.variant == 'classic' || inputs.variant == 'both'
         uses: actions/upload-artifact@v4
         with:
-          name: WandRuInstaller
+          name: WandRuInstaller-classic
           path: WAND_RU/publish/WandRuInstaller.exe
           if-no-files-found: error
+
+      - name: Build small exe (~2.4 MB, needs .NET 9 Desktop Runtime)
+        if: inputs.variant == 'small' || inputs.variant == 'both'
+        shell: pwsh
+        run: ./WAND_RU/build.ps1 -PublishSmall
+
+      - name: Upload small artifact
+        if: inputs.variant == 'small' || inputs.variant == 'both'
+        uses: actions/upload-artifact@v4
+        with:
+          name: WandRuInstaller-small
+          path: WAND_RU/publish-small/WandRuInstaller.exe
+          if-no-files-found: error
+
+      - name: Summary
+        if: success()
+        shell: pwsh
+        run: |
+          $lines = @(
+            '## Сборка готова',
+            '',
+            'Скачайте артефакт из блока **Artifacts** внизу этой страницы, распакуйте zip - внутри `WandRuInstaller.exe`.',
+            ''
+          )
+          if ('${{ inputs.variant }}' -in @('classic','both')) {
+            $lines += '- **WandRuInstaller-classic** - работает «из коробки», ничего ставить не надо (~130 МБ).'
+          }
+          if ('${{ inputs.variant }}' -in @('small','both')) {
+            $lines += '- **WandRuInstaller-small** - компактная (~2.4 МБ), нужен [.NET 9 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/9.0).'
+          }
+          $lines += @(
+            '',
+            'Windows SmartScreen может предупредить: сборка не подписана. Это нормально - вы собрали её сами, из открытого кода.',
+            '',
+            '---',
+            '',
+            '### :bookmark: За следующей версией - сюда же',
+            '',
+            'Новые игры, карты и исправления выходят регулярно, и обновляться вы будете так же: `Sync fork` -> `Run workflow`.',
+            'Чтобы не искать проект заново среди своих репозиториев:',
+            '',
+            '- :star: **Star** на [оригинальном репозитории](https://github.com/LockBB1/Wand-RU-Patcher) - он ляжет в ваше [избранное](https://github.com/stars). Это закладка: один клик - и вы снова тут, за свежей сборкой.',
+            '- :bell: **Watch -> Custom -> Releases** - GitHub сам напишет, когда выйдет новая версия.'
+          )
+          $lines -join "`n" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append
