@@ -64,14 +64,6 @@ public sealed class RuPatcher
         LogReport(Report);
 
         _log("Сборка app.asar…");
-        // Собираем в поддиректории resources (тот же том - нужно для атомарного File.Replace ниже).
-        // AsarCreator кладёт рядом с .asar ещё и .unpacked-сиблинг; держим оба в _buildDir и метём разом.
-        if (Directory.Exists(_buildDir)) Directory.Delete(_buildDir, true); // хвост прошлого прерванного патча
-        Directory.CreateDirectory(_buildDir);
-        var newAsar = Path.Combine(_buildDir, "app.asar");
-        new AsarCreator(_unpacked, newAsar, new CreateOptions { Unpack = UnpackDirs })
-            .CreatePackageWithOptions();
-
         var man = new PatchManifest
         {
             Name = "Wand RU",
@@ -81,22 +73,35 @@ public sealed class RuPatcher
             InstalledAt = DateTimeOffset.Now.ToString("o"),
             BackupRoot = backupRoot,
         };
-        // Манифест (с BackupRoot) пишем ДО подмены asar. Если процесс убьют между подменой asar и
-        // синхронизацией integrity-хэша exe, Wand остаётся с новым asar + старым хэшем (тихий не-старт),
-        // а откат находит бэкап ТОЛЬКО через манифест. Манифест раньше подмены = откат всегда доступен.
-        File.WriteAllText(_manifestPath,
-            JsonSerializer.Serialize(man, new JsonSerializerOptions { WriteIndented = true }), Utf8NoBom);
+        // Собираем в поддиректории resources (тот же том - нужно для атомарного File.Replace ниже).
+        // AsarCreator кладёт рядом с .asar ещё и .unpacked-сиблинг; держим оба в _buildDir.
+        // Уборка _buildDir - в finally и best-effort: она НЕ на критическом пути и не должна ни ронять
+        // патч, ни вклиниваться перед SyncAndVerify (иначе сбой уборки оставит exe-хэш рассинхроненным).
+        TryDeleteDir(_buildDir);                 // хвост прошлого прерванного патча
+        Directory.CreateDirectory(_buildDir);
+        try
+        {
+            var newAsar = Path.Combine(_buildDir, "app.asar");
+            new AsarCreator(_unpacked, newAsar, new CreateOptions { Unpack = UnpackDirs })
+                .CreatePackageWithOptions();
 
-        // Атомарная подмена: File.Replace (тот же том) вместо Copy+overwrite - kill/сбой посреди не
-        // оставит обрезанный app.asar (Copy = truncate-then-write). Либо старый, либо новый, без огрызка.
-        File.Replace(newAsar, _asar, null);
-        Directory.Delete(_buildDir, true); // убрать .unpacked-сиблинг сборки
-        // ExtractAll закэшировал старый filesystem по этому пути; после подмены - сбросить.
-        Disk.UncacheFilesystem(_asar);
+            // Манифест (с BackupRoot) пишем ДО подмены asar. Если процесс убьют между подменой asar и
+            // синком integrity-хэша exe, Wand остаётся с новым asar + старым хэшем (тихий не-старт), а
+            // откат находит бэкап ТОЛЬКО через манифест. Манифест раньше подмены = откат всегда доступен.
+            File.WriteAllText(_manifestPath,
+                JsonSerializer.Serialize(man, new JsonSerializerOptions { WriteIndented = true }), Utf8NoBom);
 
-        // Wand.exe хранит SHA256 заголовка app.asar (Electron fuse integrity). Заголовок изменился -
-        // без обновления хэша Electron молча не стартует. Пишем актуальный хэш в exe + read-back.
-        AsarIntegrity.SyncAndVerify(_appDir, _asar, _log);
+            // Атомарная подмена: File.Replace (тот же том) вместо Copy+overwrite - kill/сбой посреди не
+            // оставит обрезанный app.asar (Copy = truncate-then-write). Либо старый, либо новый.
+            File.Replace(newAsar, _asar, null);
+            // ExtractAll закэшировал старый filesystem по этому пути; после подмены - сбросить.
+            Disk.UncacheFilesystem(_asar);
+
+            // Wand.exe хранит SHA256 заголовка app.asar (Electron fuse integrity). Заголовок изменился -
+            // без обновления хэша Electron молча не стартует. Пишем актуальный хэш в exe + read-back.
+            AsarIntegrity.SyncAndVerify(_appDir, _asar, _log);
+        }
+        finally { TryDeleteDir(_buildDir); }     // .unpacked-сиблинг сборки: убрать всегда, не роняя патч
 
         _log("Готово.");
         return man;
@@ -267,5 +272,12 @@ public sealed class RuPatcher
         Directory.CreateDirectory(d);
         foreach (var f in Directory.GetFiles(s)) File.Copy(f, Path.Combine(d, Path.GetFileName(f)), true);
         foreach (var sub in Directory.GetDirectories(s)) CopyDir(sub, Path.Combine(d, Path.GetFileName(sub)));
+    }
+
+    // Best-effort уборка временной сборки: AV может держать .unpacked-сиблинг. Провал уборки не должен
+    // ни ронять патч, ни оставлять exe-хэш рассинхроненным - потому swallow и только в finally.
+    static void TryDeleteDir(string dir)
+    {
+        try { if (Directory.Exists(dir)) Directory.Delete(dir, true); } catch { /* мусор подчистит следующий Apply */ }
     }
 }
