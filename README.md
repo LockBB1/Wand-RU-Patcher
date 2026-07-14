@@ -11,7 +11,7 @@
 
 [![Звёзды](https://img.shields.io/github/stars/LockBB1/Wand-RU-Patcher?style=flat-square&label=%E2%98%85%20%D0%B2%20%D0%B8%D0%B7%D0%B1%D1%80%D0%B0%D0%BD%D0%BD%D0%BE%D0%BC&color=f5a623)](../../stargazers)
 [![Версия](https://img.shields.io/github/v/release/LockBB1/Wand-RU-Patcher?style=flat-square&label=%D0%B2%D0%B5%D1%80%D1%81%D0%B8%D1%8F&color=4c9)](../../releases/latest)
-[![Игр в точных словарях](https://img.shields.io/badge/%D1%82%D0%BE%D1%87%D0%BD%D1%8B%D1%85%20%D1%81%D0%BB%D0%BE%D0%B2%D0%B0%D1%80%D0%B5%D0%B9-29%20%D0%B8%D0%B3%D1%80-blue?style=flat-square)](WAND_RU/renderer/games)
+[![Игр и карт в точных словарях](https://img.shields.io/badge/%D1%82%D0%BE%D1%87%D0%BD%D1%8B%D1%85%20%D1%81%D0%BB%D0%BE%D0%B2%D0%B0%D1%80%D0%B5%D0%B9-29%20%D0%B8%D0%B3%D1%80%20%C2%B7%201%20%D0%BA%D0%B0%D1%80%D1%82%D0%B0-blue?style=flat-square)](WAND_RU/renderer)
 
 </div>
 
