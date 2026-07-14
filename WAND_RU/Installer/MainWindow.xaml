@@ -154,9 +154,11 @@
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                         <Button Content="{DynamicResource S_Retry}" Width="170" Height="38" Margin="0 0 10 0"
                                 Style="{StaticResource ColoredButton}" Command="{Binding PatchCommand}"/>
-                        <!-- Патч мог упасть после подмены asar -> Wand кирпич, откат единственный путь назад. -->
+                        <!-- Патч мог упасть после подмены asar -> Wand кирпич, откат единственный путь назад.
+                             Прячем, если манифеста нет (упало до подмены - откатывать нечего). -->
                         <Button Content="{DynamicResource S_Restore}" Width="170" Height="38"
-                                Style="{StaticResource ColoredButton}" Command="{Binding RestoreCommand}"/>
+                                Style="{StaticResource ColoredButton}" Command="{Binding RestoreCommand}"
+                                Visibility="{Binding RollbackAvailable, Converter={StaticResource ToVisibilityConverter}}"/>
                     </StackPanel>
                 </StackPanel>
 

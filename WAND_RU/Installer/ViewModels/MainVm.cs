@@ -17,6 +17,7 @@ public sealed class MainVm : ObservableObject
     bool _isHelpOpen;
     bool _isPatchOptionsOpen;
     bool _isBackupWarnOpen;
+    bool _rollbackAvailable;
     bool _backuplessOk;   // юзер согласился патчить без бэкапа (откат будет недоступен)
     SettingsVm? _settings;
     readonly RuOverrides _overrides = RuOverrides.LoadEmbedded();
@@ -34,6 +35,9 @@ public sealed class MainVm : ObservableObject
     public bool IsPatchOptionsOpen { get => _isPatchOptionsOpen; set => SetProperty(ref _isPatchOptionsOpen, value); }
     /// <summary>Открыто предупреждение «бэкап утерян, откат будет недоступен» (решает юзер).</summary>
     public bool IsBackupWarnOpen { get => _isBackupWarnOpen; set => SetProperty(ref _isBackupWarnOpen, value); }
+    /// <summary>Есть ли что откатывать (манифест на диске). Прячет кнопку «Откатить» в Error, когда патч
+    /// упал ДО записи манифеста (неподдерж. версия) - там откат дал бы бесполезное «нет manifest».</summary>
+    public bool RollbackAvailable { get => _rollbackAvailable; private set => SetProperty(ref _rollbackAvailable, value); }
 
     public ICommand PatchCommand { get; }
     public ICommand RestoreCommand { get; }
@@ -124,6 +128,7 @@ public sealed class MainVm : ObservableObject
         // прошла после записи манифеста) не должен выдавать оригинальный Wand за русифицированный.
         Install.IsPatched = WandLocator.IsActuallyPatched(Install.SelectedAppDir, man);
         Install.Manifest = man;
+        RollbackAvailable = man is not null;   // манифест есть -> есть путь отката (кнопка в Error/Patched)
         var ver = WandLocator.VersionOf(Install.SelectedAppDir);
         var pinned = ver != WandLocator.VersionOf(Install.AppDirs[0]);   // выбрана не последняя -> закреплена
         State = Install.IsPatched ? InstallerState.Patched : InstallerState.Ready;
@@ -155,6 +160,7 @@ public sealed class MainVm : ObservableObject
                 mapDiag, backupless, Add);
             await Task.Run(() => patcher.Apply());
             State = InstallerState.Done;
+            RollbackAvailable = true;   // патч лёг -> манифест на диске, откат доступен
             // Честный итог вместо безусловного «Готово»: якорь читов/карт мог не найтись на новой версии Wand.
             StatusText = FormatReport(patcher.Report);
             if (Install is not null) Install.IsPatched = true;
@@ -166,6 +172,9 @@ public sealed class MainVm : ObservableObject
             State = InstallerState.Error;
             StatusText = L.Get("S_Msg_ErrorPrefix") + ex.Message;
             Add(ex.ToString());
+            // Патч мог упасть ПОСЛЕ записи манифеста (подмена asar/синк exe) - тогда откат нужен и доступен;
+            // до записи (неподдерж. версия) - манифеста нет, кнопку отката прячем.
+            RollbackAvailable = Install?.SelectedAppDir is { } d && WandLocator.Manifest(d) is not null;
         }
         finally { _backuplessOk = false; }   // согласие разовое: следующая установка спросит заново
     }
@@ -187,6 +196,9 @@ public sealed class MainVm : ObservableObject
             State = InstallerState.Error;
             StatusText = L.Get("S_Msg_ErrorPrefix") + ex.Message;
             Add(ex.ToString());
+            // Патч мог упасть ПОСЛЕ записи манифеста (подмена asar/синк exe) - тогда откат нужен и доступен;
+            // до записи (неподдерж. версия) - манифеста нет, кнопку отката прячем.
+            RollbackAvailable = Install?.SelectedAppDir is { } d && WandLocator.Manifest(d) is not null;
         }
     }
 

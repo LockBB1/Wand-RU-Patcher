@@ -101,6 +101,21 @@ public class MainVmTests
         Assert.Equal(InstallerState.Error, vm.State);
 
         Assert.True(vm.RestoreCommand.CanExecute(null));
+        // RES-E: но откатывать нечего (манифеста нет) -> кнопку прячем.
+        Assert.False(vm.RollbackAvailable);
+    }
+
+    // RES-E: RollbackAvailable отражает наличие манифеста - управляет видимостью кнопки отката.
+    [Fact]
+    public void RollbackAvailable_false_on_pristine_true_after_patch()
+    {
+        var appDir = TestPaths.PristineAppCopy();
+        var vm = new MainVm();
+        vm.DetectFrom(new[] { RootOf(appDir) });
+        Assert.False(vm.RollbackAvailable);   // чистый Wand - откатывать нечего
+
+        vm.PatchAsync().GetAwaiter().GetResult();
+        Assert.True(vm.RollbackAvailable);    // пропатчен - откат доступен
     }
 
     [Fact]
