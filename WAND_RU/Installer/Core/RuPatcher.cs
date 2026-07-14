@@ -22,7 +22,7 @@ public sealed class RuPatcher
     // Наш след в заголовке asar: ru-RU.json появляется в static/strings только от патча (Wand везёт 14 локалей без RU).
     const string RuLocaleEntry = "\"ru-RU.json\"";
 
-    readonly string _appDir, _resources, _asar, _unpacked, _manifestPath;
+    readonly string _appDir, _resources, _asar, _unpacked, _manifestPath, _buildDir;
     readonly RuOverrides _ov;
     readonly bool _translateCheats, _translateMaps, _translateMapsOnline, _mapDiag, _allowMissingBackup;
     readonly Action<string> _log;
@@ -43,6 +43,7 @@ public sealed class RuPatcher
         _asar = Path.Combine(_resources, "app.asar");
         _unpacked = Path.Combine(_resources, "app.asar.unpacked");
         _manifestPath = Path.Combine(_resources, ManifestName);
+        _buildDir = Path.Combine(_resources, ".wru-build");
     }
 
     /// <summary>Что легло по итогам последнего Apply (для честного «Готово» в UI). null до Apply.</summary>
@@ -63,17 +64,13 @@ public sealed class RuPatcher
         LogReport(Report);
 
         _log("Сборка app.asar…");
-        var newAsar = Path.Combine(Path.GetTempPath(), "app-ru-" + Guid.NewGuid().ToString("N") + ".asar");
+        // Собираем в поддиректории resources (тот же том - нужно для атомарного File.Replace ниже).
+        // AsarCreator кладёт рядом с .asar ещё и .unpacked-сиблинг; держим оба в _buildDir и метём разом.
+        if (Directory.Exists(_buildDir)) Directory.Delete(_buildDir, true); // хвост прошлого прерванного патча
+        Directory.CreateDirectory(_buildDir);
+        var newAsar = Path.Combine(_buildDir, "app.asar");
         new AsarCreator(_unpacked, newAsar, new CreateOptions { Unpack = UnpackDirs })
             .CreatePackageWithOptions();
-        File.Copy(newAsar, _asar, overwrite: true);
-        File.Delete(newAsar);
-        // ExtractAll закэшировал старый filesystem по этому пути; после перезаписи - сбросить.
-        Disk.UncacheFilesystem(_asar);
-
-        // Wand.exe хранит SHA256 заголовка app.asar (Electron fuse integrity). Заголовок изменился -
-        // без обновления хэша Electron молча не стартует. Пишем актуальный хэш в exe + read-back.
-        AsarIntegrity.SyncAndVerify(_appDir, _asar, _log);
 
         var man = new PatchManifest
         {
@@ -84,8 +81,23 @@ public sealed class RuPatcher
             InstalledAt = DateTimeOffset.Now.ToString("o"),
             BackupRoot = backupRoot,
         };
+        // Манифест (с BackupRoot) пишем ДО подмены asar. Если процесс убьют между подменой asar и
+        // синхронизацией integrity-хэша exe, Wand остаётся с новым asar + старым хэшем (тихий не-старт),
+        // а откат находит бэкап ТОЛЬКО через манифест. Манифест раньше подмены = откат всегда доступен.
         File.WriteAllText(_manifestPath,
             JsonSerializer.Serialize(man, new JsonSerializerOptions { WriteIndented = true }), Utf8NoBom);
+
+        // Атомарная подмена: File.Replace (тот же том) вместо Copy+overwrite - kill/сбой посреди не
+        // оставит обрезанный app.asar (Copy = truncate-then-write). Либо старый, либо новый, без огрызка.
+        File.Replace(newAsar, _asar, null);
+        Directory.Delete(_buildDir, true); // убрать .unpacked-сиблинг сборки
+        // ExtractAll закэшировал старый filesystem по этому пути; после подмены - сбросить.
+        Disk.UncacheFilesystem(_asar);
+
+        // Wand.exe хранит SHA256 заголовка app.asar (Electron fuse integrity). Заголовок изменился -
+        // без обновления хэша Electron молча не стартует. Пишем актуальный хэш в exe + read-back.
+        AsarIntegrity.SyncAndVerify(_appDir, _asar, _log);
+
         _log("Готово.");
         return man;
     }

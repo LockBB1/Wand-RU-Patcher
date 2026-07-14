@@ -30,6 +30,24 @@ public class PatchRoundTripTests
         Assert.Contains("Главная", File.ReadAllText(ruUnpacked));
     }
 
+    // CRIT-1/2: манифест (с BackupRoot) пишется ДО подмены asar, сборка идёт в .wru-build и метётся,
+    // подмена атомарна (File.Replace). Инвариант отката: после Apply манифест указывает на ЧИТАЕМЫЙ
+    // бэкап (иначе прерванный между подменой и синком exe патч оставил бы недостижимый оригинал),
+    // а временный .wru-build не остаётся в resources.
+    [Fact]
+    public void Apply_manifest_points_to_readable_backup_and_leaves_no_build_temp()
+    {
+        var appDir = TestPaths.PristineAppCopy();
+        var man = new RuPatcher(appDir, RuOverrides.LoadEmbedded()).Apply();
+        var res = Path.Combine(appDir, "resources");
+
+        Assert.False(string.IsNullOrEmpty(man.BackupRoot));
+        var backupAsar = Path.Combine(man.BackupRoot, "app.asar");
+        Assert.True(File.Exists(backupAsar));
+        Assert.NotEmpty(AsarIntegrity.ReadHeaderJson(backupAsar));      // бэкап цел - откат возможен
+        Assert.False(Directory.Exists(Path.Combine(res, ".wru-build"))); // временная сборка убрана
+    }
+
     [Fact]
     public void Apply_injects_cheat_hook_when_enabled()
     {
