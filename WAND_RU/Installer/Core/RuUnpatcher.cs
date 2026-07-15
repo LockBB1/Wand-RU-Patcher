@@ -38,6 +38,11 @@ public static class RuUnpatcher
         if (string.IsNullOrWhiteSpace(header) || header[0] != '{')
             throw CorruptBackup(backupAsar, "пустой или нечитаемый заголовок", null);
 
+        // Формат integrity-blob всех exe проверяем ДО разрушающей записи asar. Иначе SyncAndVerify бросил бы
+        // на нераспознанном формате (будущий Wand) уже ПОСЛЕ подмены asar = half-restore. Пре-чек -> либо
+        // откат пройдёт целиком, либо asar не тронут. (AV-локи exe при записи - отдельный транзиторный риск.)
+        AsarIntegrity.EnsureWritable(appDir);
+
         log("Восстановление app.asar…");
         var asar = Path.Combine(resources, "app.asar");
         File.Copy(backupAsar, asar, true);
@@ -45,9 +50,6 @@ public static class RuUnpatcher
 
         // Вернуть встроенный в Wand.exe хэш целостности к оригинальному заголовку app.asar.
         // Read-back обязателен: запись не прошла -> «Откат завершён» + Wand молча не стартует.
-        // ceiling: на НЕраспознанном формате blob (будущий Wand) SyncAndVerify бросит здесь - asar уже
-        // откачен, но unpacked/manifest ещё нет = half-restore. Латентно (после успешного Apply exe хранит
-        // валидный 64-hex -> не бросает). Полный фикс = транзакция отката; пока честный фейл > тихая порча.
         AsarIntegrity.SyncAndVerify(appDir, asar, log);
 
         var backupUnpacked = Path.Combine(man.BackupRoot, "app.asar.unpacked");

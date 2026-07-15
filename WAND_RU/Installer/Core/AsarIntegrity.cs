@@ -52,6 +52,23 @@ public static class AsarIntegrity
     }
 
     /// <summary>
+    /// Пре-чек формата integrity-blob во ВСЕХ exe appDir: бросает, если blob есть, но по позиции лежат не
+    /// ровно 64 hex (формат сменился - будущий Wand). Зовётся ДО разрушающей записи asar в откате: без
+    /// пре-чека WriteHash бросил бы уже ПОСЛЕ подмены asar = half-restore (asar откачен, хэш/unpacked нет).
+    /// Проверив заранее, гарантируем: либо синк пройдёт целиком, либо ни один файл не тронут.
+    /// </summary>
+    public static void EnsureWritable(string appDir)
+    {
+        foreach (var exe in Directory.EnumerateFiles(appDir, "*.exe", SearchOption.TopDirectoryOnly))
+        {
+            using var fs = File.OpenRead(exe);
+            long hashPos = LocateHash(fs);
+            if (hashPos < 0) continue;   // нет blob - старая версия, синк будет no-op
+            ValidateBlobFormat(fs, hashPos, exe);
+        }
+    }
+
+    /// <summary>
     /// Единая точка для патча И отката: записать хэш + прочитать обратно. Без read-back запись могла
     /// не пройти (AV, залоченный exe) - и Wand молча не стартует, а мы рапортуем успех.
     /// </summary>
@@ -98,19 +115,23 @@ public static class AsarIntegrity
         using var fs = new FileStream(exePath, FileMode.Open, FileAccess.ReadWrite, FileShare.Read);
         long hashPos = LocateHash(fs);
         if (hashPos < 0) return false;   // blob нет -> старая версия Wand, не наше дело
-        // Blob есть: по позиции ДОЛЖНЫ лежать ровно 64 hex-символа. Если нет - формат blob сменился
-        // (новая версия Wand). Слепо писать 64 байта нельзя: затрём код/данные exe, а exe не бэкапится
-        // (self-correcting только по хэшу). Честный фейл вместо тихой порчи - откат вернёт целый Wand.
-        // Сообщение нейтральное к контексту: WriteHash зовётся и из Apply, и из RuUnpatcher.Restore -
-        // «откатите Восстановить» в откате было бы ложным/циклическим советом.
-        if (hashPos + HashHexLen > fs.Length || !CurrentIsHex(fs, hashPos))
-            throw new InvalidOperationException(
-                $"Формат проверки целостности Wand.exe ({Path.GetFileName(exePath)}) не распознан - возможно, новая версия Wand. " +
-                "Обновите WRP или создайте issue с экспортом лога.");
+        ValidateBlobFormat(fs, hashPos, exePath);
         fs.Seek(hashPos, SeekOrigin.Begin);
         fs.Write(hashBytes, 0, hashBytes.Length);
         fs.Flush();
         return true;
+    }
+
+    // Blob по позиции ДОЛЖЕН быть ровно 64 hex. Иначе формат сменился (новая версия Wand): слепая запись
+    // затёрла бы код/данные exe (exe не бэкапится, self-correcting только по хэшу) - честный фейл. Сообщение
+    // нейтрально к контексту: зовётся из Apply, EnsureWritable и WriteHash (Restore) - совет «Восстановить»
+    // в откате был бы циклическим.
+    static void ValidateBlobFormat(FileStream fs, long hashPos, string exePath)
+    {
+        if (hashPos + HashHexLen > fs.Length || !CurrentIsHex(fs, hashPos))
+            throw new InvalidOperationException(
+                $"Формат проверки целостности Wand.exe ({Path.GetFileName(exePath)}) не распознан - возможно, новая версия Wand. " +
+                "Обновите WRP или создайте issue с экспортом лога.");
     }
 
     // Лежат ли по позиции ровно HashHexLen hex-символов (0-9a-fA-F)? Защита от слепой записи в чужой формат.
