@@ -82,6 +82,7 @@ public partial class MainWindow : Window
     void OnOpenSettings(object sender, RoutedEventArgs e)
     {
         if (ViewModel.Settings is null) return;
+        if (ViewModel.State == InstallerState.Working) return;   // во время патча настройки менять нельзя (гонка)
         new SettingsWindow(ViewModel) { Owner = this }.ShowDialog();
     }
 

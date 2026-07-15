@@ -19,6 +19,7 @@ public sealed class MainVm : ObservableObject
     bool _isBackupWarnOpen;
     bool _rollbackAvailable;
     bool _backuplessOk;   // юзер согласился патчить без бэкапа (откат будет недоступен)
+    bool _busy;           // патч/откат в работе - реентранси-guard (второй запуск = гонка за файлы Wand)
     SettingsVm? _settings;
     readonly RuOverrides _overrides = RuOverrides.LoadEmbedded();
 
@@ -115,7 +116,9 @@ public sealed class MainVm : ObservableObject
             return;
         }
         Settings = new SettingsVm(Install);
-        Settings.OnAppDirSelected = _ => RefreshSelection();   // смена версии в настройках -> обновить шапку/состояние
+        // Смена версии в настройках -> обновить шапку/состояние. НЕ во время патча/отката: RefreshSelection
+        // затёр бы Working на Ready/Patched -> кнопка снова активна -> второй патч поверх идущего (гонка).
+        Settings.OnAppDirSelected = _ => { if (State != InstallerState.Working) RefreshSelection(); };
         RefreshSelection();
     }
 
@@ -141,65 +144,74 @@ public sealed class MainVm : ObservableObject
     // mode: "local" -> офлайн-перевод, "online" -> +интернет, null -> оставить текущий (переустановка).
     internal async Task PatchAsync(string? mode = null)
     {
-        if (Install?.SelectedAppDir is null) return;
-        if (Settings is not null && mode is not null)
-            Settings.TranslateCheatsOnline = mode.Equals("online", StringComparison.OrdinalIgnoreCase);
-        // Бэкап утерян, а Wand уже русифицирован: патч возможен, но откат мёртв - цена решения юзера.
-        if (!_backuplessOk && RuPatcher.BackupLost(Install.SelectedAppDir)) { IsBackupWarnOpen = true; return; }
-        if (!await EnsureWandClosedAsync()) return;
-        State = InstallerState.Working;
-        Log.Clear();
+        if (Install?.SelectedAppDir is null || _busy) return;   // реентранси: патч/откат уже идёт
+        _busy = true;
         try
         {
-            var translateCheats = Settings?.TranslateCheats ?? true;
-            var maps = Settings?.TranslateMaps ?? true;
-            var mapsOnline = Settings?.TranslateMapsOnline ?? true;
-            var mapDiag = Settings?.ShowLog ?? false;   // диагностику карт шлём в лог только если он показан
-            var backupless = _backuplessOk;
-            var patcher = new RuPatcher(Install.SelectedAppDir, _overrides, translateCheats, maps, mapsOnline,
-                mapDiag, backupless, Add);
-            await Task.Run(() => patcher.Apply());
-            State = InstallerState.Done;
-            RollbackAvailable = true;   // патч лёг -> манифест на диске, откат доступен
-            // Честный итог вместо безусловного «Готово»: якорь читов/карт мог не найтись на новой версии Wand.
-            StatusText = FormatReport(patcher.Report);
-            if (Install is not null) Install.IsPatched = true;
-            MigrationHint = ""; // патч теперь в актуальной версии
-            if (Settings?.RestartWandAfter == true) TryRestartWand();
+            if (Settings is not null && mode is not null)
+                Settings.TranslateCheatsOnline = mode.Equals("online", StringComparison.OrdinalIgnoreCase);
+            // Бэкап утерян, а Wand уже русифицирован: патч возможен, но откат мёртв - цена решения юзера.
+            if (!_backuplessOk && RuPatcher.BackupLost(Install.SelectedAppDir)) { IsBackupWarnOpen = true; return; }
+            if (!await EnsureWandClosedAsync()) return;
+            State = InstallerState.Working;
+            Log.Clear();
+            try
+            {
+                var translateCheats = Settings?.TranslateCheats ?? true;
+                var maps = Settings?.TranslateMaps ?? true;
+                var mapsOnline = Settings?.TranslateMapsOnline ?? true;
+                var mapDiag = Settings?.ShowLog ?? false;   // диагностику карт шлём в лог только если он показан
+                var backupless = _backuplessOk;
+                var patcher = new RuPatcher(Install.SelectedAppDir, _overrides, translateCheats, maps, mapsOnline,
+                    mapDiag, backupless, Add);
+                await Task.Run(() => patcher.Apply());
+                State = InstallerState.Done;
+                RollbackAvailable = true;   // патч лёг -> манифест на диске, откат доступен
+                // Честный итог вместо безусловного «Готово»: якорь читов/карт мог не найтись на новой версии Wand.
+                StatusText = FormatReport(patcher.Report);
+                if (Install is not null) Install.IsPatched = true;
+                MigrationHint = ""; // патч теперь в актуальной версии
+                if (Settings?.RestartWandAfter == true) TryRestartWand();
+            }
+            catch (Exception ex)
+            {
+                State = InstallerState.Error;
+                StatusText = L.Get("S_Msg_ErrorPrefix") + ex.Message;
+                Add(ex.ToString());
+                // Патч мог упасть ПОСЛЕ записи манифеста (подмена asar/синк exe) - тогда откат нужен и доступен;
+                // до записи (неподдерж. версия) - манифеста нет, кнопку отката прячем.
+                RollbackAvailable = Install?.SelectedAppDir is { } d && WandLocator.Manifest(d) is not null;
+            }
         }
-        catch (Exception ex)
-        {
-            State = InstallerState.Error;
-            StatusText = L.Get("S_Msg_ErrorPrefix") + ex.Message;
-            Add(ex.ToString());
-            // Патч мог упасть ПОСЛЕ записи манифеста (подмена asar/синк exe) - тогда откат нужен и доступен;
-            // до записи (неподдерж. версия) - манифеста нет, кнопку отката прячем.
-            RollbackAvailable = Install?.SelectedAppDir is { } d && WandLocator.Manifest(d) is not null;
-        }
-        finally { _backuplessOk = false; }   // согласие разовое: следующая установка спросит заново
+        finally { _backuplessOk = false; _busy = false; }   // согласие разовое: следующая установка спросит заново
     }
 
     internal async Task RestoreAsync()
     {
-        if (Install?.SelectedAppDir is null) return;
-        if (!await EnsureWandClosedAsync()) return;
-        var root = Install.RootDir;
-        State = InstallerState.Working;
-        Log.Clear();
+        if (Install?.SelectedAppDir is null || _busy) return;   // реентранси: патч/откат уже идёт
+        _busy = true;
         try
         {
-            await Task.Run(() => RuUnpatcher.Restore(Install.SelectedAppDir, Add));
-            DetectFrom(new[] { root });
+            if (!await EnsureWandClosedAsync()) return;
+            var root = Install.RootDir;
+            State = InstallerState.Working;
+            Log.Clear();
+            try
+            {
+                await Task.Run(() => RuUnpatcher.Restore(Install.SelectedAppDir, Add));
+                DetectFrom(new[] { root });
+            }
+            catch (Exception ex)
+            {
+                State = InstallerState.Error;
+                StatusText = L.Get("S_Msg_ErrorPrefix") + ex.Message;
+                Add(ex.ToString());
+                // Патч мог упасть ПОСЛЕ записи манифеста (подмена asar/синк exe) - тогда откат нужен и доступен;
+                // до записи (неподдерж. версия) - манифеста нет, кнопку отката прячем.
+                RollbackAvailable = Install?.SelectedAppDir is { } d && WandLocator.Manifest(d) is not null;
+            }
         }
-        catch (Exception ex)
-        {
-            State = InstallerState.Error;
-            StatusText = L.Get("S_Msg_ErrorPrefix") + ex.Message;
-            Add(ex.ToString());
-            // Патч мог упасть ПОСЛЕ записи манифеста (подмена asar/синк exe) - тогда откат нужен и доступен;
-            // до записи (неподдерж. версия) - манифеста нет, кнопку отката прячем.
-            RollbackAvailable = Install?.SelectedAppDir is { } d && WandLocator.Manifest(d) is not null;
-        }
+        finally { _busy = false; }
     }
 
     /// <summary>Строка итога для экрана «Готово»: «локаль ✓ · читы ✓ · карты - якорь не найден».
