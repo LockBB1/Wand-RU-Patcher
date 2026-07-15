@@ -101,10 +101,12 @@ public static class AsarIntegrity
         // Blob есть: по позиции ДОЛЖНЫ лежать ровно 64 hex-символа. Если нет - формат blob сменился
         // (новая версия Wand). Слепо писать 64 байта нельзя: затрём код/данные exe, а exe не бэкапится
         // (self-correcting только по хэшу). Честный фейл вместо тихой порчи - откат вернёт целый Wand.
+        // Сообщение нейтральное к контексту: WriteHash зовётся и из Apply, и из RuUnpatcher.Restore -
+        // «откатите Восстановить» в откате было бы ложным/циклическим советом.
         if (hashPos + HashHexLen > fs.Length || !CurrentIsHex(fs, hashPos))
             throw new InvalidOperationException(
-                $"Формат проверки целостности в {Path.GetFileName(exePath)} не распознан (новая версия Wand?). " +
-                "app.asar пересобран, но хэш не обновлён - откатите русификатор (Восстановить) и создайте issue с экспортом лога.");
+                $"Формат проверки целостности Wand.exe ({Path.GetFileName(exePath)}) не распознан - возможно, новая версия Wand. " +
+                "Обновите WRP или создайте issue с экспортом лога.");
         fs.Seek(hashPos, SeekOrigin.Begin);
         fs.Write(hashBytes, 0, hashBytes.Length);
         fs.Flush();

@@ -45,6 +45,9 @@ public static class RuUnpatcher
 
         // Вернуть встроенный в Wand.exe хэш целостности к оригинальному заголовку app.asar.
         // Read-back обязателен: запись не прошла -> «Откат завершён» + Wand молча не стартует.
+        // ceiling: на НЕраспознанном формате blob (будущий Wand) SyncAndVerify бросит здесь - asar уже
+        // откачен, но unpacked/manifest ещё нет = half-restore. Латентно (после успешного Apply exe хранит
+        // валидный 64-hex -> не бросает). Полный фикс = транзакция отката; пока честный фейл > тихая порча.
         AsarIntegrity.SyncAndVerify(appDir, asar, log);
 
         var backupUnpacked = Path.Combine(man.BackupRoot, "app.asar.unpacked");
