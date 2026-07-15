@@ -1,0 +1,21 @@
+{
+  "title": "Atomic Heart",
+  "names": {
+    "Unlimited Health": "Бесконечное здоровье",
+    "Unlimited Stamina": "Бесконечная выносливость",
+    "Unlimited Dodges": "Бесконечные уклонения",
+    "One-Hit Kills": "Убийство с одного удара",
+    "Damage Multiplier": "Множитель урона",
+    "Choose Resource": "Выбрать ресурс",
+    "Set Resource": "Задать ресурс",
+    "Unlimited Ammo": "Бесконечные патроны",
+    "No Reload": "Без перезарядки",
+    "No Spread": "Без разброса",
+    "No Recoil": "Без отдачи",
+    "Enemy Damage [%]": "Урон врагов [%]",
+    "Game Speed": "Скорость игры",
+    "Instant Acceleration": "Мгновенное ускорение",
+    "Movement Speed Multiplier": "Множитель скорости передвижения",
+    "Jump Height Multiplier": "Множитель высоты прыжка"
+  }
+}

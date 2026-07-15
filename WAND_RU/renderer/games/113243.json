@@ -1,0 +1,21 @@
+{
+  "title": "Yakuza Kiwami 3: Dark Ties",
+  "names": {
+    "Unlimited HP": "Бесконечное здоровье",
+    "Player Damage Multiplier": "Множитель урона игрока",
+    "Player Healing Multiplier": "Множитель лечения игрока",
+    "Player Cannot Die": "Игрок не может умереть",
+    "Two-Hit Kills": "Убийство с двух ударов",
+    "Enemy Damage Multiplier": "Множитель урона врагов",
+    "Enemy Healing Multiplier": "Множитель лечения врагов",
+    "Unlimited Money": "Бесконечные деньги",
+    "Money Gain Multiplier": "Множитель прироста денег",
+    "Money Loss Multiplier": "Множитель потери денег",
+    "Heat Gauge Always Max": "Шкала жара всегда макс.",
+    "Set Dragon Gauge to Max": "Задать шкалу дракона на макс.",
+    "Unlimited Items": "Бесконечные предметы",
+    "Item Gain Multiplier": "Множитель прироста предметов",
+    "Item Loss Multiplier": "Множитель потери предметов",
+    "Edit Money": "Изменить деньги"
+  }
+}
