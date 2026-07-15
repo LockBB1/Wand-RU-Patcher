@@ -179,16 +179,32 @@
                         <TextBlock Text="{DynamicResource S_Log}" Foreground="{DynamicResource MutedForeground}"
                                    FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center"/>
                     </DockPanel>
-                    <ScrollViewer VerticalScrollBarVisibility="Auto">
-                        <ItemsControl ItemsSource="{Binding Log}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <TextBlock Text="{Binding}" Foreground="{DynamicResource MutedForeground}"
-                                               FontSize="11" TextWrapping="Wrap"/>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </ScrollViewer>
+                    <!-- Виртуализация: лог держит до 5000 строк - без неё реализуются все 5000 TextBlock.
+                         ScrollViewer в шаблоне с CanContentScroll + VirtualizingStackPanel -> реализуются
+                         только видимые (~12). -->
+                    <ItemsControl ItemsSource="{Binding Log}"
+                                  VirtualizingStackPanel.IsVirtualizing="True"
+                                  VirtualizingStackPanel.VirtualizationMode="Recycling"
+                                  ScrollViewer.CanContentScroll="True">
+                        <ItemsControl.Template>
+                            <ControlTemplate TargetType="ItemsControl">
+                                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                    <ItemsPresenter/>
+                                </ScrollViewer>
+                            </ControlTemplate>
+                        </ItemsControl.Template>
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <VirtualizingStackPanel/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding}" Foreground="{DynamicResource MutedForeground}"
+                                           FontSize="11" TextWrapping="Wrap"/>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
                 </DockPanel>
             </Border>
 
