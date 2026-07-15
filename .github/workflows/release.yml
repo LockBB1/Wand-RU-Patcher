@@ -20,6 +20,20 @@ jobs:
         with:
           fetch-depth: 0   # нужна история: фолбэк на список коммитов между тегами
 
+      - name: Verify tag matches csproj Version
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          # <Version> = версия встраивается в exe; UpdateChecker сравнивает её с tag_name релиза. Тег > версии
+          # exe -> у собравших этот тег юзеров вечное «доступно обновление». Не релизим при рассинхроне.
+          ver=$(sed -n 's/.*<Version>\(.*\)<\/Version>.*/\1/p' WAND_RU/Installer/WandRuInstaller.csproj | head -1)
+          if [ "$ver" != "$TAG" ]; then
+            echo "::error::Тег $TAG != <Version> $ver в csproj. Синхронизируйте версию перед пушем тега."
+            exit 1
+          fi
+          echo "Тег совпадает с <Version> csproj: $ver"
+
       - name: Build release notes
         env:
           TAG: ${{ github.ref_name }}
