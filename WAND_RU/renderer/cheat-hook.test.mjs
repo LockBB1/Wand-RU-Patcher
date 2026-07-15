@@ -147,3 +147,19 @@ test("online cache: параллельные игры не затирают за
     assert.equal(cache["bravo desc"], "Браво");
   } finally { a.restore(); b.restore(); rmSync(base, { recursive: true, force: true }); }
 });
+
+// HIGH-6: список читов offline-first. Медленный/зависший MT не держит ответ 12с - отдаём офлайн в
+// пределах бюджета (~600мс), MT добивает кэш в фоне. Раньше withTimeout был 12000 -> список висел.
+test("online: зависший MT не блокирует ответ дольше бюджета (offline-first)", async () => {
+  const base = mkdtempSync(realPath.join(tmpdir(), "wru-slow-"));
+  const hang = { get() { return { on() { return this; }, destroy() {} }; } }; // cb никогда не зовётся
+  const { window, restore } = installOnline(base, hang, () => Promise.resolve(jsonRes(withDesc("Never translated"))));
+  try {
+    const t0 = Date.now();
+    const res = await window.fetch("https://api.wemod.com/v3/games/1/trainer");
+    const dt = Date.now() - t0;
+    const data = await res.json();
+    assert.ok(dt < 3000, `ответ ждал ${dt}мс - offline-first сломан (бюджет ~600мс, не 12с)`);
+    assert.equal(data.i18n.strings["d.1"], "Never translated"); // офлайн-фолбэк оставил оригинал
+  } finally { restore(); rmSync(base, { recursive: true, force: true }); }
+});

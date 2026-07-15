@@ -130,10 +130,13 @@ ${indent(onlineBody)}
           return out;
         });
       });
-      // Кэш пишем по ПОЛНОМУ завершению MT (в фоне), а не по 12s-таймауту ответа: большая игра
-      // не укладывается в 12s, поздние переводы иначе теряются и кэш не наполняется между рестартами.
+      // Кэш пишем по ПОЛНОМУ завершению MT (в фоне), а не по таймауту ответа: большая игра
+      // не укладывается в бюджет, поздние переводы иначе теряются и кэш не наполняется между рестартами.
       combined.then(function () { saveCache(d, cache); }, function () { saveCache(d, cache); });
-      return withTimeout(combined, 12000, offline)
+      // Offline-first: список читов не блокируем. Тёплый кэш -> combined без сети резолвится за мс
+      // (MT всплывает в этот же ответ); холодный -> 600мс -> офлайн сразу, MT добивает кэш в фоне к
+      // след. запуску. Wand дёргает /trainer один раз - долго ждать = список висит на секунды.
+      return withTimeout(combined, 600, offline)
         .then(function (result) { return JSON.stringify(result); },
               function () { return JSON.stringify(offline); });
     } catch (e) { return Promise.resolve(JSON.stringify(offline)); }
