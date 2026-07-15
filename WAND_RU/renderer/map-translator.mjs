@@ -78,7 +78,9 @@
     if (t.indexOf("{") >= 0 || t.indexOf("}") >= 0) return;   // CSS/код - не текст
     if (skip(node)) return;
     var r = D[t];
-    if (r) { node.nodeValue = v.replace(t, r); cnt++; return; }
+    // identity-бренд (Wand, Red Dead Redemption 2): dict-hit -> НЕ слать в MT, но и не писать
+    // тот же текст (сеттер nodeValue всегда ставит mutation-record -> MO -> вечный цикл).
+    if (r) { if (r !== t) { node.nodeValue = v.replace(t, r); cnt++; } return; }
     var f = filterTr(t);
     if (f) { node.nodeValue = v.replace(t, f); cnt++; return; }
     if (!sent[t] && !pending[t]) { pending[t] = 1; schedule(); }
