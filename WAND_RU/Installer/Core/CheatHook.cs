@@ -45,4 +45,26 @@ public static class CheatHook
             File.WriteAllText(path, patched, Utf8NoBom);
         }
     }
+
+    /// <summary>
+    /// Убирает подключение cheat-hook.js из index.html/overlay.html и удаляет сам файл хука.
+    /// Нужно, когда перевод читов выключен: без strip хук от прошлой установки остаётся работать,
+    /// а отчёт честно говорит «читы выключено» - ложный рапорт. Возвращает true, если что-то убрал.
+    /// </summary>
+    public static bool Strip(string treeRoot)
+    {
+        var changed = false;
+        foreach (var html in new[] { "index.html", "overlay.html" })
+        {
+            var path = Path.Combine(treeRoot, html);
+            if (!File.Exists(path)) continue;
+            var src = File.ReadAllText(path);
+            if (!src.Contains(ScriptTag)) continue;
+            File.WriteAllText(path, src.Replace(ScriptTag, ""), Utf8NoBom);
+            changed = true;
+        }
+        var hookFile = Path.Combine(treeRoot, FileName);
+        if (File.Exists(hookFile)) { File.Delete(hookFile); changed = true; }
+        return changed;
+    }
 }

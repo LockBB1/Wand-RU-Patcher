@@ -188,6 +188,10 @@ public sealed class RuPatcher
             _log("Инъекция перевода читов…");
             CheatHook.Inject(treeRoot);
         }
+        else if (CheatHook.Strip(treeRoot))
+            _log("Читы: перевод выключен - хук убран.");
+        else
+            _log("Читы: перевод выключен - пропуск.");
 
         // Path D (перевод карт, Шаг 1 PoC): main-процесс index.js - инъектор в map-фрейм.
         // Best-effort: якорь не нашёлся на новой версии Wand -> карты не хукаются, но патч цел.
