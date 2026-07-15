@@ -25,3 +25,8 @@ WAND_RU/SMOKE.md
 WAND_RU/publish/
 WAND_RU/publish-small/
 WAND_RU/Installer/THIRD-PARTY-NOTICES.md
+
+# Тесты - на диске остаются, с GitHub убраны (решение юзера). CI (-Publish) их не трогает.
+WAND_RU/Installer.Tests/
+WAND_RU/renderer/*.test.mjs
+WAND_RU/renderer/__fixtures__/
