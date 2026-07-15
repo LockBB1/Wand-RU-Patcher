@@ -97,10 +97,28 @@ public static class AsarIntegrity
     {
         using var fs = new FileStream(exePath, FileMode.Open, FileAccess.ReadWrite, FileShare.Read);
         long hashPos = LocateHash(fs);
-        if (hashPos < 0) return false;
+        if (hashPos < 0) return false;   // blob нет -> старая версия Wand, не наше дело
+        // Blob есть: по позиции ДОЛЖНЫ лежать ровно 64 hex-символа. Если нет - формат blob сменился
+        // (новая версия Wand). Слепо писать 64 байта нельзя: затрём код/данные exe, а exe не бэкапится
+        // (self-correcting только по хэшу). Честный фейл вместо тихой порчи - откат вернёт целый Wand.
+        if (hashPos + HashHexLen > fs.Length || !CurrentIsHex(fs, hashPos))
+            throw new InvalidOperationException(
+                $"Формат проверки целостности в {Path.GetFileName(exePath)} не распознан (новая версия Wand?). " +
+                "app.asar пересобран, но хэш не обновлён - откатите русификатор (Восстановить) и создайте issue с экспортом лога.");
         fs.Seek(hashPos, SeekOrigin.Begin);
         fs.Write(hashBytes, 0, hashBytes.Length);
         fs.Flush();
+        return true;
+    }
+
+    // Лежат ли по позиции ровно HashHexLen hex-символов (0-9a-fA-F)? Защита от слепой записи в чужой формат.
+    static bool CurrentIsHex(FileStream fs, long pos)
+    {
+        var cur = new byte[HashHexLen];
+        fs.Seek(pos, SeekOrigin.Begin);
+        fs.ReadExactly(cur);
+        foreach (var c in cur)
+            if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'))) return false;
         return true;
     }
 
