@@ -259,6 +259,9 @@ public sealed class MainVm : ObservableObject
         }
         WandProcess.KillAll();
         await Task.Delay(700); // дать ОС снять блокировки файлов
+        // Kill мог не пройти (защищённый процесс/нет прав) - не патчить по залоченным файлам: иначе патч
+        // упадёт где-то в середине с невнятной IO-ошибкой вместо честного «закройте Wand».
+        if (WandProcess.AnyRunning()) { StatusText = L.Get("S_Msg_WandRunning"); return false; }
         return true;
     }
 
