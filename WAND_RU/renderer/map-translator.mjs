@@ -33,7 +33,7 @@
   // (иначе гонка: строки очередятся в MT раньше, чем придёт seed).
   try { var _sd = window.__WANDRU_SEED; if (_sd) for (var _sk in _sd) if (_sd[_sk]) D[_sk] = _sd[_sk]; } catch (e) {}
 
-  var pending = {}, sent = {}, timer = null, cnt = 0;
+  var pending = {}, sent = {}, waiting = {}, timer = null, cnt = 0;
   var cyr = /[а-яёА-ЯЁ]/, lat = /[A-Za-z]/;
 
   function send(t) { try { console.log("WANDRU_DUMP::" + btoa(unescape(encodeURIComponent(t)))); } catch (e) {} }
@@ -83,7 +83,20 @@
     if (r) { if (r !== t) { node.nodeValue = v.replace(t, r); cnt++; } return; }
     var f = filterTr(t);
     if (f) { node.nodeValue = v.replace(t, f); cnt++; return; }
+    // промах: запомнить узел, ждущий этот перевод - __wandruApply патчит его точечно (не полный re-walk).
+    var q = waiting[t] || (waiting[t] = []);
+    if (q.length < 200) q.push(node);   // cap: одна строка на многих узлах не растёт без предела
     if (!sent[t] && !pending[t]) { pending[t] = 1; schedule(); }
+  }
+
+  // Точечно применить перевод r к узлу, ждавшему исходный текст t. Пишем nodeValue только при реальном
+  // изменении (иначе сеттер шлёт characterData -> MO -> лишний цикл); узел мог уехать из DOM.
+  function patch(node, t, r) {
+    if (!node.parentNode) return;
+    var v = node.nodeValue;
+    if (!v) return;
+    var nv = v.replace(t, r);
+    if (nv !== v) { node.nodeValue = nv; cnt++; }
   }
 
   function schedule() { if (!timer) timer = setTimeout(flush, 400); }
@@ -123,11 +136,16 @@
     while (n = w.nextNode()) enqueue(n);
   }
 
-  // Main зовёт после MT: мержим перевод в словарь и перепроходим DOM.
+  // Main зовёт после MT: мержим перевод и точечно патчим узлы, ждавшие его. Полного re-walk нет -
+  // будущие узлы с тем же текстом переведёт MO -> dict-hit; пустой/повторный ответ = ноль работы.
   window.__wandruApply = function (map) {
     var o;
-    for (o in map) { if (map.hasOwnProperty(o) && map[o]) D[o] = map[o]; }
-    walk(document.body);
+    for (o in map) {
+      if (!map.hasOwnProperty(o) || !map[o]) continue;
+      D[o] = map[o];
+      var ns = waiting[o];
+      if (ns) { for (var i = 0; i < ns.length; i++) patch(ns[i], o, map[o]); delete waiting[o]; }
+    }
   };
 
   function arm() {
