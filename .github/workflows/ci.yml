@@ -1,0 +1,34 @@
+name: CI
+
+# Лёгкий гейт на каждый push/PR: хуки впрыскиваются в чужой процесс Wand - синтакс-ошибка = сломанный
+# Wand у юзера; cheat-hook.js генерится из источников (build-hook.mjs) и молча протухает, если забыли
+# перегенерить. Тест-сьют в git не входит (снят намеренно) - потому здесь только node-проверки хуков.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  hooks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Syntax-check hooks (впрыск в процесс Wand - синтаксис критичен)
+        run: |
+          for f in cheat-translator.js cheat-online.js cheat-badge.js build-hook.mjs \
+                   map-translator.mjs map-mainhook.mjs cheat-hook.js; do
+            node --check "WAND_RU/renderer/$f"
+          done
+
+      - name: cheat-hook.js свежий (регенерация из источников + diff)
+        run: |
+          node WAND_RU/renderer/build-hook.mjs
+          if ! git diff --ignore-cr-at-eol --exit-code -- WAND_RU/renderer/cheat-hook.js; then
+            echo "::error::cheat-hook.js устарел. Запустите 'node build-hook.mjs' в WAND_RU/renderer и закоммитьте."
+            exit 1
+          fi
