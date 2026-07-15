@@ -56,8 +56,18 @@ public static class RuUnpatcher
         var unpacked = Path.Combine(resources, "app.asar.unpacked");
         if (Directory.Exists(backupUnpacked))
         {
+            // Бэкап содержит оригинальный unpacked - вернуть его (wipe живого дерева патча + копия).
             if (Directory.Exists(unpacked)) Directory.Delete(unpacked, true);
             CopyDir(backupUnpacked, unpacked);
+        }
+        else if (man.BackupHasUnpacked == false && Directory.Exists(unpacked))
+        {
+            // Оригинал НЕ имел app.asar.unpacked (флаг записан при патче) - его создала распаковка патча.
+            // Убираем артефакт, иначе после «Откат завершён» остаётся дерево патча. Флаг null (старый
+            // манифест) или true с пропавшим бэкап-дир (порча) - НЕ трогаем: лишнее безопаснее, чем снести
+            // нужный оригиналу unpacked.
+            Directory.Delete(unpacked, true);
+            log("Откат: удалён app.asar.unpacked (оригинал его не имел).");
         }
         File.Delete(manifestPath);
         log("Откат завершён.");

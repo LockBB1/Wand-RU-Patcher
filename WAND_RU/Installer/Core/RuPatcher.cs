@@ -73,6 +73,11 @@ public sealed class RuPatcher
             AppVersion = new DirectoryInfo(_appDir).Name.Replace("app-", ""),
             InstalledAt = DateTimeOffset.Now.ToString("o"),
             BackupRoot = backupRoot,
+            // Выводим из фактического бэкапа: null при backupless (откат туда не дойдёт - бросит на пустом
+            // BackupRoot), иначе - есть ли app.asar.unpacked. Откат по нему решает, чистить ли артефакт.
+            BackupHasUnpacked = string.IsNullOrEmpty(backupRoot)
+                ? null
+                : Directory.Exists(Path.Combine(backupRoot, "app.asar.unpacked")),
         };
         // Собираем в поддиректории resources (тот же том - нужно для атомарного File.Replace ниже).
         // AsarCreator кладёт рядом с .asar ещё и .unpacked-сиблинг; держим оба в _buildDir.

@@ -8,4 +8,7 @@ public sealed class PatchManifest
     public string AppVersion { get; set; } = "";
     public string InstalledAt { get; set; } = "";
     public string BackupRoot { get; set; } = "";
+    /// <summary>Был ли app.asar.unpacked у оригинала (бэкап его захватил). null = старый манифест (неизвестно) -
+    /// откат не удаляет живой unpacked. false = оригинал его не имел -> откат чистит артефакт распаковки.</summary>
+    public bool? BackupHasUnpacked { get; set; }
 }
