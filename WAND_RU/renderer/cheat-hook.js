@@ -73,7 +73,7 @@
   
     // Prefix-паттерны (раньше suffix: "Set X Multiplier" = Set(X Multiplier), а не (Set X)Multiplier).
     for (const p of dict.prefixes || []) {
-      const m = s.match(new RegExp(p.match, "i"));
+      const m = s.match((p._re ??= new RegExp(p.match, "i"))); // компиляция один раз на паттерн, не на сегмент
       if (!m) continue;
       const r = resolveTail(m[1] !== undefined ? m[1] : "", dict, depth);
       if (p.adj) return p.adj[r.gender || "m"] + " " + r.nom; // прилагательное по роду
@@ -84,7 +84,7 @@
   
     // Suffix-паттерны (X Multiplier, X Rate): хвост в родительном.
     for (const suf of dict.suffixes || []) {
-      const m = s.match(new RegExp(suf.match, "i"));
+      const m = s.match((suf._re ??= new RegExp(suf.match, "i")));
       if (!m) continue;
       const r = resolveTail(m[1] !== undefined ? m[1] : "", dict, depth);
       return suf.template.replace("{0}", r.gen || r.nom);
