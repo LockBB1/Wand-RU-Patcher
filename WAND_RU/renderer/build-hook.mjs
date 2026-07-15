@@ -12,6 +12,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const strip = (f) => readFileSync(join(here, f), "utf8").replace(/^export\s+/gm, "").trim();
 const engineBody = strip("cheat-translator.js");
 const onlineBody = strip("cheat-online.js");
+const badgeBody = strip("cheat-badge.js");
 const dictMin = JSON.stringify(JSON.parse(readFileSync(join(here, "cheat-dictionary.json"), "utf8")));
 // Per-game точные словари (games/<gameId>.json -> {title, names}): в хук идут только names.
 const games = {};
@@ -35,10 +36,14 @@ ${indent(engineBody)}
 
 ${indent(onlineBody)}
 
+${indent(badgeBody)}
+
   var TRAINER = /\\/v3\\/games\\/(\\d+)\\/trainer/;
-  // Точный per-game словарь по gameId из URL (приоритет над движком).
+  var __lastGameId = null;
+  // Точный per-game словарь по gameId из URL (приоритет над движком). Заодно запоминаем gameId для плашки.
   function exactFor(url) {
     var m = TRAINER.exec(url || "");
+    if (m) __lastGameId = m[1];
     return (m && GAMES[m[1]]) || null;
   }
 
@@ -190,6 +195,11 @@ ${indent(onlineBody)}
       return _send.apply(this, arguments);
     };
   }
+
+  // --- Плашка статуса перевода на странице игры (cheat-badge.js) ---
+  function armBadge() { try { arm(window, GAMES, function () { return __lastGameId; }); } catch (e) {} }
+  if (typeof document !== "undefined" && document.body) armBadge();
+  else if (typeof document !== "undefined" && document.addEventListener) document.addEventListener("DOMContentLoaded", armBadge);
 })();
 `;
 
