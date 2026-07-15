@@ -25,6 +25,9 @@ public sealed class SettingsVm : ObservableObject
     /// <summary>MainVm подписывается: смена версии -> обновить шапку/состояние (без пере-Detect).</summary>
     public Action<string>? OnAppDirSelected { get; set; }
 
+    /// <summary>MainVm подписывается: смена лога -> поднять/погасить приёмник диагностики карт.</summary>
+    public Action<bool>? OnShowLogChanged { get; set; }
+
     public string SelectedAppVersion
     {
         get => _selectedAppVersion;
@@ -40,7 +43,7 @@ public sealed class SettingsVm : ObservableObject
     public bool ShowLog
     {
         get => _showLog;
-        set { if (SetProperty(ref _showLog, value)) { _appSettings.ShowLog = value; _appSettings.Save(); } }
+        set { if (SetProperty(ref _showLog, value)) { _appSettings.ShowLog = value; _appSettings.Save(); OnShowLogChanged?.Invoke(value); } }
     }
 
     public bool TranslateCheats

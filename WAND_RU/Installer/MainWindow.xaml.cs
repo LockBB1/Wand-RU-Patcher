@@ -29,9 +29,10 @@ public partial class MainWindow : Window
         Loaded += (_, _) =>
         {
             ViewModel.Detect();
-            ViewModel.StartMapDiag(); // PoC: приёмник диагностики map-хука в лог
+            ViewModel.SyncMapDiag(); // приёмник диагностики карт - только при включённом логе
             _ = ShowUpdateBannerAsync(ver);
         };
+        Closed += (_, _) => ViewModel.DisposeMapDiag(); // не оставлять TcpListener жить после окна
     }
 
     // Тихая проверка обновления: офлайн/ошибка - баннер просто не показываем.

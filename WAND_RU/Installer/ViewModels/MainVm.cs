@@ -86,14 +86,29 @@ public sealed class MainVm : ObservableObject
     }
 
     MapDiagServer? _mapDiag;
+    internal bool MapDiagListening => _mapDiag is not null;
 
-    /// <summary>PoC Шаг 1: поднять приёмник диагностики map-хука (Wand шлёт по o.net в лог). Один раз.</summary>
-    public void StartMapDiag()
+    /// <summary>Приёмник диагностики map-хука живёт ТОЛЬКО пока включён лог: без ShowLog map-хук ничего
+    /// не шлёт, а открытый :39271 (loopback, без auth, тело POST -> лог) - лишняя поверхность. Зовётся при
+    /// старте, смене ShowLog и пере-Detect - поднимает/гасит сервер по текущему флагу.</summary>
+    public void SyncMapDiag()
     {
-        if (_mapDiag is not null) return;
-        _mapDiag = new MapDiagServer(line => Add("[map] " + line));
-        if (_mapDiag.Start()) Add($"[map] диагностика карт слушает :{MapDiagServer.Port} - открой карту в Wand");
+        var want = Settings?.ShowLog ?? false;
+        if (want && _mapDiag is null)
+        {
+            var srv = new MapDiagServer(line => Add("[map] " + line));
+            if (srv.Start()) { _mapDiag = srv; Add($"[map] диагностика карт слушает :{MapDiagServer.Port} - открой карту в Wand"); }
+            else srv.Dispose();   // порт занят - не держим мёртвый приёмник
+        }
+        else if (!want && _mapDiag is not null)
+        {
+            _mapDiag.Dispose();
+            _mapDiag = null;
+        }
     }
+
+    /// <summary>Гасит приёмник при закрытии окна - иначе TcpListener переживал бы окно.</summary>
+    public void DisposeMapDiag() { _mapDiag?.Dispose(); _mapDiag = null; }
 
     public void Detect() => DetectFrom(WandLocator.DefaultRoots());
 
@@ -119,6 +134,7 @@ public sealed class MainVm : ObservableObject
         // Смена версии в настройках -> обновить шапку/состояние. НЕ во время патча/отката: RefreshSelection
         // затёр бы Working на Ready/Patched -> кнопка снова активна -> второй патч поверх идущего (гонка).
         Settings.OnAppDirSelected = _ => { if (State != InstallerState.Working) RefreshSelection(); };
+        Settings.OnShowLogChanged = _ => SyncMapDiag();   // тумблер лога поднимает/гасит приёмник карт
         RefreshSelection();
     }
 
