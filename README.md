@@ -11,7 +11,7 @@
 
 [![Звёзды](https://img.shields.io/github/stars/LockBB1/Wand-RU-Patcher?style=flat-square&label=%E2%98%85%20%D0%B2%20%D0%B8%D0%B7%D0%B1%D1%80%D0%B0%D0%BD%D0%BD%D0%BE%D0%BC&color=f5a623)](../../stargazers)
 [![Версия](https://img.shields.io/github/v/release/LockBB1/Wand-RU-Patcher?style=flat-square&label=%D0%B2%D0%B5%D1%80%D1%81%D0%B8%D1%8F&color=4c9)](../../releases/latest)
-[![Игр и карт в точных словарях](https://img.shields.io/badge/%D1%82%D0%BE%D1%87%D0%BD%D1%8B%D1%85%20%D1%81%D0%BB%D0%BE%D0%B2%D0%B0%D1%80%D0%B5%D0%B9-29%20%D0%B8%D0%B3%D1%80%20%C2%B7%201%20%D0%BA%D0%B0%D1%80%D1%82%D0%B0-blue?style=flat-square)](WAND_RU/renderer)
+[![Игр и карт в точных словарях](https://img.shields.io/badge/%D1%82%D0%BE%D1%87%D0%BD%D1%8B%D1%85%20%D1%81%D0%BB%D0%BE%D0%B2%D0%B0%D1%80%D0%B5%D0%B9-48%20%D0%B8%D0%B3%D1%80%20%C2%B7%201%20%D0%BA%D0%B0%D1%80%D1%82%D0%B0-blue?style=flat-square)](WAND_RU/renderer)
 
 </div>
 
@@ -46,8 +46,8 @@
   На реальных трейнерах **62 игр**: **~51%** имён с верной грамматикой (в геймерских жанрах выше —
   гонки 85%, экшн 68%, космос 65%, выживание 59%, шутеры 55%). Остаток - жаргон отдельных игр.
   > 💯 Плюс **точные словари для отдельных игр** (`WAND_RU/renderer/games/`) - у этих игр переведены
-  > **все** имена читов вручную, офлайн. Сейчас покрыто **29 игр** (Cyberpunk 2077, Crusader Kings III,
-  > Palworld, Fallout 4, Stellaris, Victoria 3, Dying Light, Mortal Kombat 11/1 и др.),
+  > **все** имена читов вручную, офлайн. Сейчас покрыто **48 игр** (Cyberpunk 2077, Crusader Kings III,
+  > Kingdom Come: Deliverance II, Nioh 3, Death Stranding 2, Atomic Heart, Anno 1800, Sekiro и др.),
   > список растёт по запросам - открывайте issue или жмите ♥ в самом установщике.
 - **Перевод читов через интернет** - допереводит всё непокрытое словарём + **описания и заметки** читов,
   кэширует. Бесплатно, без ключей: **Google Translate**, при сбое - **MyMemory**; при недоступности обоих -
