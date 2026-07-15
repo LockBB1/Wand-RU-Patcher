@@ -77,5 +77,8 @@
     <s:String x:Key="S_Msg_ErrorPrefix">Ошибка: </s:String>
     <s:String x:Key="S_Msg_WandRunning">Закройте Wand и повторите - он мешает изменить файлы.</s:String>
     <s:String x:Key="S_Browse_Dialog">Выберите папку установки Wand</s:String>
+    <s:String x:Key="S_Pinned">(закреплено)</s:String>
+    <s:String x:Key="S_ExportFilter">Markdown (*.md)|*.md|Текст (*.txt)|*.txt</s:String>
+    <s:String x:Key="S_LogTitle">Wand RU - лог</s:String>
 
 </ResourceDictionary>

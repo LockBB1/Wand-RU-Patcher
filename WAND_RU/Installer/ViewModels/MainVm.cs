@@ -135,7 +135,7 @@ public sealed class MainVm : ObservableObject
         var ver = WandLocator.VersionOf(Install.SelectedAppDir);
         var pinned = ver != WandLocator.VersionOf(Install.AppDirs[0]);   // выбрана не последняя -> закреплена
         State = Install.IsPatched ? InstallerState.Patched : InstallerState.Ready;
-        StatusText = pinned ? $"Wand {ver} (закреплено)" : $"Wand {ver}";
+        StatusText = pinned ? $"Wand {ver} {L.Get("S_Pinned")}" : $"Wand {ver}";
         MigrationHint = Install.PatchedOtherAppDir is null
             ? ""
             : string.Format(L.Get("S_MigrateHint"), ver, WandLocator.VersionOf(Install.PatchedOtherAppDir));

@@ -96,7 +96,7 @@ public partial class MainWindow : Window
         var dialog = new SaveFileDialog
         {
             FileName = "wand-ru-log.md",
-            Filter = "Markdown (*.md)|*.md|Текст (*.txt)|*.txt",
+            Filter = L.Get("S_ExportFilter"),
             Title = L.Get("S_ExportLog"),
         };
         if (dialog.ShowDialog(this) != true) return;
@@ -113,7 +113,7 @@ public partial class MainWindow : Window
     string BuildLogReport()
     {
         var sb = new StringBuilder();
-        sb.AppendLine("# Wand RU - лог");
+        sb.AppendLine("# " + L.Get("S_LogTitle"));
         sb.AppendLine();
         sb.AppendLine($"- WRP: {VersionLabel.Text}");
         var app = ViewModel.Install?.SelectedAppDir;

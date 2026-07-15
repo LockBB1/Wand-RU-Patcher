@@ -77,5 +77,8 @@
     <s:String x:Key="S_Msg_ErrorPrefix">Error: </s:String>
     <s:String x:Key="S_Msg_WandRunning">Close Wand and try again - it locks the files.</s:String>
     <s:String x:Key="S_Browse_Dialog">Select the Wand installation folder</s:String>
+    <s:String x:Key="S_Pinned">(pinned)</s:String>
+    <s:String x:Key="S_ExportFilter">Markdown (*.md)|*.md|Text (*.txt)|*.txt</s:String>
+    <s:String x:Key="S_LogTitle">Wand RU - log</s:String>
 
 </ResourceDictionary>
