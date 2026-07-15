@@ -5,7 +5,7 @@
    Канал в лог инсталлера: __EL__.net POST на 127.0.0.1:39271 (без fs/require, loopback без CORS).
    Парные маркеры __WANDRU_MAPHOOK__ ... _END - для strip-then-reinject (обновляемость). */
 try {
-  var MF = null, CACHE = {};
+  var MF = null, CACHE = {}, cacheN = 0, CACHE_CAP = 5000;
   /* Пер-карта офлайн-словари {slug:{en:ru}} - подставляет MapFrameHook.Patch (__MAPS__).
      Мгновенный офлайн-перевод POI/событий: seed переводчика по slug из URL, MT только на остаток. */
   var MAPS = __MAPS__;
@@ -43,7 +43,14 @@ try {
     while (inflight < MAXC && Q.length) {
       var it = Q.shift(); inflight++;
       (function (q, cb) {
-        one(q, function (r) { inflight--; r = brandFix(q, r); CACHE[q] = r; cb(r); setTimeout(pump, 120); }); // ~throttle + бренд
+        one(q, function (r) {
+          inflight--; r = brandFix(q, r);
+          // Кэш живёт в main-процессе через смены карт (не гибнет с фреймом) - в долгой сессии рос бы без
+          // предела. Приближённый cap: при пороге сбрасываем целиком (потеря кэша = ре-перевод, не поломка).
+          if (cacheN >= CACHE_CAP) { CACHE = {}; cacheN = 0; }
+          if (CACHE[q] === undefined) cacheN++;
+          CACHE[q] = r; cb(r); setTimeout(pump, 120);   // ~throttle + бренд
+        });
       })(it[0], it[1]);
     }
   }
