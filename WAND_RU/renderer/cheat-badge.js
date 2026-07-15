@@ -1,6 +1,6 @@
 // Плашка статуса перевода на странице игры Wand. Впрыскивается В renderer через cheat-hook.js
 // (build-hook стрипает export). Ставит "Ручной перевод"/"Авто-перевод" в .title-header__title-actions.
-// ES5-совместимо (чужой renderer), без зависимостей.
+// Без зависимостей; ES2015 ок (Chromium-renderer, как cheat-translator.js/cheat-online.js).
 
 export const MANUAL = "manual";
 export const AUTO = "auto";
@@ -27,12 +27,15 @@ export function resolveGameId(doc, fallbackGameId) {
   return pick(href) || pick(hash) || (fallbackGameId != null ? String(fallbackGameId) : null);
 }
 
-// Вставить/обновить плашку в actionsEl. Guard: если уже есть - обновляем, не дублируем.
+// Вставить/обновить плашку в actionsEl. Guard от дубля + guard от лишней записи в DOM.
+// КРИТИЧНО: то же состояние -> НЕ трогаем DOM. Иначе безусловная запись textContent = childList-мутация
+// -> MutationObserver в arm() -> снова insertBadge -> вечный цикл (тот же баг, что HIGH-5 в map-translator).
 export function insertBadge(doc, actionsEl, state) {
   if (!actionsEl) return "noop";
   var cls = BADGE_CLASS + " " + BADGE_CLASS + "--" + state;
-  var label = badgeLabel(state);
   var existing = actionsEl.querySelector("." + BADGE_CLASS);
+  if (existing && existing.className === cls) return "unchanged"; // состояние то же -> без записи, без мутации
+  var label = badgeLabel(state);
   if (existing) {
     existing.className = cls; existing.textContent = label.text; existing.title = label.title;
     return "updated";
