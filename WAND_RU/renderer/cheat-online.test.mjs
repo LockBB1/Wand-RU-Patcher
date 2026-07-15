@@ -10,6 +10,8 @@ import {
   translateOne,
   translateStrings,
   runOnline,
+  mapLimited,
+  MT_MAXC,
 } from "./cheat-online.js";
 
 const KEYS = new Set(["name", "displayName", "label"]);
@@ -211,4 +213,38 @@ test("applyMap: вход не мутирует", () => {
   const before = JSON.stringify(s);
   applyMap(s, { "Unlimited Widgets": "X" }, KEYS);
   assert.equal(JSON.stringify(s), before);
+});
+
+// HIGH-7: без лимита 150 имён = 150 параллельных Google -> 429. Пик одновременных MT <= MT_MAXC.
+function concurrencyTracker() {
+  let inFlight = 0, peak = 0;
+  const httpsGet = () => {
+    inFlight++; peak = Math.max(peak, inFlight);
+    return new Promise((r) => setTimeout(() => { inFlight--; r(JSON.stringify([[["ру", "x"]]])); }, 5));
+  };
+  return { httpsGet, peak: () => peak };
+}
+
+test("runOnline: одновременных MT-запросов не больше MT_MAXC (анти-429)", async () => {
+  const { httpsGet, peak } = concurrencyTracker();
+  const cheats = Array.from({ length: 8 }, (_, i) => ({ uuid: String(i), name: "Widget " + i, category: "player" }));
+  await runOnline({ trainer: { blueprint: { cheats } } }, { cache: {}, httpsGet, targetKeys: KEYS });
+  assert.ok(peak() <= MT_MAXC, `пик конкуренции ${peak()} > MT_MAXC ${MT_MAXC}`);
+  assert.ok(peak() >= 2, "должно идти реально параллельно, иначе лимит не проверяется");
+});
+
+test("translateStrings: одновременных MT-запросов не больше MT_MAXC", async () => {
+  const { httpsGet, peak } = concurrencyTracker();
+  const map = {};
+  for (let i = 0; i < 8; i++) map["k" + i] = "Some note " + i;
+  await translateStrings(map, { cache: {}, httpsGet, provider: "auto" });
+  assert.ok(peak() <= MT_MAXC, `пик конкуренции ${peak()} > MT_MAXC ${MT_MAXC}`);
+  assert.ok(peak() >= 2, "должно идти реально параллельно");
+});
+
+test("mapLimited: сохраняет порядок результатов и зовёт fn на каждый элемент", async () => {
+  const seen = [];
+  const out = await mapLimited([10, 20, 30], 2, async (x) => { seen.push(x); return x * 2; });
+  assert.deepEqual(out, [20, 40, 60]);
+  assert.equal(seen.length, 3);
 });

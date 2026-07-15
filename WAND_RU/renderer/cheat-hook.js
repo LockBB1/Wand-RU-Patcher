@@ -130,6 +130,22 @@
   
   const LATIN = /[A-Za-z]/;
   
+  // Лимит одновременных MT-запросов: без него 150 имён = 150 параллельных Google -> 429 -> всё валится
+  // в MyMemory -> её лимит. map-mainhook держит тот же потолок (MAXC=2). Кэш-хиты/офлайн-покрытые слот
+  // не держат - их fn резолвится сразу, воркер берёт следующий.
+  const MT_MAXC = 2;
+  async function mapLimited(items, limit, fn) {
+    const out = new Array(items.length);
+    let i = 0;
+    async function worker() {
+      while (i < items.length) { const idx = i++; out[idx] = await fn(items[idx], idx); }
+    }
+    const ws = [];
+    for (let w = 0; w < Math.min(limit, items.length); w++) ws.push(worker());
+    await Promise.all(ws);
+    return out;
+  }
+  
   // Уникальные англ. строки на целевых полях, которым нужен MT (офлайн не смог - осталась латиница).
   function collectUntranslated(node, targetKeys, out = new Set()) {
     if (Array.isArray(node)) {
@@ -221,16 +237,14 @@
     const { cache, httpsGet, provider } = deps;
     if (!map || typeof map !== "object") return map;
     const out = {};
-    await Promise.all(
-      Object.entries(map).map(async ([k, v]) => {
-        out[k] = v;
-        if (typeof v !== "string" || !LATIN.test(v) || v.length > 1500) return;
-        const ck = v.toLowerCase();
-        if (ck in cache) { out[k] = cache[ck]; return; }
-        const ru = await translateOne(v, httpsGet, provider);
-        if (ru) { cache[ck] = ru; out[k] = ru; }
-      })
-    );
+    await mapLimited(Object.entries(map), MT_MAXC, async ([k, v]) => {
+      out[k] = v;
+      if (typeof v !== "string" || !LATIN.test(v) || v.length > 1500) return;
+      const ck = v.toLowerCase();
+      if (ck in cache) { out[k] = cache[ck]; return; }
+      const ru = await translateOne(v, httpsGet, provider);
+      if (ru) { cache[ck] = ru; out[k] = ru; }
+    });
     return out;
   }
   
@@ -252,13 +266,11 @@
       else misses.push(s);
     }
   
-    await Promise.all(
-      misses.map(async (s) => {
-        const ru = await translateOne(s, httpsGet, provider);
-        if (ru) { cache[s.toLowerCase()] = ru; map[s] = ru; } // кэшируем только успешные
-        else { const off = offline(s); if (off !== s) map[s] = off; } // MT упал - частичный офлайн
-      })
-    );
+    await mapLimited(misses, MT_MAXC, async (s) => {
+      const ru = await translateOne(s, httpsGet, provider);
+      if (ru) { cache[s.toLowerCase()] = ru; map[s] = ru; } // кэшируем только успешные
+      else { const off = offline(s); if (off !== s) map[s] = off; } // MT упал - частичный офлайн
+    });
   
     return applyMap(node, map, targetKeys);
   }
