@@ -32,6 +32,21 @@ try {
      A+B (офлайн-словарь + шаблоны фильтров) уже срезали ~90% запросов; тут - остаток (описания POI). --- */
   var Q = [], inflight = 0, MAXC = 2, gCoolUntil = 0;
 
+  /* Сторожевой таймаут (у пути читов он есть: https.get {timeout:6000}, тут был забыт).
+     Electron net.request своего таймаута не имеет, а повисший TCP к translate.googleapis.com для РФ -
+     обычное дело: два таких сокета -> inflight не убывает -> очередь встаёт НАВСЕГДА и молча
+     (в релизе DIAG=false), строки уже помечены sent[] и повторно не запрашиваются.
+     once: abort() шлёт "error", ответ мог уже прийти - cb обязан сработать ровно раз. */
+  var HTTP_TIMEOUT = 6000;
+  function once(cb) {
+    var done = false;
+    return function (a, b) { if (done) return; done = true; cb(a, b); };
+  }
+  function deadline(rq, cb) {
+    var t = setTimeout(function () { try { rq.abort(); } catch (_) {} cb(null, 0); }, HTTP_TIMEOUT);
+    return function (a, b) { try { clearTimeout(t); } catch (_) {} cb(a, b); };
+  }
+
   function _mt(q, cb) {
     if (CACHE[q] !== undefined) { cb(CACHE[q]); return; }
     if (!MTON) { cb(null); return; }           // онлайн-перевод карт выключен -> только офлайн
@@ -68,8 +83,10 @@ try {
     });
   }
   function google(q, cb) {
+    cb = once(cb);
     try {
       var rq = __EL__.net.request("https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=ru&dt=t&q=" + encodeURIComponent(q)), data = "", code = 0;
+      var fin = deadline(rq, cb);
       rq.on("response", function (res) {
         code = res.statusCode || 0;
         res.on("data", function (c) { data += c.toString(); });
@@ -77,26 +94,28 @@ try {
           var out = null;
           try { var j = JSON.parse(data), i; out = ""; for (i = 0; i < j[0].length; i++) out += j[0][i][0]; }
           catch (e) { out = null; }
-          cb(out, code);
+          fin(out, code);
         });
       });
-      rq.on("error", function () { cb(null, 0); });
+      rq.on("error", function () { fin(null, 0); });
       rq.end();
     } catch (e) { cb(null, 0); }
   }
   function mymemory(q, cb) {
+    cb = once(cb);
     try {
       var rq = __EL__.net.request("https://api.mymemory.translated.net/get?langpair=en%7Cru&q=" + encodeURIComponent(q)), data = "";
+      var fin = deadline(rq, cb);
       rq.on("response", function (res) {
         res.on("data", function (c) { data += c.toString(); });
         res.on("end", function () {
           var out = null;
           try { var t = JSON.parse(data).responseData.translatedText; if (t && t.toUpperCase().indexOf("MYMEMORY WARNING") < 0) out = t; }
           catch (e) { out = null; }
-          cb(out);
+          fin(out);
         });
       });
-      rq.on("error", function () { cb(null); });
+      rq.on("error", function () { fin(null); });
       rq.end();
     } catch (e) { cb(null); }
   }
