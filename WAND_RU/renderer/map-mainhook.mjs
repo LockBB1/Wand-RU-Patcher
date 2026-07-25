@@ -31,6 +31,9 @@ try {
   /* --- Онлайн-MT с устойчивостью: throttle (<=2 в полёте) + Google-gtx с 429-backoff -> MyMemory-фолбэк.
      A+B (офлайн-словарь + шаблоны фильтров) уже срезали ~90% запросов; тут - остаток (описания POI). --- */
   var Q = [], inflight = 0, MAXC = 2, gCoolUntil = 0;
+  /* Кулдаун Google. 429 - минута; прочий отказ (403/500/таймаут/сеть) - короче: сетевой блип не должен
+     слепить провайдера надолго, но и долбить его каждой следующей строкой смысла нет. */
+  var G_COOL_429 = 60000, G_COOL_ERR = 30000;
 
   /* Сторожевой таймаут (у пути читов он есть: https.get {timeout:6000}, тут был забыт).
      Electron net.request своего таймаута не имеет, а повисший TCP к translate.googleapis.com для РФ -
@@ -73,12 +76,16 @@ try {
       })(it[0], it[1]);
     }
   }
-  // Google в кулдауне (после 429) -> сразу MyMemory; иначе Google, при 429/ошибке -> MyMemory.
+  // Google в кулдауне -> сразу MyMemory; иначе Google, при любом отказе -> кулдаун + MyMemory.
   function one(q, cb) {
     if (Date.now() < gCoolUntil) { mymemory(q, cb); return; }
     google(q, function (r, code) {
-      if (code === 429) { gCoolUntil = Date.now() + 60000; mymemory(q, cb); return; }
+      if (code === 429) { gCoolUntil = Date.now() + G_COOL_429; mymemory(q, cb); return; }
       if (r != null) { cb(r); return; }
+      /* Отказ был не только при 429: без кулдауна следующая строка снова шла бы в мёртвый Google,
+         а потом в MyMemory - 2x запросов и латентности на КАЖДОЙ строке. Эхо (r == исходник) сюда
+         не попадает: это валидный ответ провайдера, а не отказ. */
+      gCoolUntil = Date.now() + G_COOL_ERR;
       mymemory(q, cb);
     });
   }
