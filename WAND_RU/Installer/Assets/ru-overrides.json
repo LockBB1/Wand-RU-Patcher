@@ -2275,6 +2275,25 @@
     "video_mods_list.clip_length": "Длина клипа",
     "time_limit_reminder_dialog.game_customization_free_for_one_hour_every_day": "Настройка игры бесплатна 1 час каждый день",
     "pulse.objectives_title": "Зарабатывай Boost'ы",
-    "boost_title.navigate_to_queue_cta": "Смотреть все Rising"
+    "boost_title.navigate_to_queue_cta": "Смотреть все Rising",
+    "settings_dialog.highlights": "Хайлайты",
+    "settings_dialog.instant_highlights_section": "Мгновенные хайлайты",
+    "settings_dialog.instant_highlights_section_description": "Записывай лучшие моменты по горячей клавише",
+    "settings_dialog.enable_instant_highlights": "Включить мгновенные хайлайты",
+    "settings_dialog.enable_instant_highlights_description": "Сохраняй игровые моменты одним нажатием горячей клавиши - и они бесплатно уедут в облако. Твои видео приватны и никогда не публикуются без твоего разрешения. [Подробнее](website://support/en/articles/11934730-instant-highlights)",
+    "settings_dialog.instant_highlight_hotkey": "Горячая клавиша хайлайта",
+    "settings_dialog.instant_highlight_hotkey_description": "Выбери клавишу для записи хайлайтов",
+    "settings_dialog.enable_highlight_map_pins": "Включить метки хайлайтов на карте",
+    "settings_dialog.enable_highlight_map_pins_description": "Автоматически ставит на карте метку там, где ты записал хайлайт\n**Примечание: чтобы видеть свои клипы на карте, видео должны быть сохранены в облаке. Поддерживается только для игр с Live Location и одной картой.**",
+    "settings_dialog.capture_settings_section": "Настройки записи",
+    "settings_dialog.capture_settings_section_description": "Разрешение, частота кадров и источники звука для каждого хайлайта",
+    "settings_dialog.cloud_storage_section": "Облако и хранилище",
+    "settings_dialog.cloud_storage_section_description": "Где живут твои хайлайты, как они синхронизируются и что остаётся на этом устройстве",
+    "settings_dialog.highlight_uploads": "Загрузка хайлайтов",
+    "settings_dialog.highlight_uploads_description": "Мгновенная загрузка делает хайлайты доступными сразу. Загрузка после выхода из игры меньше нагружает систему во время игры. Если выключить облачное хранилище, хайлайты загружаться не будут.",
+    "settings_dialog.windows_10_capture_limit_description": "В Windows 10 при записи видео может появляться жёлтая рамка.\nРекомендуем обновиться до Windows 11.",
+    "game_collection.games_with_auto_highlights": "Игры с автохайлайтами",
+    "auto_clipping_menu.go_to_highlights_settings": "Больше настроек хайлайтов",
+    "auto_clipping_menu.auto_highlights_description": "Автоматически записывает хайлайты, пока ты играешь в $gameName."
   }
 }
