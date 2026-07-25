@@ -13,6 +13,7 @@ const strip = (f) => readFileSync(join(here, f), "utf8").replace(/^export\s+/gm,
 const engineBody = strip("cheat-translator.js");
 const onlineBody = strip("cheat-online.js");
 const badgeBody = strip("cheat-badge.js");
+const welcomeBody = strip("assistant-welcome.js");
 const dictMin = JSON.stringify(JSON.parse(readFileSync(join(here, "cheat-dictionary.json"), "utf8")));
 // Per-game точные словари (games/<gameId>.json -> {title, names}): в хук идут только names.
 const games = {};
@@ -38,7 +39,10 @@ ${indent(onlineBody)}
 
 ${indent(badgeBody)}
 
+${indent(welcomeBody)}
+
   var TRAINER = /\\/v3\\/games\\/(\\d+)\\/trainer/;
+  var ASSIST = /\\/v3\\/assistant\\/session/;
   var __lastGameId = null;
   // Точный per-game словарь по gameId из URL (приоритет над движком). Заодно запоминаем gameId для плашки.
   function exactFor(url) {
@@ -147,20 +151,30 @@ ${indent(badgeBody)}
     } catch (e) { return Promise.resolve(JSON.stringify(offline)); }
   }
 
+  // Приветствие AI-помощника. Целиком офлайн (шаблон шапки + наши подсказки) - без сети и без
+  // бюджета ожидания: панель помощника ждёт этот ответ, задержка была бы видна юзеру.
+  function translateWelcomeBody(text) {
+    var out = null;
+    try { out = translateSession(JSON.parse(text)); } catch (e) { /* не наш формат - оригинал */ }
+    return Promise.resolve(out ? JSON.stringify(out) : null);
+  }
+
   // --- fetch (офлайн + онлайн-MT) ---
   var _fetch = window.fetch;
   if (typeof _fetch === "function") {
     window.fetch = function (input, init) {
       var url = typeof input === "string" ? input : (input && input.url) || "";
       var p = _fetch.apply(this, arguments);
-      if (!TRAINER.test(url)) return p;
+      var assist = ASSIST.test(url);
+      if (!assist && !TRAINER.test(url)) return p;
       return p.then(function (res) {
         try {
           if (!res || !res.ok) return res;
           var ct = (res.headers && res.headers.get("content-type")) || "";
           if (ct.indexOf("json") < 0) return res;
           return res.clone().text().then(function (text) {
-            return translateAsync(text, exactFor(url)).then(function (t) {
+            var work = assist ? translateWelcomeBody(text) : translateAsync(text, exactFor(url));
+            return work.then(function (t) {
               if (t == null) return res;
               var headers = new Headers(res.headers);
               headers.delete("content-length");

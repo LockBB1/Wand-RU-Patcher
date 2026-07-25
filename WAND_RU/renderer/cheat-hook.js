@@ -360,7 +360,57 @@
     schedule(); // первый проход сразу
   }
 
+  // Приветствие AI-помощника (Game Guide). Впрыскивается В renderer через cheat-hook.js
+  // (build-hook стрипает export). Без зависимостей; ES2015 ок, как cheat-badge.js.
+  //
+  // welcomeMessage приходит обычным JSON с api.wemod.com/v3/assistant/session - то есть ДО того,
+  // как попасть в cross-origin фрейм помощника. Значит правим его нашим renderer-хуком, без Path D.
+  // Формат (12.42): шапка с названием игры в `**...**`, ниже - кликабельные примеры вопросов
+  // `[текст](wemod://ask)`. Сами ответы модели уже приходят по-русски (модель зеркалит язык
+  // вопроса) - переводить их не нужно и незачем.
+  
+  // Шапка. ceiling: шаблон снят с 12.42; сменит Wand формулировку - шапка останется английской
+  // (подсказки ниже подменятся всё равно, они важнее). Чинить сверкой при новой версии Wand.
+  var HEAD = /^I['’]m your AI Game Guide! Here you can ask me anything about (\*\*[\s\S]+?\*\*) like\.\.\./;
+  var HEAD_RU = "Я твой ИИ-гид по игре! Спрашивай меня о чём угодно про $1, например...";
+  
+  // Ссылка-подсказка: клик отправляет её текст как вопрос.
+  var LINK = /\[[^\]]*\]\(wemod:\/\/ask\)/g;
+  
+  // Наши подсказки вместо серверных. Серверные - английские и per-game, офлайн-словаря на них нет,
+  // а клик по английской подсказке увёл бы ОТВЕТЫ модели обратно в английский. Наши универсальны
+  // (годятся любой игре) и работают без сети.
+  var PROMPTS = [
+    "Как пройти текущую миссию?",
+    "Где найти редкие предметы?"
+  ];
+  
+  // Перевод welcomeMessage. Шапка и подсказки обрабатываются независимо: не совпал шаблон шапки -
+  // подсказки всё равно подменяем. Лишние серверные подсказки (сверх наших) убираем, а не оставляем
+  // английскими. Не строка / нет совпадений -> возвращаем как есть.
+  function translateWelcome(msg) {
+    if (typeof msg !== "string" || !msg) return msg;
+    var out = msg.replace(HEAD, HEAD_RU);
+    var i = 0;
+    out = out.replace(LINK, function () {
+      var q = PROMPTS[i++];
+      return q ? "[" + q + "](wemod://ask)" : "";
+    });
+    // Удалённые подсказки оставляют пустые строки - схлопываем, чтобы не было дыры в панели.
+    return out.replace(/(\r?\n)(?:[ \t]*\r?\n){2,}/g, "$1$1").replace(/[\s\r\n]+$/, "");
+  }
+  
+  // Перевод тела ответа /v3/assistant/session. Нет welcomeMessage -> null (хук оставит оригинал).
+  function translateSession(data) {
+    if (!data || typeof data !== "object" || typeof data.welcomeMessage !== "string") return null;
+    var out = {};
+    for (var k in data) out[k] = data[k];
+    out.welcomeMessage = translateWelcome(data.welcomeMessage);
+    return out;
+  }
+
   var TRAINER = /\/v3\/games\/(\d+)\/trainer/;
+  var ASSIST = /\/v3\/assistant\/session/;
   var __lastGameId = null;
   // Точный per-game словарь по gameId из URL (приоритет над движком). Заодно запоминаем gameId для плашки.
   function exactFor(url) {
@@ -469,20 +519,30 @@
     } catch (e) { return Promise.resolve(JSON.stringify(offline)); }
   }
 
+  // Приветствие AI-помощника. Целиком офлайн (шаблон шапки + наши подсказки) - без сети и без
+  // бюджета ожидания: панель помощника ждёт этот ответ, задержка была бы видна юзеру.
+  function translateWelcomeBody(text) {
+    var out = null;
+    try { out = translateSession(JSON.parse(text)); } catch (e) { /* не наш формат - оригинал */ }
+    return Promise.resolve(out ? JSON.stringify(out) : null);
+  }
+
   // --- fetch (офлайн + онлайн-MT) ---
   var _fetch = window.fetch;
   if (typeof _fetch === "function") {
     window.fetch = function (input, init) {
       var url = typeof input === "string" ? input : (input && input.url) || "";
       var p = _fetch.apply(this, arguments);
-      if (!TRAINER.test(url)) return p;
+      var assist = ASSIST.test(url);
+      if (!assist && !TRAINER.test(url)) return p;
       return p.then(function (res) {
         try {
           if (!res || !res.ok) return res;
           var ct = (res.headers && res.headers.get("content-type")) || "";
           if (ct.indexOf("json") < 0) return res;
           return res.clone().text().then(function (text) {
-            return translateAsync(text, exactFor(url)).then(function (t) {
+            var work = assist ? translateWelcomeBody(text) : translateAsync(text, exactFor(url));
+            return work.then(function (t) {
               if (t == null) return res;
               var headers = new Headers(res.headers);
               headers.delete("content-length");
