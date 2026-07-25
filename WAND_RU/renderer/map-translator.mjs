@@ -33,6 +33,28 @@
   // (иначе гонка: строки очередятся в MT раньше, чем придёт seed).
   try { var _sd = window.__WANDRU_SEED; if (_sd) for (var _sk in _sd) if (_sd[_sk]) D[_sk] = _sd[_sk]; } catch (e) {}
 
+  // UI-режим (фрейм AI-помощника): переводим ТОЛЬКО известные строки и атрибуты, MT не зовём.
+  // Ответы модели приходят по-русски сами; гонять их через MT нельзя - они СТРИМЯТСЯ, и MT переводил
+  // бы обрывки фраз (плюс 429). Карты работают в обычном режиме: контент + MT-добор.
+  var UIONLY = false;
+  try { UIONLY = window.__WANDRU_UIONLY === true; } catch (e) {}
+
+  // Шаблоны с подстановкой (в DOM интерполяция уже выполнена): [[regexSource, "рус $1"], ...].
+  var TPL = [];
+  try {
+    var _st = window.__WANDRU_SEED_TPL;
+    if (_st && _st.length) for (var _ti = 0; _ti < _st.length; _ti++) {
+      try { TPL.push([new RegExp(_st[_ti][0]), _st[_ti][1]]); } catch (e) {}
+    }
+  } catch (e) {}
+  function tplTr(t) {
+    for (var i = 0; i < TPL.length; i++) {
+      var m = TPL[i][0].exec(t);
+      if (m) return TPL[i][1].replace(/\$(\d)/g, function (_s, d) { return m[+d] != null ? m[+d] : ""; });
+    }
+    return null;
+  }
+
   var pending = {}, sent = {}, waiting = {}, timer = null, cnt = 0;
   var cyr = /[а-яёА-ЯЁ]/, lat = /[A-Za-z]/;
 
@@ -81,8 +103,9 @@
     // identity-бренд (Wand, Red Dead Redemption 2): dict-hit -> НЕ слать в MT, но и не писать
     // тот же текст (сеттер nodeValue всегда ставит mutation-record -> MO -> вечный цикл).
     if (r) { if (r !== t) { node.nodeValue = v.replace(t, r); cnt++; } return; }
-    var f = filterTr(t);
-    if (f) { node.nodeValue = v.replace(t, f); cnt++; return; }
+    var f = filterTr(t) || tplTr(t);
+    if (f) { if (f !== t) { node.nodeValue = v.replace(t, f); cnt++; } return; }
+    if (UIONLY) return;   // помощник: незнакомую строку (в т.ч. стримящийся ответ модели) не трогаем
     // промах: запомнить узел, ждущий этот перевод - __wandruApply патчит его точечно (не полный re-walk).
     var q = waiting[t] || (waiting[t] = []);
     if (q.length < 200) q.push(node);   // cap: одна строка на многих узлах не растёт без предела
@@ -128,10 +151,34 @@
     }
     draining = false;
   }
+  // Атрибуты UI (placeholder/aria-label/title): это НЕ текст-узлы, TreeWalker их не видит, а
+  // плейсхолдер поля ввода - самая заметная строка фрейма помощника. Только в UI-режиме: на карте
+  // это лишний querySelectorAll на каждую мутацию тяжёлого стримингового DOM.
+  // MO не слушает attributes -> setAttribute не даёт mutation-record -> цикла нет (ср. HIGH-5).
+  var ATTRS = ["placeholder", "aria-label", "title"];
+  function attrEl(el) {
+    for (var i = 0; i < ATTRS.length; i++) {
+      var a = ATTRS[i], v = el.getAttribute ? el.getAttribute(a) : null;
+      if (!v) continue;
+      var t = v.trim();
+      if (t.length < 2 || cyr.test(t) || !lat.test(t)) continue;
+      var r = D[t] || tplTr(t);
+      if (r && r !== t) { el.setAttribute(a, v.replace(t, r)); cnt++; }
+    }
+  }
+  function attrWalk(root) {
+    if (!root || root.nodeType !== 1) return;
+    attrEl(root);
+    if (!root.querySelectorAll) return;
+    var ns = root.querySelectorAll("[placeholder],[aria-label],[title]");
+    for (var i = 0; i < ns.length; i++) attrEl(ns[i]);
+  }
+
   function walk(root) {
     if (!root) return;
     if (root.nodeType === 3) { enqueue(root); return; }
     if (root.nodeType !== 1) return;
+    if (UIONLY) attrWalk(root);
     var w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null, false), n;
     while (n = w.nextNode()) enqueue(n);
   }

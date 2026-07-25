@@ -32,11 +32,13 @@ public static class MapFrameHook
     // JS-хуки вынесены в читаемые renderer/*.mjs (встроены как ресурсы map-translator.js /
     // map-mainhook.js). map-translator = переводчик текст-узлов (в map-фрейм), map-mainhook =
     // main-процесс (did-frame-navigate инъектор + o.net Google MT + relay). Ленивая загрузка + кэш.
-    static string? _translator, _mainhook, _mapsJson;
+    static string? _translator, _mainhook, _mapsJson, _assistJson;
     static string Translator => _translator ??= LoadEmbedded("map-translator.js");
     static string MainHook => _mainhook ??= LoadEmbedded("map-mainhook.js");
     // Пер-карта офлайн-словари {slug:{en:ru}} из ресурсов maps.<slug>.json -> JS-объект (__MAPS__).
     static string MapsJson => _mapsJson ??= BuildMapsJson();
+    // UI фрейма AI-помощника {strings,templates} -> JS-объект (__ASSIST__). Тот же Path D, что карты.
+    static string AssistJson => _assistJson ??= BuildAssistJson();
 
     // Кириллица литеральная (не \uXXXX) - втрое компактнее в index.js, как оригинальные локали.
     static readonly JsonSerializerOptions MapsOpts = new()
@@ -60,6 +62,17 @@ public static class MapFrameHook
             maps[slug] = JsonSerializer.Deserialize<JsonElement>(r.ReadToEnd());
         }
         return JsonSerializer.Serialize(maps, MapsOpts);   // валидный JS-литерал в index.js
+    }
+
+    // Словарь UI помощника из ресурса assistant-ui.json. `_note` (происхождение строк) в JS не тащим -
+    // это документация для нас, а не данные хука.
+    static string BuildAssistJson()
+    {
+        var doc = JsonSerializer.Deserialize<JsonElement>(LoadEmbedded("assistant-ui.json"));
+        var outp = new Dictionary<string, JsonElement>();
+        foreach (var p in doc.EnumerateObject())
+            if (p.Name != "_note") outp[p.Name] = p.Value;
+        return JsonSerializer.Serialize(outp, MapsOpts);   // литеральная кириллица, как MapsJson
     }
 
     static string LoadEmbedded(string suffix)
@@ -114,7 +127,9 @@ public static class MapFrameHook
                 .Replace("__DUMP__", dumpLit)
                 .Replace("__MTON__", mapOnline ? "true" : "false")
                 .Replace("__DIAG__", diag ? "true" : "false")
-                .Replace("__MAPS__", MapsJson);   // последним: контент словаря не должен ре-подставляться
+                // Словари последними: их контент не должен ре-подставляться.
+                .Replace("__ASSIST__", AssistJson)
+                .Replace("__MAPS__", MapsJson);
             return m.Value + inject;
         }, 1);
     }

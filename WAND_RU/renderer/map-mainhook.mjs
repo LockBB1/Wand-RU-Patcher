@@ -9,6 +9,10 @@ try {
   /* Пер-карта офлайн-словари {slug:{en:ru}} - подставляет MapFrameHook.Patch (__MAPS__).
      Мгновенный офлайн-перевод POI/событий: seed переводчика по slug из URL, MT только на остаток. */
   var MAPS = __MAPS__;
+  /* UI фрейма AI-помощника {strings:{en:ru},templates:[[re,ru]]} - подставляет MapFrameHook.Patch
+     (__ASSIST__). Помощник = cross-origin iframe mist.wand.com/assistant/embed, та же архитектура,
+     что карта. Переводим только известный хром: ответы модели приходят по-русски сами. */
+  var ASSIST = __ASSIST__;
   /* Флаги подставляет MapFrameHook.Patch по настройкам: MTON = онлайн-добор карт (Google/MyMemory),
      DIAG = диагностика в инсталлер (:39271, STAGE/NAV/HV). В релизе DIAG=false -> тихо. */
   var MTON = __MTON__, DIAG = __DIAG__;
@@ -126,6 +130,21 @@ try {
           .then(function () { _p("STAGE3 inject resolved; dict " + sl + "=" + Object.keys(dict).length); })
           .catch(function (e) { _p("STAGE3 inject ERR " + e); });
       } catch (e) { _p("STAGE2 throw " + e); }
+    }
+    /* Фрейм AI-помощника. Локаль в path зануляет JsLocalePatch (/en/ -> 307 -> без префикса), поэтому
+       ловим оба вида URL. Свой фрейм-хэндл (af), НЕ mf: в оверлее рядом живёт карта, и MT-ответ карты
+       не должен уехать в чат. UIONLY -> только словарь и атрибуты, без MT (ответы модели уже русские). */
+    if (!mn && /wand\.com\/(?:[a-z-]{2,5}\/)?assistant\/embed/.test(u)) {
+      _p("STAGE2 assistant matched: " + u);
+      try {
+        var af = __EL__.webFrameMain.fromId(pi, ri);
+        var ad = ASSIST.strings || {}, at = ASSIST.templates || [];
+        af.executeJavaScript(
+          "window.__WANDRU_UIONLY=true;window.__WANDRU_SEED=" + JSON.stringify(ad) +
+          ";window.__WANDRU_SEED_TPL=" + JSON.stringify(at) + ";" + __DUMP__)
+          .then(function () { _p("STAGE3 assistant inject resolved; strings=" + Object.keys(ad).length); })
+          .catch(function (e) { _p("STAGE3 assistant inject ERR " + e); });
+      } catch (e) { _p("STAGE2 assistant throw " + e); }
     }
   });
 
