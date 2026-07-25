@@ -201,9 +201,16 @@
       for (var i = 0; i < ms.length; i++) {
         var m = ms[i];
         if (m.type === "characterData") enqueue(m.target);
+        else if (m.type === "attributes") attrEl(m.target);
         else for (var j = 0; j < m.addedNodes.length; j++) walk(m.addedNodes[j]);
       }
-    }).observe(document, { childList: true, subtree: true, characterData: true });
+    }).observe(document, {
+      childList: true, subtree: true, characterData: true,
+      // Атрибуты слушаем только в UI-режиме: чат стримится, и React переустанавливает placeholder
+      // на существующем узле - без этого он вернулся бы к английскому. Цикла нет: уже русское
+      // значение отсекается по кириллице ещё до записи.
+      attributes: UIONLY, attributeFilter: UIONLY ? ATTRS : undefined
+    });
     setInterval(function () { if (cnt) { send("TR replaced " + cnt + " nodes"); cnt = 0; } }, 2000);
   }
 
