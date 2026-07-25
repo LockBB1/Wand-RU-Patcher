@@ -126,7 +126,10 @@ try {
         mf = __EL__.webFrameMain.fromId(pi, ri);
         /* Словарь ставим ПЕРЕД переводчиком (window.__WANDRU_SEED) - иначе гонка: translator arms и
            очередит строки в MT до прихода seed (лишний MT + бренд утекал через Google). Один executeJavaScript. */
-        mf.executeJavaScript("window.__WANDRU_SEED=" + JSON.stringify(dict) + ";" + __DUMP__)
+        /* MTON во фрейм: при выключенном онлайне переводчик не заводит очередь MT (иначе копил бы
+           waiting со ссылками на узлы - ответ на его батч всегда пустой). */
+        mf.executeJavaScript("window.__WANDRU_MTON=" + (MTON ? "true" : "false") +
+          ";window.__WANDRU_SEED=" + JSON.stringify(dict) + ";" + __DUMP__)
           .then(function () { _p("STAGE3 inject resolved; dict " + sl + "=" + Object.keys(dict).length); })
           .catch(function (e) { _p("STAGE3 inject ERR " + e); });
       } catch (e) { _p("STAGE2 throw " + e); }

@@ -39,6 +39,14 @@
   var UIONLY = false;
   try { UIONLY = window.__WANDRU_UIONLY === true; } catch (e) {}
 
+  // Онлайн-добор карт (настройка юзера, по умолчанию ВЫКЛЮЧЕН) - main ставит window.__WANDRU_MTON.
+  // При false очередь MT не заводим ВООБЩЕ: main на выключенном онлайне отвечает пустым {}, значит
+  // waiting[t] не чистится никогда и копит до 200 ссылок на текст-узлы = растущий detached DOM
+  // за сессию с ремаунтами карты (+ холостой btoa/console.log/executeJavaScript на каждый батч).
+  // Флаг не пришёл -> считаем включённым (не терять перевод из-за пропущенного плейсхолдера).
+  var MTON = true;
+  try { MTON = window.__WANDRU_MTON !== false; } catch (e) {}
+
   // Шаблоны с подстановкой (в DOM интерполяция уже выполнена): [[regexSource, "рус $1"], ...].
   var TPL = [];
   try {
@@ -105,7 +113,9 @@
     if (r) { if (r !== t) { node.nodeValue = v.replace(t, r); cnt++; } return; }
     var f = filterTr(t) || tplTr(t);
     if (f) { if (f !== t) { node.nodeValue = v.replace(t, f); cnt++; } return; }
-    if (UIONLY) return;   // помощник: незнакомую строку (в т.ч. стримящийся ответ модели) не трогаем
+    // помощник: незнакомую строку (в т.ч. стримящийся ответ модели) не трогаем.
+    // MTON=false: ответа не будет - ни очереди, ни waiting (см. комментарий у объявления MTON).
+    if (UIONLY || !MTON) return;
     // промах: запомнить узел, ждущий этот перевод - __wandruApply патчит его точечно (не полный re-walk).
     var q = waiting[t] || (waiting[t] = []);
     if (q.length < 200) q.push(node);   // cap: одна строка на многих узлах не растёт без предела
