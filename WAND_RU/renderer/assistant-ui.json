@@ -1,5 +1,5 @@
 {
-  "_note": "UI фрейма AI-помощника (mist.wand.com/assistant/embed). Источник строк - встроенный i18n-словарь самого фрейма (чанк _next/static/chunks, модуль 95160): у него есть 15 локалей, русской нет. strings - точные совпадения текст-узлов и атрибутов; templates - шаблоны с подстановкой (в DOM интерполяция уже выполнена, поэтому regex, а не {{game}}). Ответы модели НЕ переводим - она отвечает по-русски сама.",
+  "_note": "UI фрейма AI-помощника (mist.wand.com/assistant/embed). Источник строк - встроенный i18n-словарь самого фрейма (чанк _next/static/chunks, модуль 95160): у него есть 15 локалей, русской нет. strings - точные совпадения текст-узлов и атрибутов; templates - шаблоны с подстановкой (в DOM интерполяция уже выполнена, поэтому regex, а не {{game}}). Ответы модели НЕ переводим - она отвечает по-русски сама. Длинные строки с markdown (**почта**, ссылки) рендерятся в несколько текст-узлов, поэтому лежат тут ОБРЕЗАННЫМИ до первого разрыва - совпадает узел, а не весь абзац. ceiling: из 66 строк фрейма не переведена одна - all_under_license ('*All under [$license License]($url)'): markdown-ссылка внутри фразы, перевод требует переупорядочивания. Сверять при новой версии Wand: строки берутся из чанка фрейма, ключи могут смениться.",
   "strings": {
     "Ask anything...": "Спроси о чём угодно...",
     "Ask anything with": "Спроси о чём угодно с",
@@ -58,10 +58,8 @@
     "The response took longer than expected. Please try again. If you continue to experience this issue, please reach out to us at": "Ответ занял больше времени, чем ожидалось. Попробуй снова. Если это повторяется, напиши нам на",
     "Unfortunately the Game Guide is taking a well-deserved rest right now. Thanks for giving it a try! Check back soon for more fun and assistance. Until then, happy gaming!": "Гайд по игре сейчас отдыхает. Спасибо, что попробовал! Заглядывай позже - будет и помощь, и веселье. А пока - хорошей игры!",
     "Hi! I'm your Game Guide! Here you can ask me anything about": "Привет! Я твой гид по игре! Спрашивай меня о чём угодно про",
-    "Beta": "Бета",
-    "Wand": "Wand",
-    "PRO": "PRO",
-    "Pro": "Pro"
+    "We're sorry for the inconvenience. The Game Guide is currently having difficulty responding. Remember, the Game Guide is in early development and we appreciate your patience as we work on improvements! If this problem continues, please reach out to us at": "Извини за неудобства. Гайд по игре сейчас отвечает с трудом. Он ещё в раннем развитии - спасибо за терпение, пока мы его улучшаем! Если проблема не уходит, напиши нам на",
+    "Beta": "Бета"
   },
   "templates": [
     ["^Hey, welcome back! How can I assist you with (.+) today\\?$", "Привет, с возвращением! Чем помочь в $1 сегодня?"],
