@@ -58,9 +58,12 @@ public static class JsLocalePatch
         return AssistantLocaleSeg.Replace(text, "/en/assistant/embed");
     }
 
+    // FlagPairTail - отдельным условием: карта флагов (`resources/value-converters/flags`) живёт в
+    // СВОЁМ бандле, без списка локалей/langMeta/short-pair. Без этого файл отсеивался целиком и флаг
+    // РФ не вставлялся (12.37/12.39/12.42 - «флаг НЕ найден якорь»; на 12.38 совпало случайно).
     public static bool NeedsPatch(string js) =>
         !js.Contains("\"ru-RU\"") &&
-        (LocaleList.IsMatch(js) || LangMetaTail.IsMatch(js) || ShortPairTail.IsMatch(js));
+        (LocaleList.IsMatch(js) || LangMetaTail.IsMatch(js) || ShortPairTail.IsMatch(js) || FlagPairTail.IsMatch(js));
 
     public static string Patch(string js, string nativeName, string flagDataUri)
     {
