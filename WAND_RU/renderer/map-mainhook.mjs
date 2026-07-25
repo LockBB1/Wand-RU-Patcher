@@ -5,7 +5,7 @@
    Канал в лог инсталлера: __EL__.net POST на 127.0.0.1:39271 (без fs/require, loopback без CORS).
    Парные маркеры __WANDRU_MAPHOOK__ ... _END - для strip-then-reinject (обновляемость). */
 try {
-  var MF = null, CACHE = {}, cacheN = 0, CACHE_CAP = 5000;
+  var CACHE = {}, cacheN = 0, CACHE_CAP = 5000;
   /* Пер-карта офлайн-словари {slug:{en:ru}} - подставляет MapFrameHook.Patch (__MAPS__).
      Мгновенный офлайн-перевод POI/событий: seed переводчика по slug из URL, MT только на остаток. */
   var MAPS = __MAPS__;
@@ -99,8 +99,17 @@ try {
 
   _p("STAGE1 main hook installed");
 
+  /* Вооружить ОДНО окно. Карта и помощник живут не только в главном окне: игровой оверлей - отдельное
+     BrowserWindow (пересоздаётся при каждом входе в игру), и его фреймы раньше оставались английскими.
+     Поэтому arm зовётся и для главного окна, и для каждого нового (browser-window-created ниже).
+     mf - ПЕР-ОКОННАЯ: одна общая переменная отправляла бы MT-ответ в фрейм чужого окна. */
+  function arm(W) {
+    if (!W || W.__wandruArmed) return;   // окно уже вооружено - второй листенер дублировал бы работу
+    W.__wandruArmed = true;
+    var mf = null;
+
   /* При навигации подфрейма на wand.com/maps - впрыск переводчика в фрейм (обход SOP). */
-  __WIN__.webContents.on("did-frame-navigate", function (ev, u, c, t, mn, pi, ri) {
+  W.webContents.on("did-frame-navigate", function (ev, u, c, t, mn, pi, ri) {
     _p("NAV " + (mn ? "main" : "sub") + " " + u);
     if (!mn && /wand\.com\/maps\//.test(u)) {
       _p("STAGE2 map matched: " + u);
@@ -110,10 +119,10 @@ try {
       for (kk in _c) dict[kk] = _c[kk];
       for (kk in _m) dict[kk] = _m[kk];
       try {
-        MF = __EL__.webFrameMain.fromId(pi, ri);
+        mf = __EL__.webFrameMain.fromId(pi, ri);
         /* Словарь ставим ПЕРЕД переводчиком (window.__WANDRU_SEED) - иначе гонка: translator arms и
            очередит строки в MT до прихода seed (лишний MT + бренд утекал через Google). Один executeJavaScript. */
-        MF.executeJavaScript("window.__WANDRU_SEED=" + JSON.stringify(dict) + ";" + __DUMP__)
+        mf.executeJavaScript("window.__WANDRU_SEED=" + JSON.stringify(dict) + ";" + __DUMP__)
           .then(function () { _p("STAGE3 inject resolved; dict " + sl + "=" + Object.keys(dict).length); })
           .catch(function (e) { _p("STAGE3 inject ERR " + e); });
       } catch (e) { _p("STAGE2 throw " + e); }
@@ -121,7 +130,7 @@ try {
   });
 
   /* console-message из фрейма: MTREQ = батч на перевод; DUMP = строка в лог. */
-  __WIN__.webContents.on("console-message", function (ev, l, ms) {
+  W.webContents.on("console-message", function (ev, l, ms) {
     var s = typeof ms == "string" ? ms : (ev && ev.message);
     if (typeof s !== "string") return;
     if (s.indexOf("WANDRU_MTREQ::") === 0) {
@@ -132,8 +141,8 @@ try {
       arr.forEach(function (q) {
         _mt(q, function (r) {
           if (r && r !== q) { res[q] = r; _p("HV\t" + q + "\t" + r); } /* харвест-пара */
-          if (--pend === 0 && MF) {
-            try { MF.executeJavaScript("window.__wandruApply&&window.__wandruApply(" + JSON.stringify(res) + ")"); } catch (_) {}
+          if (--pend === 0 && mf) {
+            try { mf.executeJavaScript("window.__wandruApply&&window.__wandruApply(" + JSON.stringify(res) + ")"); } catch (_) {}
           }
         });
       });
@@ -147,6 +156,12 @@ try {
   });
 
   _p("STAGE1b listeners attached");
+  }
+
+  arm(__WIN__);   // главное окно: создано прямо перед этим блоком, до подписки ниже
+  /* Игровой оверлей и любые будущие окна Wand. Оверлей создаётся позже (вход в игру) и
+     пересоздаётся через destroyOverlayWindow - каждое новое окно вооружаем заново. */
+  __EL__.app.on("browser-window-created", function (e, w) { try { arm(w); } catch (_) {} });
 } catch (e) {
   try { __EL__.dialog.showErrorBox("WANDRU", "FATAL " + e); } catch (_) {}
 }

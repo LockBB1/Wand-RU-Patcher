@@ -8,7 +8,9 @@ namespace WandRuInstaller.Core;
 /// (wand.com), SOP не даёт renderer-хуку до неё дотянуться. Из main-процесса же
 /// webFrameMain.executeJavaScript впрыскивает скрипт прямо в контекст фрейма (обход SOP).
 ///
-/// Вешаем did-frame-navigate на главное окно; при навигации подфрейма на wand.com/maps впрыск
+/// Вешаем did-frame-navigate на главное окно И на каждое новое окно (app.on browser-window-created):
+/// игровой оверлей - отдельное BrowserWindow, и карта, открытая в игре, иначе остаётся английской.
+/// При навигации подфрейма на wand.com/maps - впрыск
 /// переводчика (renderer/map-translator.mjs) в фрейм. Переводчик: словарь -> мгновенный офлайн,
 /// промахи -> в main через console.log (WANDRU_MTREQ), main переводит через o.net Google gtx и
 /// зовёт window.__wandruApply обратно. Канал в лог инсталлера - o.net POST на MapDiagServer :39271
@@ -94,7 +96,8 @@ public static class MapFrameHook
         return LegacyBlock.Replace(clean, "");        // легаси-блоки без END (0.16.3-0.16.8)
     }
 
-    /// <summary>Снимает прошлый хук-блок и вставляет актуальный после создания главного окна. Идемпотентно.
+    /// <summary>Снимает прошлый хук-блок и вставляет актуальный после создания главного окна (сам блок
+    /// вооружает и главное окно, и каждое последующее - в т.ч. игровой оверлей). Идемпотентно.
     /// mapOnline = онлайн-добор карт (Google/MyMemory); diag = диагностика в инсталлер (:39271).</summary>
     public static string Patch(string js, bool mapOnline = true, bool diag = false)
     {
