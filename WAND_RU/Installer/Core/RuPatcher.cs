@@ -158,8 +158,16 @@ public sealed class RuPatcher
     {
         var root = Path.Combine(resources, "wand-ru-backup");
         if (!Directory.Exists(root)) return null;
-        foreach (var dir in Directory.EnumerateDirectories(root).OrderByDescending(Path.GetFileName, StringComparer.Ordinal))
-            if (IsUsableOriginal(Path.Combine(dir, "app.asar"))) return dir;
+        // Перечисление обёрнуто: BackupLost зовётся из MainVm ДО внутреннего try/catch, а команда -
+        // async void. Папку сносит клинер/AV между Exists и обходом -> исключение уронило бы установщик
+        // вместо сообщения. Не смогли посмотреть = бэкапа не видим (прежнее поведение), не краш.
+        try
+        {
+            foreach (var dir in Directory.EnumerateDirectories(root).OrderByDescending(Path.GetFileName, StringComparer.Ordinal))
+                if (IsUsableOriginal(Path.Combine(dir, "app.asar"))) return dir;
+        }
+        catch (IOException) { }
+        catch (UnauthorizedAccessException) { }
         return null;
     }
 
