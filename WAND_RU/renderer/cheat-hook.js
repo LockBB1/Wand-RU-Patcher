@@ -211,16 +211,31 @@
     }
   }
   
+  // Кулдаун Google: после отказа не долбим его КАЖДОЙ следующей строкой (150 имён = 300 запросов и
+  // двойная латентность, когда Google уже лежит). 429 - минута, прочий отказ - короче: сетевой блип
+  // не должен слепить провайдера надолго. Состояние живёт в deps одного ответа Wand (одна волна имён);
+  // между ответами Google пробуется снова - сам восстанавливается.
+  const G_COOL_429 = 60000, G_COOL_ERR = 30000;
+  
   // Перевести одну строку. provider: "auto" (Google -> фолбэк MyMemory, default), "google", "mymemory".
-  // httpsGet: (url) => Promise<body>. Сбой -> null. Эхо-ответ (перевод == оригинал) не считаем переводом.
-  async function translateOne(text, httpsGet, provider) {
+  // httpsGet: (url) => Promise<body>; на HTTP-ошибке бросает Error со .status. Сбой -> null.
+  // Эхо-ответ (перевод == оригинал) не считаем переводом - но и отказом провайдера тоже (proper noun).
+  // state (опц.) - общий на волну объект с полем gCoolUntil; без него кулдауна нет, поведение прежнее.
+  async function translateOne(text, httpsGet, provider, state) {
     const p = provider || "auto";
+    const st = state || {};
     const useful = (t) => (t && t.trim().toLowerCase() !== text.trim().toLowerCase() ? t : null);
     if (p !== "mymemory") {
-      try {
-        const g = useful(parseGoogle(await httpsGet(googleUrl(text))));
-        if (g) return g;
-      } catch { /* провайдер упал - дальше фолбэк (в auto) */ }
+      if (!(st.gCoolUntil > Date.now())) {
+        try {
+          const parsed = parseGoogle(await httpsGet(googleUrl(text)));
+          if (parsed === null) st.gCoolUntil = Date.now() + G_COOL_ERR;  // мусор вместо ответа = провайдер не работает
+          const g = useful(parsed);
+          if (g) return g;
+        } catch (e) { /* провайдер упал - дальше фолбэк (в auto) */
+          st.gCoolUntil = Date.now() + (e && e.status === 429 ? G_COOL_429 : G_COOL_ERR);
+        }
+      }
       if (p === "google") return null;
     }
     try {
@@ -235,6 +250,7 @@
   // Строки >1500 символов пропускаем (лимит URL у GET-провайдеров).
   async function translateStrings(map, deps) {
     const { cache, httpsGet, provider } = deps;
+    const state = deps.state || (deps.state = {});   // кулдаун общий с runOnline - тот же ответ Wand
     if (!map || typeof map !== "object") return map;
     const out = {};
     await mapLimited(Object.entries(map), MT_MAXC, async ([k, v]) => {
@@ -242,7 +258,7 @@
       if (typeof v !== "string" || !LATIN.test(v) || v.length > 1500) return;
       const ck = v.toLowerCase();
       if (ck in cache) { out[k] = cache[ck]; return; }
-      const ru = await translateOne(v, httpsGet, provider);
+      const ru = await translateOne(v, httpsGet, provider, state);
       if (ru) { cache[ck] = ru; out[k] = ru; }
     });
     return out;
@@ -256,6 +272,7 @@
   async function runOnline(node, deps) {
     const { cache, httpsGet, targetKeys, provider } = deps;
     const offline = deps.offline || ((s) => s);
+    const state = deps.state || (deps.state = {});   // кулдаун Google на всю волну имён этого ответа
     const all = [...collectUntranslated(node, targetKeys)]; // исходные англ. строки
     const map = {};
     const misses = [];
@@ -267,7 +284,7 @@
     }
   
     await mapLimited(misses, MT_MAXC, async (s) => {
-      const ru = await translateOne(s, httpsGet, provider);
+      const ru = await translateOne(s, httpsGet, provider, state);
       if (ru) { cache[s.toLowerCase()] = ru; map[s] = ru; } // кэшируем только успешные
       else { const off = offline(s); if (off !== s) map[s] = off; } // MT упал - частичный офлайн
     });
@@ -457,7 +474,14 @@
         var req = d.https.get(url, { timeout: 6000 }, function (r) {
           var body = ""; r.setEncoding("utf8");
           r.on("data", function (c) { body += c; });
-          r.on("end", function () { resolve(body); });
+          // HTTP-ошибка отдавала тело (страницу 429) как успех: parse -> null -> фолбэк на КАЖДОЙ
+          // строке. Бросаем со .status - translateOne по нему ставит кулдаун Google.
+          r.on("end", function () {
+            if (r.statusCode >= 400) {
+              var e = new Error("http " + r.statusCode); e.status = r.statusCode; reject(e); return;
+            }
+            resolve(body);
+          });
         });
         req.on("error", reject);
         req.on("timeout", function () { req.destroy(new Error("timeout")); });
@@ -491,7 +515,7 @@
       var cache = loadCache(d);
       var deps = {
         cache: cache, httpsGet: httpsGetter(d), targetKeys: TARGET_KEYS_ONLINE,
-        provider: conf.provider,
+        provider: conf.provider, state: {},   // кулдаун Google, общий на имена + описания этого ответа
         offline: function (s) { return translateText(s, DICT, exact); }
       };
       // Имена читов + значения i18n.strings (описания/заметки; ключи не трогаем - по ним lookup).

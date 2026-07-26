@@ -89,7 +89,14 @@ ${indent(welcomeBody)}
         var req = d.https.get(url, { timeout: 6000 }, function (r) {
           var body = ""; r.setEncoding("utf8");
           r.on("data", function (c) { body += c; });
-          r.on("end", function () { resolve(body); });
+          // HTTP-ошибка отдавала тело (страницу 429) как успех: parse -> null -> фолбэк на КАЖДОЙ
+          // строке. Бросаем со .status - translateOne по нему ставит кулдаун Google.
+          r.on("end", function () {
+            if (r.statusCode >= 400) {
+              var e = new Error("http " + r.statusCode); e.status = r.statusCode; reject(e); return;
+            }
+            resolve(body);
+          });
         });
         req.on("error", reject);
         req.on("timeout", function () { req.destroy(new Error("timeout")); });
@@ -123,7 +130,7 @@ ${indent(welcomeBody)}
       var cache = loadCache(d);
       var deps = {
         cache: cache, httpsGet: httpsGetter(d), targetKeys: TARGET_KEYS_ONLINE,
-        provider: conf.provider,
+        provider: conf.provider, state: {},   // кулдаун Google, общий на имена + описания этого ответа
         offline: function (s) { return translateText(s, DICT, exact); }
       };
       // Имена читов + значения i18n.strings (описания/заметки; ключи не трогаем - по ним lookup).
