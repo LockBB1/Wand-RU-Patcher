@@ -178,14 +178,9 @@ public static class AsarIntegrity
         return -1;
     }
 
-    static int IndexOf(byte[] hay, int len, byte[] needle)
-    {
-        for (int i = 0; i + needle.Length <= len; i++)
-        {
-            int j = 0;
-            while (j < needle.Length && hay[i + j] == needle[j]) j++;
-            if (j == needle.Length) return i;
-        }
-        return -1;
-    }
+    // Якорь лежит на ~99.5% файла, так что скан почти всегда полный: 223 МБ на каждый вызов, а вызовов
+    // за Apply три (пре-чек + запись + read-back). Наивный вложенный цикл на этом давал 300+ мс,
+    // векторизованный Span.IndexOf - около 60 мс при том же смещении.
+    static int IndexOf(byte[] hay, int len, byte[] needle) =>
+        hay.AsSpan(0, len).IndexOf(needle);
 }
