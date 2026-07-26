@@ -54,6 +54,12 @@ public sealed class RuPatcher
         if (!File.Exists(_asar)) throw new FileNotFoundException($"Нет app.asar: {_asar}");
         using var _lock = AcquireLock(_resources);   // второй процесс WRP на этом же Wand -> понятный отказ
 
+        // Формат integrity-blob проверяем ДО любой разрушающей работы (у отката такой пре-чек уже есть).
+        // Иначе на будущей версии Wand со сменённым форматом blob мы бы сначала подменили app.asar, а
+        // потом упали в SyncAndVerify: новый asar + старый хэш = тихий не-старт. Причём откат кнопкой
+        // тоже был бы недоступен - RuUnpatcher бросит на том же пре-чеке, хотя вернуть asar безопасно.
+        AsarIntegrity.EnsureWritable(_appDir);
+
         var backupRoot = EnsureBackup();
 
         _log("Распаковка app.asar…");
