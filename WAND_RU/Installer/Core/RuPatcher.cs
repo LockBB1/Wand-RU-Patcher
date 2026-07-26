@@ -60,7 +60,7 @@ public sealed class RuPatcher
         // тоже был бы недоступен - RuUnpatcher бросит на том же пре-чеке, хотя вернуть asar безопасно.
         AsarIntegrity.EnsureWritable(_appDir);
 
-        var backupRoot = EnsureBackup();
+        var (backupRoot, backupHasUnpacked) = EnsureBackup();
 
         _log("Распаковка app.asar…");
         AsarExtractor.ExtractAll(_asar, _unpacked);
@@ -79,11 +79,12 @@ public sealed class RuPatcher
             AppVersion = new DirectoryInfo(_appDir).Name.Replace("app-", ""),
             InstalledAt = DateTimeOffset.Now.ToString("o"),
             BackupRoot = backupRoot,
-            // Выводим из фактического бэкапа: null при backupless (откат туда не дойдёт - бросит на пустом
-            // BackupRoot), иначе - есть ли app.asar.unpacked. Откат по нему решает, чистить ли артефакт.
-            BackupHasUnpacked = string.IsNullOrEmpty(backupRoot)
-                ? null
-                : Directory.Exists(Path.Combine(backupRoot, "app.asar.unpacked")),
+            // Флаг «был ли unpacked у ОРИГИНАЛА» знает только тот, кто бэкап создавал (EnsureBackup).
+            // Пересчёт по сегодняшнему состоянию папки врал бы: клинер снёс из бэкапа app.asar.unpacked ->
+            // флаг стал false -> откат снёс бы живой unpacked, которого оригиналу как раз НЕ хватает
+            // (Wand везёт его в поставке) = кирпич. Не знаем (усыновлённый бэкап) - пишем null: откат
+            // трактует null как «не трогать».
+            BackupHasUnpacked = backupHasUnpacked,
         };
         // Собираем в поддиректории resources (тот же том - нужно для атомарного File.Replace ниже).
         // AsarCreator кладёт рядом с .asar ещё и .unpacked-сиблинг; держим оба в _buildDir.
@@ -184,10 +185,17 @@ public sealed class RuPatcher
         catch (JsonException) { return null; } // битый manifest = бэкапа считай нет
     }
 
-    /// <summary>Путь бэкапа: существующий, свежий или "" (бэкап утерян, откат недоступен - по согласию юзера).</summary>
-    string EnsureBackup()
+    /// <summary>Путь бэкапа (существующий, свежий или "" - бэкап утерян, откат недоступен по согласию юзера)
+    /// и знание, был ли у ОРИГИНАЛА app.asar.unpacked. Флаг честен только там, где бэкап создавался:
+    /// у чужого/усыновлённого - null («не знаем»), и откат такой бэкап не чистит.</summary>
+    (string Root, bool? HasUnpacked) EnsureBackup()
     {
-        if (HasUsableBackup(_manifestPath)) return ReadManifest(_manifestPath)!.BackupRoot;
+        // Свой прошлый бэкап: флаг переносим из манифеста, а не пересчитываем по папке (её могли обглодать).
+        if (HasUsableBackup(_manifestPath))
+        {
+            var prev = ReadManifest(_manifestPath)!;
+            return (prev.BackupRoot, prev.BackupHasUnpacked);
+        }
 
         if (IsAsarPatched(_asar))
         {
@@ -195,7 +203,7 @@ public sealed class RuPatcher
             if (FindOrphanBackup(_resources) is { } orphan)
             {
                 _log($"Манифест утерян, но найден бэкап оригинала: {orphan} - откат остаётся доступен.");
-                return orphan;
+                return (orphan, null);   // кто его снимал - неизвестно; про unpacked ничего не утверждаем
             }
             // Оригинала нет: текущий asar - наш патч. Молча бэкапить его = убить откат навсегда.
             if (!_allowMissingBackup)
@@ -204,14 +212,15 @@ public sealed class RuPatcher
                     "Переустановите Wand, затем русифицируйте заново.");
             _log("ВНИМАНИЕ: бэкап утерян, а app.asar уже русифицирован - оригинал НЕ сохраняем " +
                  "(копия патча - не оригинал). ОТКАТ БУДЕТ НЕДОСТУПЕН: чистый Wand вернёт только его переустановка.");
-            return "";
+            return ("", null);
         }
 
         var root = Path.Combine(_resources, "wand-ru-backup", DateTime.Now.ToString("yyyyMMdd-HHmmss"));
         Directory.CreateDirectory(root);
         File.Copy(_asar, Path.Combine(root, "app.asar"));
-        if (Directory.Exists(_unpacked)) CopyDir(_unpacked, Path.Combine(root, "app.asar.unpacked"));
-        return root;
+        var hadUnpacked = Directory.Exists(_unpacked);   // замер В МОМЕНТ снятия бэкапа - это и есть оригинал
+        if (hadUnpacked) CopyDir(_unpacked, Path.Combine(root, "app.asar.unpacked"));
+        return (root, hadUnpacked);
     }
 
     void PatchTree(string treeRoot)
