@@ -137,12 +137,45 @@ public sealed class RuPatcher
     {
         var resources = Path.Combine(appDir, "resources");
         return !HasUsableBackup(Path.Combine(resources, ManifestName))
+               && FindOrphanBackup(resources) is null            // осиротевший бэкап = откат жив, пугать незачем
                && IsAsarPatched(Path.Combine(resources, "app.asar"));
     }
 
     static bool HasUsableBackup(string manifestPath) =>
         ReadManifest(manifestPath) is { BackupRoot: var root }
         && !string.IsNullOrEmpty(root) && Directory.Exists(root);
+
+    /// <summary>
+    /// Бэкап без манифеста: манифест снесли (клинер/переустановка Wand поверх), а папка
+    /// resources/wand-ru-backup/&lt;ts&gt; осталась. Раньше её просто не видели - юзеру говорили
+    /// «Переустановите Wand», хотя оригинал лежит рядом. Папке доверяем только по содержимому:
+    /// годится лишь та, где app.asar читается и НЕ является нашим патчем. Берём самую свежую
+    /// (имя = yyyyMMdd-HHmmss, лексикографический порядок совпадает с хронологическим): она ближе
+    /// всего к текущей версии Wand.
+    /// </summary>
+    static string? FindOrphanBackup(string resources)
+    {
+        var root = Path.Combine(resources, "wand-ru-backup");
+        if (!Directory.Exists(root)) return null;
+        foreach (var dir in Directory.EnumerateDirectories(root).OrderByDescending(Path.GetFileName, StringComparer.Ordinal))
+            if (IsUsableOriginal(Path.Combine(dir, "app.asar"))) return dir;
+        return null;
+    }
+
+    /// <summary>Файл годится как оригинал: заголовок читается, это asar-дерево, и это НЕ наш патч.
+    /// Критерий совпадает с тем, что примет откат (RuUnpatcher) - не усыновляем бэкап, который он
+    /// потом отвергнет как битый. `IsAsarPatched` тут мало: он даёт false и на обрезанном файле.</summary>
+    static bool IsUsableOriginal(string asarPath)
+    {
+        if (!File.Exists(asarPath)) return false;
+        try
+        {
+            var header = AsarIntegrity.ReadHeaderJson(asarPath);
+            return !string.IsNullOrWhiteSpace(header) && header[0] == '{'
+                   && !header.Contains(RuLocaleEntry, StringComparison.Ordinal);
+        }
+        catch { return false; }
+    }
 
     static PatchManifest? ReadManifest(string manifestPath)
     {
@@ -158,6 +191,12 @@ public sealed class RuPatcher
 
         if (IsAsarPatched(_asar))
         {
+            // Манифест пропал, но бэкап оригинала остался рядом - это обычный откат, а не «утерян».
+            if (FindOrphanBackup(_resources) is { } orphan)
+            {
+                _log($"Манифест утерян, но найден бэкап оригинала: {orphan} - откат остаётся доступен.");
+                return orphan;
+            }
             // Оригинала нет: текущий asar - наш патч. Молча бэкапить его = убить откат навсегда.
             if (!_allowMissingBackup)
                 throw new InvalidOperationException(
