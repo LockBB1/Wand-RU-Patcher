@@ -72,6 +72,8 @@
     <s:String x:Key="S_MigrateHint">Wand updated to {0}, but the Russian patch is still in {1}. Click "Install Russian" to migrate it to the new version.</s:String>
 
     <!-- VM messages -->
+    <s:String x:Key="S_RuntimeInstalled">Russian installed. Launch Wand using your usual shortcut.</s:String>
+    <s:String x:Key="S_RuntimeChanged">The Wand translation shortcut has changed or is damaged. Reinstall or remove the translation.</s:String>
     <s:String x:Key="S_Msg_NotFound">Wand not found</s:String>
     <s:String x:Key="S_Msg_Done">Done! Restart Wand → Settings → Language → Russian</s:String>
     <s:String x:Key="S_Msg_ErrorPrefix">Error: </s:String>

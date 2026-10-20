@@ -4,6 +4,7 @@ using System.IO;
 using System.Windows.Input;
 using WandEnhancer.ReactiveUICore;
 using WandRuInstaller.Core;
+using WandRuInstaller.Core.Runtime;
 using WandRuInstaller.Models;
 
 namespace WandRuInstaller.ViewModels;
@@ -22,6 +23,9 @@ public sealed class MainVm : ObservableObject
     bool _busy;           // патч/откат в работе - реентранси-guard (второй запуск = гонка за файлы Wand)
     SettingsVm? _settings;
     readonly RuOverrides _overrides = RuOverrides.LoadEmbedded();
+    readonly AppSettings _appSettings;
+    readonly Action<AppSettings> _saveSettings;
+    readonly Func<string, RuntimeInstallation> _runtime;
 
     public InstallerState State { get => _state; private set => SetProperty(ref _state, value); }
     public string StatusText { get => _statusText; private set => SetProperty(ref _statusText, value); }
@@ -55,8 +59,13 @@ public sealed class MainVm : ObservableObject
     public ICommand LaunchWandCommand { get; }
     public ICommand BackToMenuCommand { get; }
 
-    public MainVm()
+    public MainVm() : this(AppSettings.Load(), settings => settings.Save(), RuntimeInstallation.ForRoot) { }
+
+    internal MainVm(AppSettings settings, Action<AppSettings> saveSettings, Func<string, RuntimeInstallation> runtime)
     {
+        _appSettings = settings;
+        _saveSettings = saveSettings;
+        _runtime = runtime;
         PatchCommand = new AsyncRelayCommand(async p => await PatchAsync(p as string),
             _ => State is InstallerState.Ready or InstallerState.Patched or InstallerState.Done or InstallerState.Error);
         // Error тоже: патч мог упасть ПОСЛЕ подмены asar (синк exe-хэша, залоченный AV) - Wand кирпич,
@@ -123,14 +132,14 @@ public sealed class MainVm : ObservableObject
     public void DetectFrom(IEnumerable<string> roots)
     {
         State = InstallerState.Detecting;
-        Install = WandLocator.Detect(roots, AppSettings.Load().PinnedAppVersion);
+        Install = WandLocator.Detect(roots, _appSettings.PinnedAppVersion);
         if (Install is null)
         {
             State = InstallerState.NotFound;
             StatusText = L.Get("S_Msg_NotFound");
             return;
         }
-        Settings = new SettingsVm(Install);
+        Settings = new SettingsVm(Install, _appSettings, _saveSettings);
         // Смена версии в настройках -> обновить шапку/состояние. НЕ во время патча/отката: RefreshSelection
         // затёр бы Working на Ready/Patched -> кнопка снова активна -> второй патч поверх идущего (гонка).
         Settings.OnAppDirSelected = _ => { if (State != InstallerState.Working) RefreshSelection(); };
@@ -143,16 +152,21 @@ public sealed class MainVm : ObservableObject
     {
         if (Install?.SelectedAppDir is null) return;
         var man = WandLocator.Manifest(Install.SelectedAppDir);
+        var runtime = _runtime(Install.RootDir);
+        var runtimeState = runtime.HasState;
+        var runtimeInstalled = false;
+        try { runtimeInstalled = runtimeState && runtime.IsInstalled; }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or System.Text.Json.JsonException or System.Runtime.InteropServices.COMException) { }
         // Не «манифест есть», а «манифест есть И asar реально наш»: прерванный патч (подмена asar не
         // прошла после записи манифеста) не должен выдавать оригинальный Wand за русифицированный.
-        Install.IsPatched = WandLocator.IsActuallyPatched(Install.SelectedAppDir, man);
+        Install.IsPatched = runtimeInstalled || WandLocator.IsActuallyPatched(Install.SelectedAppDir, man);
         Install.Manifest = man;
-        RollbackAvailable = man is not null;   // манифест есть -> есть путь отката (кнопка в Error/Patched)
+        RollbackAvailable = man is not null || runtimeState;
         var ver = WandLocator.VersionOf(Install.SelectedAppDir);
         var pinned = ver != WandLocator.VersionOf(Install.AppDirs[0]);   // выбрана не последняя -> закреплена
-        State = Install.IsPatched ? InstallerState.Patched : InstallerState.Ready;
-        StatusText = pinned ? $"Wand {ver} {L.Get("S_Pinned")}" : $"Wand {ver}";
-        MigrationHint = Install.PatchedOtherAppDir is null
+        State = runtimeState && !runtimeInstalled ? InstallerState.Error : Install.IsPatched ? InstallerState.Patched : InstallerState.Ready;
+        StatusText = runtimeState && !runtimeInstalled ? L.Get("S_RuntimeChanged") : pinned ? $"Wand {ver} {L.Get("S_Pinned")}" : $"Wand {ver}";
+        MigrationHint = runtimeState || Install.PatchedOtherAppDir is null
             ? ""
             : string.Format(L.Get("S_MigrateHint"), ver, WandLocator.VersionOf(Install.PatchedOtherAppDir));
     }
@@ -166,25 +180,34 @@ public sealed class MainVm : ObservableObject
         {
             if (Settings is not null && mode is not null)
                 Settings.TranslateCheatsOnline = mode.Equals("online", StringComparison.OrdinalIgnoreCase);
+            var runtime = _runtime(Install.RootDir);
+            var useRuntime = runtime.HasState || RuntimeInstallation.Required(Install.SelectedAppDir);
             // Бэкап утерян, а Wand уже русифицирован: патч возможен, но откат мёртв - цена решения юзера.
-            if (!_backuplessOk && RuPatcher.BackupLost(Install.SelectedAppDir)) { IsBackupWarnOpen = true; return; }
+            if (!useRuntime && !_backuplessOk && RuPatcher.BackupLost(Install.SelectedAppDir)) { IsBackupWarnOpen = true; return; }
             if (!await EnsureWandClosedAsync()) return;
             State = InstallerState.Working;
             Log.Clear();
             try
             {
-                var translateCheats = Settings?.TranslateCheats ?? true;
-                var maps = Settings?.TranslateMaps ?? true;
-                var mapsOnline = Settings?.TranslateMapsOnline ?? true;
-                var mapDiag = Settings?.ShowLog ?? false;   // диагностику карт шлём в лог только если он показан
-                var backupless = _backuplessOk;
-                var patcher = new RuPatcher(Install.SelectedAppDir, _overrides, translateCheats, maps, mapsOnline,
-                    mapDiag, backupless, Add);
-                await Task.Run(() => patcher.Apply());
+                if (useRuntime)
+                {
+                    await Task.Run(() => runtime.Install(Install.SelectedAppDir, Add));
+                    StatusText = L.Get("S_RuntimeInstalled");
+                }
+                else
+                {
+                    var translateCheats = Settings?.TranslateCheats ?? true;
+                    var maps = Settings?.TranslateMaps ?? true;
+                    var mapsOnline = Settings?.TranslateMapsOnline ?? true;
+                    var mapDiag = Settings?.ShowLog ?? false;
+                    var backupless = _backuplessOk;
+                    var patcher = new RuPatcher(Install.SelectedAppDir, _overrides, translateCheats, maps, mapsOnline,
+                        mapDiag, backupless, Add);
+                    await Task.Run(() => patcher.Apply());
+                    StatusText = FormatReport(patcher.Report);
+                }
                 State = InstallerState.Done;
-                RollbackAvailable = true;   // патч лёг -> манифест на диске, откат доступен
-                // Честный итог вместо безусловного «Готово»: якорь читов/карт мог не найтись на новой версии Wand.
-                StatusText = FormatReport(patcher.Report);
+                RollbackAvailable = true;
                 if (Install is not null) Install.IsPatched = true;
                 MigrationHint = ""; // патч теперь в актуальной версии
                 if (Settings?.RestartWandAfter == true) TryRestartWand();
@@ -196,7 +219,7 @@ public sealed class MainVm : ObservableObject
                 Add(ex.ToString());
                 // Патч мог упасть ПОСЛЕ записи манифеста (подмена asar/синк exe) - тогда откат нужен и доступен;
                 // до записи (неподдерж. версия) - манифеста нет, кнопку отката прячем.
-                RollbackAvailable = Install?.SelectedAppDir is { } d && WandLocator.Manifest(d) is not null;
+                RollbackAvailable = runtime.HasState || Install?.SelectedAppDir is { } d && WandLocator.Manifest(d) is not null;
             }
         }
         finally { _backuplessOk = false; _busy = false; }   // согласие разовое: следующая установка спросит заново
@@ -214,7 +237,9 @@ public sealed class MainVm : ObservableObject
             Log.Clear();
             try
             {
-                await Task.Run(() => RuUnpatcher.Restore(Install.SelectedAppDir, Add));
+                var runtime = _runtime(root);
+                if (runtime.HasState) await Task.Run(runtime.Restore);
+                else await Task.Run(() => RuUnpatcher.Restore(Install.SelectedAppDir, Add));
                 DetectFrom(new[] { root });
             }
             catch (Exception ex)
@@ -224,7 +249,7 @@ public sealed class MainVm : ObservableObject
                 Add(ex.ToString());
                 // Патч мог упасть ПОСЛЕ записи манифеста (подмена asar/синк exe) - тогда откат нужен и доступен;
                 // до записи (неподдерж. версия) - манифеста нет, кнопку отката прячем.
-                RollbackAvailable = Install?.SelectedAppDir is { } d && WandLocator.Manifest(d) is not null;
+                RollbackAvailable = _runtime(root).HasState || Install?.SelectedAppDir is { } d && WandLocator.Manifest(d) is not null;
             }
         }
         finally { _busy = false; }
@@ -270,10 +295,20 @@ public sealed class MainVm : ObservableObject
     {
         try
         {
-            var exe = Path.Combine(Install!.RootDir, "Wand.exe");
-            if (File.Exists(exe)) Process.Start(new ProcessStartInfo(exe) { UseShellExecute = true });
+            var runtime = _runtime(Install!.RootDir);
+            if (runtime.HasState) Process.Start(runtime.CreateStartInfo());
+            else
+            {
+                var exe = Path.Combine(Install.RootDir, "Wand.exe");
+                if (File.Exists(exe)) Process.Start(new ProcessStartInfo(exe) { UseShellExecute = true });
+            }
         }
-        catch (Exception ex) { Add("Не удалось перезапустить Wand: " + ex.Message); }
+        catch (Exception ex)
+        {
+            State = InstallerState.Error;
+            StatusText = L.Get("S_Msg_ErrorPrefix") + ex.Message;
+            Add("Не удалось перезапустить Wand: " + ex.Message);
+        }
     }
 
     // Лог карт может расти тысячами строк (STAGE/NAV/HV на активной карте) - чистим при пороге,

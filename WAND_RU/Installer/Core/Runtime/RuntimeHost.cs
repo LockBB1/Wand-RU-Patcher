@@ -9,12 +9,23 @@ namespace WandRuInstaller.Core.Runtime;
 
 internal static class RuntimeHost
 {
-    public static ProcessStartInfo CreateStartInfo(string appDir)
+    public static ProcessStartInfo CreateStartInfo(string appDir, IEnumerable<string>? arguments = null)
     {
         var start = new ProcessStartInfo(Path.GetFullPath(Path.Combine(appDir, "Wand.exe")))
         { WorkingDirectory = Path.GetFullPath(appDir), UseShellExecute = false, CreateNoWindow = true };
         start.ArgumentList.Add("--remote-debugging-port=0");
         start.ArgumentList.Add("--remote-debugging-address=127.0.0.1");
+        start.Environment.Remove("NODE_OPTIONS");
+        start.Environment.Remove("ELECTRON_RUN_AS_NODE");
+        foreach (var argument in arguments ?? Array.Empty<string>())
+        {
+            var option = argument.TrimStart().TrimStart('-', '/');
+            if (option.StartsWith("remote-", StringComparison.OrdinalIgnoreCase) ||
+                option.StartsWith("inspect", StringComparison.OrdinalIgnoreCase) ||
+                option.StartsWith("js-flags", StringComparison.OrdinalIgnoreCase))
+                throw new ArgumentException("Аргументы ярлыка Wand меняют настройки отладки. Уберите их перед запуском перевода.");
+            start.ArgumentList.Add(argument);
+        }
         return start;
     }
 
@@ -144,7 +155,7 @@ internal static class RuntimeHost
         finally { if (!attached && client is not null) await client.DisposeAsync().ConfigureAwait(false); }
     }
 
-    static void ValidateOriginal(string appDir)
+    internal static void ValidateOriginal(string appDir)
     {
         var executable = Path.Combine(appDir, "Wand.exe");
         var rootExecutable = Path.Combine(Directory.GetParent(appDir)!.FullName, "Wand.exe");
@@ -165,7 +176,7 @@ internal static class RuntimeHost
 
     static bool HasRunningInstance(string root)
     {
-        var prefix = Path.TrimEndingDirectorySeparator(root) + Path.DirectorySeparatorChar;
+        var prefix = Path.EndsInDirectorySeparator(root) ? root : root + Path.DirectorySeparatorChar;
         foreach (var process in Process.GetProcessesByName("Wand").Concat(Process.GetProcessesByName("WeMod")))
         {
             using (process)

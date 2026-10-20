@@ -18,12 +18,12 @@ public partial class App : Application
             ShutdownMode = ShutdownMode.OnExplicitShutdown;
             try
             {
-                if (e.Args.Length != 2) throw new ArgumentException("Не указана папка Wand.");
+                if (e.Args.Length < 2 || e.Args.Length > 2 && e.Args[2] != "--") throw new ArgumentException("Не указана папка или аргументы Wand.");
                 var settings = AppSettings.Load();
                 var directories = WandLocator.FindAppDirs(e.Args[1]);
                 var appDir = directories.FirstOrDefault(d => WandLocator.VersionOf(d) == settings.PinnedAppVersion)
                     ?? directories.FirstOrDefault() ?? throw new InvalidOperationException("Установка Wand не найдена.");
-                await RuntimeHost.RunAsync(RuntimeHost.CreateStartInfo(appDir), settings);
+                await RuntimeHost.RunAsync(RuntimeHost.CreateStartInfo(appDir, e.Args.Skip(3)), settings);
                 Shutdown();
             }
             catch (Exception error)
