@@ -23,7 +23,8 @@ public partial class App : Application
                 var directories = WandLocator.FindAppDirs(e.Args[1]);
                 var appDir = directories.FirstOrDefault(d => WandLocator.VersionOf(d) == settings.PinnedAppVersion)
                     ?? directories.FirstOrDefault() ?? throw new InvalidOperationException("Установка Wand не найдена.");
-                await RuntimeHost.RunAsync(RuntimeHost.CreateStartInfo(appDir, e.Args.Skip(3)), settings);
+                await RuntimeHost.RunAsync(RuntimeHost.CreateStartInfo(appDir, e.Args.Skip(3)), settings,
+                    activation: RuntimeInstallation.CurrentActivation(e.Args[1]));
                 Shutdown();
             }
             catch (Exception error)

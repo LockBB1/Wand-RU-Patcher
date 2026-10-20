@@ -236,12 +236,12 @@ internal sealed class RuntimeShortcuts(string wandRoot, string stateDirectory, I
         }
         return result.Append('\\', slashes * 2).Append('"').ToString();
     }
-    static void Replace(string source, string destination)
+    internal static void Replace(string source, string destination)
     {
         if (File.Exists(destination)) File.Replace(source, destination, null);
         else File.Move(source, destination);
     }
-    static void WriteDurable(string path, byte[] bytes)
+    internal static void WriteDurable(string path, byte[] bytes)
     {
         using var stream = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None);
         stream.Write(bytes);

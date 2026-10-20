@@ -30,7 +30,7 @@ internal static class RuntimeHost
     }
 
     public static async Task RunAsync(ProcessStartInfo start, AppSettings settings, Action<JsonElement>? ready = null,
-        Action<string>? log = null, CancellationToken cancellationToken = default)
+        Action<string>? log = null, CancellationToken cancellationToken = default, (string Path, string Identity)? activation = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
         var appDir = Path.GetDirectoryName(Path.GetFullPath(start.FileName))!;
@@ -71,7 +71,7 @@ internal static class RuntimeHost
                 throw new InvalidOperationException("Не подтверждено безопасное локальное соединение Wand.");
             var actualAppDir = Path.GetDirectoryName(process.MainModule!.FileName)!;
             var scope = new RuntimeScope(actualAppDir, address.Port);
-            var script = RuntimeScripts.MainScript(actualAppDir, settings);
+            var script = RuntimeScripts.MainScript(actualAppDir, settings, activation);
             using var http = new HttpClient(new SocketsHttpHandler { UseProxy = false, AllowAutoRedirect = false })
             {
                 BaseAddress = new UriBuilder("http", address.Host.Trim('[', ']'), address.Port).Uri,

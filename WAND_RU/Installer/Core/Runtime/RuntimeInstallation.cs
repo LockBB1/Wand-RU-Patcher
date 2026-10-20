@@ -9,6 +9,7 @@ namespace WandRuInstaller.Core.Runtime;
 
 internal sealed class RuntimeInstallation
 {
+    const string ActivationName = "select-russian.pending";
     readonly string _root;
     readonly string _storage;
     readonly string[] _folders;
@@ -24,7 +25,7 @@ internal sealed class RuntimeInstallation
 
     public static RuntimeInstallation ForRoot(string root)
     {
-        var identity = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(Path.GetFullPath(root).TrimEnd('\\').ToUpperInvariant())));
+        var identity = Identity(root);
         var data = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
         var roaming = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
         return new RuntimeInstallation(root, Path.Combine(data, "WandRuInstaller", "runtime", identity), new[]
@@ -67,11 +68,41 @@ internal sealed class RuntimeInstallation
             if (File.Exists(fallback)) throw new InvalidOperationException("Существующий ярлык Wand принадлежит другой установке.");
             paths = new[] { fallback };
         }
+        var marker = Path.Combine(_storage, ActivationName);
+        RuntimeShortcuts.EnsureNoLinks(marker);
+        var temporary = marker + "." + Guid.NewGuid().ToString("N") + ".tmp";
+        try
+        {
+            RuntimeShortcuts.WriteDurable(temporary, Encoding.UTF8.GetBytes(Identity(_root)));
+            RuntimeShortcuts.Replace(temporary, marker);
+        }
+        finally { File.Delete(temporary); }
         _shortcuts.Install(helper, paths);
         if (!IsInstalled) throw new IOException("Не удалось проверить установку перевода через ярлык Wand.");
     }
 
     public void Restore() => _shortcuts.Restore();
+
+    public static (string Path, string Identity)? CurrentActivation(string root) => ActivationForExecutable(root, Bundle()[0]);
+
+    internal static (string Path, string Identity)? ActivationForExecutable(string root, string executable)
+    {
+        var package = Path.GetDirectoryName(Path.GetFullPath(executable))!;
+        var packages = Directory.GetParent(package);
+        var name = Path.GetFileName(package);
+        if (!Path.GetFileName(executable).Equals("WandRuInstaller.exe", StringComparison.OrdinalIgnoreCase) ||
+            packages?.Name != "packages" || packages.Parent is null || name.Length != 64 || name.Any(c => !Uri.IsHexDigit(c))) return null;
+        var storage = packages.Parent.FullName;
+        var vendor = Path.TrimEndingDirectorySeparator(Path.GetFullPath(root));
+        if (storage.Equals(vendor, StringComparison.OrdinalIgnoreCase) ||
+            storage.StartsWith(Path.EndsInDirectorySeparator(vendor) ? vendor : vendor + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException("Данные активации WRP должны храниться вне папки Wand.");
+        var path = Path.Combine(storage, ActivationName);
+        RuntimeShortcuts.EnsureNoLinks(path);
+        return (path, Identity(root));
+    }
+
+    static string Identity(string root) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(Path.GetFullPath(root).TrimEnd('\\').ToUpperInvariant())));
 
     public ProcessStartInfo CreateStartInfo()
     {
