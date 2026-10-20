@@ -33,12 +33,12 @@ public static class MapFrameHook
     // map-mainhook.js). map-translator = переводчик текст-узлов (в map-фрейм), map-mainhook =
     // main-процесс (did-frame-navigate инъектор + o.net Google MT + relay). Ленивая загрузка + кэш.
     static string? _translator, _mainhook, _mapsJson, _assistJson;
-    static string Translator => _translator ??= LoadEmbedded("map-translator.js");
+    internal static string Translator => _translator ??= LoadEmbedded("map-translator.js");
     static string MainHook => _mainhook ??= LoadEmbedded("map-mainhook.js");
     // Пер-карта офлайн-словари {slug:{en:ru}} из ресурсов maps.<slug>.json -> JS-объект (__MAPS__).
-    static string MapsJson => _mapsJson ??= BuildMapsJson();
+    internal static string MapsJson => _mapsJson ??= BuildMapsJson();
     // UI фрейма AI-помощника {strings,templates} -> JS-объект (__ASSIST__). Тот же Path D, что карты.
-    static string AssistJson => _assistJson ??= BuildAssistJson();
+    internal static string AssistJson => _assistJson ??= BuildAssistJson();
 
     // Кириллица литеральная (не \uXXXX) - втрое компактнее в index.js, как оригинальные локали.
     static readonly JsonSerializerOptions MapsOpts = new()

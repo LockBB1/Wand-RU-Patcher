@@ -15,7 +15,7 @@ internal sealed class DevToolsClient : IAsyncDisposable
     readonly Task _reader;
     int _next;
 
-    public event Action<string, JsonElement>? EventReceived;
+    public event Action<string, JsonElement, string?>? EventReceived;
 
     DevToolsClient(ClientWebSocket socket)
     {
@@ -42,7 +42,8 @@ internal sealed class DevToolsClient : IAsyncDisposable
         catch { socket.Dispose(); throw; }
     }
 
-    public async Task<JsonElement> SendAsync(string method, object? parameters = null, CancellationToken cancellationToken = default)
+    public async Task<JsonElement> SendAsync(string method, object? parameters = null, CancellationToken cancellationToken = default,
+        string? sessionId = null)
     {
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _lifetime.Token);
         timeout.CancelAfter(TimeSpan.FromSeconds(20));
@@ -51,7 +52,9 @@ internal sealed class DevToolsClient : IAsyncDisposable
         _pending[id] = reply;
         try
         {
-            var bytes = JsonSerializer.SerializeToUtf8Bytes(new { id, method, @params = parameters ?? new { } });
+            var command = new Dictionary<string, object> { ["id"] = id, ["method"] = method, ["params"] = parameters ?? new { } };
+            if (sessionId is not null) command["sessionId"] = sessionId;
+            var bytes = JsonSerializer.SerializeToUtf8Bytes(command);
             await _writer.WaitAsync(timeout.Token).ConfigureAwait(false);
             try
             {
@@ -99,7 +102,8 @@ internal sealed class DevToolsClient : IAsyncDisposable
                 else if (message.TryGetProperty("method", out var method))
                 {
                     var parameters = message.TryGetProperty("params", out var p) ? p.Clone() : default;
-                    EventReceived?.Invoke(method.GetString()!, parameters);
+                    EventReceived?.Invoke(method.GetString()!, parameters,
+                        message.TryGetProperty("sessionId", out var session) ? session.GetString() : null);
                 }
             }
         }

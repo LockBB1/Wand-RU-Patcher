@@ -10,15 +10,22 @@ internal sealed class RuntimeScope(string appDir, int port)
     readonly string[] _pages = new[] { "index.html", "overlay.html" }
         .Select(name => Path.GetFullPath(Path.Combine(appDir, "resources", "app.asar", name))).ToArray();
 
+    public bool IsAppPage(string? url)
+    {
+        try
+        {
+            return Uri.TryCreate(url, UriKind.Absolute, out var file) && file.IsFile && file.Host.Length == 0 &&
+                _pages.Contains(Path.GetFullPath(file.LocalPath), StringComparer.OrdinalIgnoreCase);
+        }
+        catch (ArgumentException) { return false; }
+    }
+
     public bool TryGetAppSocket(JsonElement target, out Uri? socket)
     {
         socket = null;
         try
         {
-            if (target.GetProperty("type").GetString() != "page" ||
-                !Uri.TryCreate(target.GetProperty("url").GetString(), UriKind.Absolute, out var file) ||
-                !file.IsFile || file.Host.Length != 0 ||
-                !_pages.Contains(Path.GetFullPath(file.LocalPath), StringComparer.OrdinalIgnoreCase)) return false;
+            if (target.GetProperty("type").GetString() != "page" || !IsAppPage(target.GetProperty("url").GetString())) return false;
             if (!Uri.TryCreate(target.GetProperty("webSocketDebuggerUrl").GetString(), UriKind.Absolute, out var address) ||
                 address.Scheme != "ws" || address.Host is not ("127.0.0.1" or "[::1]" or "::1") ||
                 address.Port != port || address.UserInfo.Length != 0 || address.Query.Length != 0 || address.Fragment.Length != 0 ||

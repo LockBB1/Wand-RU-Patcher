@@ -148,6 +148,15 @@
     for (k in pending) { schedule(); break; } // остались - ещё раунд
   }
 
+  // The native helper may reject a full queue; retry only the unaccepted texts.
+  window.__wandruRetry = function (texts) {
+    for (var i = 0; i < texts.length; i++) {
+      var t = texts[i];
+      if (waiting[t] && sent[t]) { delete sent[t]; pending[t] = 1; }
+    }
+    schedule();
+  };
+
   // Тайм-слайсинг: per-map словарь (1281+ записей) сделал синхронный walk блокирующим -
   // рефлоу-шторм от массовых замен узлов тормозил загрузку карты (MT был быстрее, т.к. капал
   // асинхронно вне критического пути). Очередь узлов + дренаж порциями <=6мс, отдаём кадр.

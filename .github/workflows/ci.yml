@@ -21,7 +21,7 @@ jobs:
       - name: Syntax-check hooks (впрыск в процесс Wand - синтаксис критичен)
         run: |
           for f in cheat-translator.js cheat-online.js cheat-badge.js build-hook.mjs \
-                   map-translator.mjs map-mainhook.mjs cheat-hook.js; do
+                   map-translator.mjs map-mainhook.mjs cheat-hook.js runtime-ui.mjs runtime-map-online.mjs; do
             node --check "WAND_RU/renderer/$f"
           done
 

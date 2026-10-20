@@ -72,6 +72,8 @@ internal static class RuntimeHost
             var actualAppDir = Path.GetDirectoryName(process.MainModule!.FileName)!;
             var scope = new RuntimeScope(actualAppDir, address.Port);
             var script = RuntimeScripts.MainScript(actualAppDir, settings, activation);
+            await using var browser = await DevToolsClient.ConnectAsync(address, cancellationToken).ConfigureAwait(false);
+            await using var frames = await RuntimeTargets.StartAsync(browser, scope, script, settings, cancellationToken).ConfigureAwait(false);
             using var http = new HttpClient(new SocketsHttpHandler { UseProxy = false, AllowAutoRedirect = false })
             {
                 BaseAddress = new UriBuilder("http", address.Host.Trim('[', ']'), address.Port).Uri,
@@ -81,11 +83,13 @@ internal static class RuntimeHost
             while (!process.HasExited)
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                frames.ThrowIfFailed();
                 string snapshot;
                 try { snapshot = await http.GetStringAsync("json/list", cancellationToken).ConfigureAwait(false); }
                 catch (HttpRequestException) when (process.HasExited) { break; }
                 using var targets = JsonDocument.Parse(snapshot);
                 var live = targets.RootElement.EnumerateArray().Select(t => t.GetProperty("id").GetString()!).ToHashSet();
+                frames.Prune(live);
                 foreach (var id in clients.Keys.Where(id => !live.Contains(id)).ToArray())
                 {
                     await clients[id].DisposeAsync().ConfigureAwait(false);
@@ -99,7 +103,7 @@ internal static class RuntimeHost
                     if (!seen.Add(id)) continue;
                     if (process.HasExited || !await RuntimeScope.OwnsListenerAsync(address.Port, process.Id, cancellationToken).ConfigureAwait(false))
                         throw new IOException("Локальное соединение Wand изменилось.");
-                    var page = await AttachPageAsync(socket!, id, http, script, cancellationToken).ConfigureAwait(false);
+                    var page = await AttachPageAsync(socket!, id, http, script, cancellationToken, frames).ConfigureAwait(false);
                     if (page is null) { seen.Remove(id); continue; }
                     clients.Add(id, page.Value.Client);
                     translated = true;
@@ -129,23 +133,25 @@ internal static class RuntimeHost
     }
 
     internal static async Task<(DevToolsClient Client, JsonElement Status)?> AttachPageAsync(Uri socket, string id,
-        HttpClient http, string script, CancellationToken cancellationToken)
+        HttpClient http, string script, CancellationToken cancellationToken, RuntimeTargets? frames = null)
     {
         DevToolsClient? client = null;
         var attached = false;
         try
         {
             client = await DevToolsClient.ConnectAsync(socket, cancellationToken).ConfigureAwait(false);
+            var reload = frames is null ? true : await frames.ShouldReloadAsync(id, cancellationToken).ConfigureAwait(false);
+            if (reload is null) return null;
             await client.SendAsync("Page.enable", cancellationToken: cancellationToken).ConfigureAwait(false);
             await client.SendAsync("Page.addScriptToEvaluateOnNewDocument", new { source = script }, cancellationToken).ConfigureAwait(false);
-            // Install fetch hooks before trainer navigation in this newly owned session.
-            await client.SendAsync("Page.reload", new { ignoreCache = false }, cancellationToken).ConfigureAwait(false);
+            // Only pre-existing pages need reload; future overlays were armed while paused.
+            if (reload.Value) await client.SendAsync("Page.reload", new { ignoreCache = false }, cancellationToken).ConfigureAwait(false);
             var status = await WaitReadyAsync(client, cancellationToken).ConfigureAwait(false);
             attached = true;
             return (client, status);
         }
         catch (Exception error) when (!cancellationToken.IsCancellationRequested &&
-            error is IOException or System.Net.WebSockets.WebSocketException or InvalidOperationException or OperationCanceledException)
+            error is IOException or System.Net.WebSockets.WebSocketException or InvalidOperationException or OperationCanceledException or TimeoutException)
         {
             // A closed overlay is local; a failed hook in a live window still fails the session.
             using var current = JsonDocument.Parse(await http.GetStringAsync("json/list", cancellationToken).ConfigureAwait(false));
