@@ -7,7 +7,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <Version>0.20.0</Version>
-    <FileVersion>0.20.0.142</FileVersion>
+    <FileVersion>0.20.0.143</FileVersion>
     <AssemblyVersion>0.20.0.0</AssemblyVersion>
     <ApplicationIcon>app.ico</ApplicationIcon>
   </PropertyGroup>
@@ -22,6 +22,9 @@
 
   <ItemGroup>
     <EmbeddedResource Include="Assets\ru-overrides.json" />
+    <EmbeddedResource Include="..\renderer\runtime-ui.mjs">
+      <LogicalName>runtime-ui.js</LogicalName>
+    </EmbeddedResource>
     <EmbeddedResource Include="..\renderer\cheat-hook.js">
       <LogicalName>cheat-hook.js</LogicalName>
     </EmbeddedResource>

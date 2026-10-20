@@ -10,6 +10,7 @@ public sealed class SettingsVm : ObservableObject
 {
     readonly WandInstall _install;
     readonly AppSettings _appSettings;
+    readonly Action<AppSettings> _save;
     string _selectedAppVersion;
     bool _restartWandAfter;
     bool _showLog;
@@ -37,43 +38,43 @@ public sealed class SettingsVm : ObservableObject
     public bool RestartWandAfter
     {
         get => _restartWandAfter;
-        set { if (SetProperty(ref _restartWandAfter, value)) { _appSettings.RestartWandAfter = value; _appSettings.Save(); } }
+        set { if (SetProperty(ref _restartWandAfter, value)) { _appSettings.RestartWandAfter = value; _save(_appSettings); } }
     }
 
     public bool ShowLog
     {
         get => _showLog;
-        set { if (SetProperty(ref _showLog, value)) { _appSettings.ShowLog = value; _appSettings.Save(); OnShowLogChanged?.Invoke(value); } }
+        set { if (SetProperty(ref _showLog, value)) { _appSettings.ShowLog = value; _save(_appSettings); OnShowLogChanged?.Invoke(value); } }
     }
 
     public bool TranslateCheats
     {
         get => _translateCheats;
-        set { if (SetProperty(ref _translateCheats, value)) { _appSettings.TranslateCheats = value; _appSettings.Save(); } }
+        set { if (SetProperty(ref _translateCheats, value)) { _appSettings.TranslateCheats = value; _save(_appSettings); } }
     }
 
     public bool TranslateCheatsOnline
     {
         get => _translateCheatsOnline;
-        set { if (SetProperty(ref _translateCheatsOnline, value)) { _appSettings.TranslateCheatsOnline = value; _appSettings.Save(); } }
+        set { if (SetProperty(ref _translateCheatsOnline, value)) { _appSettings.TranslateCheatsOnline = value; _save(_appSettings); } }
     }
 
     public bool TranslateMaps
     {
         get => _translateMaps;
-        set { if (SetProperty(ref _translateMaps, value)) { _appSettings.TranslateMaps = value; _appSettings.Save(); } }
+        set { if (SetProperty(ref _translateMaps, value)) { _appSettings.TranslateMaps = value; _save(_appSettings); } }
     }
 
     public bool TranslateMapsOnline
     {
         get => _translateMapsOnline;
-        set { if (SetProperty(ref _translateMapsOnline, value)) { _appSettings.TranslateMapsOnline = value; _appSettings.Save(); } }
+        set { if (SetProperty(ref _translateMapsOnline, value)) { _appSettings.TranslateMapsOnline = value; _save(_appSettings); } }
     }
 
     public string OnlineProvider
     {
         get => _onlineProvider;
-        set { if (SetProperty(ref _onlineProvider, value)) { _appSettings.OnlineProvider = value; _appSettings.Save(); } }
+        set { if (SetProperty(ref _onlineProvider, value)) { _appSettings.OnlineProvider = value; _save(_appSettings); } }
     }
 
     public string CacheInfo
@@ -86,10 +87,13 @@ public sealed class SettingsVm : ObservableObject
 
     void RefreshCacheInfo() => CacheInfo = $"{CheatCache.HumanSize()} · {CheatCache.EntryCount()}";
 
-    public SettingsVm(WandInstall install)
+    public SettingsVm(WandInstall install) : this(install, AppSettings.Load(), settings => settings.Save()) { }
+
+    internal SettingsVm(WandInstall install, AppSettings settings, Action<AppSettings> save)
     {
         _install = install;
-        _appSettings = AppSettings.Load();
+        _appSettings = settings;
+        _save = save;
         _restartWandAfter = _appSettings.RestartWandAfter;
         _showLog = _appSettings.ShowLog;
         _translateCheats = _appSettings.TranslateCheats;
@@ -114,7 +118,7 @@ public sealed class SettingsVm : ObservableObject
         _install.SelectedAppDir = match;
         // Закрепляем выбор: переживает рестарт, Detect берёт её вместо последней (играть на старой версии).
         _appSettings.PinnedAppVersion = _selectedAppVersion == VersionOf(_install.AppDirs[0]) ? null : _selectedAppVersion;
-        _appSettings.Save();
+        _save(_appSettings);
         OnAppDirSelected?.Invoke(match);
     }
 }
