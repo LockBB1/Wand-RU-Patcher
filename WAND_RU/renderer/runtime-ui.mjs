@@ -106,7 +106,7 @@
     if (flags.get(localeTag) !== configuration.flag) throw new Error('WRP: Russian flag did not register');
     var overlay = /\/overlay\.html$/i.test(window.location.pathname);
     var Store = runtime(11700).il;
-    var action = runtime(overlay ? 55674 : 35256).Kc;
+    var action = runtime(overlay || !runtime.m?.[35256] ? 55674 : 35256).Kc;
     var store = container.get(Store);
     if (!store || typeof store.dispatch !== 'function' || !store.state || typeof store.state.subscribe !== 'function' ||
         action !== 'ACTION_SET_SETTINGS') throw new Error('WRP: locale persistence contract changed');
