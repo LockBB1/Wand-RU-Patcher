@@ -155,7 +155,7 @@ public static class AsarIntegrity
     }
 
     // Потоковый поиск паттерна в [start, end) с перекрытием между чанками. end<=0 = до конца файла.
-    static long FindPattern(FileStream fs, byte[] pat, long start, long end)
+    internal static long FindPattern(FileStream fs, byte[] pat, long start, long end)
     {
         long limit = end > 0 ? Math.Min(end, fs.Length) : fs.Length;
         fs.Seek(start, SeekOrigin.Begin);

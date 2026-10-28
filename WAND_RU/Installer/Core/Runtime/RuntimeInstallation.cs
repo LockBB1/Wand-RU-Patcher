@@ -58,8 +58,9 @@ internal sealed class RuntimeInstallation
             throw new InvalidOperationException("Выбранная версия находится вне установки Wand.");
         if (WandLocator.Manifest(appDir) is not null && RuPatcher.IsAsarPatched(Path.Combine(appDir, "resources", "app.asar")))
             RuUnpatcher.Restore(appDir, log);
-        RuntimeHost.ValidateOriginal(appDir);
+        var enhanced = RuntimeHost.ValidateOriginal(appDir);
         var helper = Deploy();
+        RuntimeEnhancer.Pin(_storage, enhanced is null ? RuntimeEnhancer.CleanState : RuntimeEnhancer.Snapshot(appDir, enhanced.Value), true);
         var paths = _shortcuts.Paths.Concat(_shortcuts.Discover()).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
         if (paths.Length == 0)
         {

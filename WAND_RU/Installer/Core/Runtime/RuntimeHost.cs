@@ -34,10 +34,23 @@ internal static class RuntimeHost
     {
         cancellationToken.ThrowIfCancellationRequested();
         var appDir = Path.GetDirectoryName(Path.GetFullPath(start.FileName))!;
-        ValidateOriginal(appDir);
+        var enhanced = ValidateOriginal(appDir);
+        if (enhanced is not null)
+        {
+            if (activation is null) throw new InvalidOperationException("Сначала установите перевод WRP для Wand-Enhancer.");
+            RuntimeEnhancer.Pin(Path.GetDirectoryName(activation.Value.Path)!, RuntimeEnhancer.Snapshot(appDir, enhanced.Value), false);
+        }
         if (HasRunningInstance(Directory.GetParent(appDir)!.FullName))
             throw new InvalidOperationException("Wand уже запущен. Закройте его перед запуском перевода.");
         cancellationToken.ThrowIfCancellationRequested();
+        int? supervisedPort = null;
+        if (enhanced == true)
+        {
+            supervisedPort = RuntimeSupervised.ReservePort();
+            start.ArgumentList[0] = "--remote-debugging-port=" + supervisedPort.Value;
+            start.FileName = Path.Combine(Directory.GetParent(appDir)!.FullName, "Wand.exe");
+            start.WorkingDirectory = Directory.GetParent(appDir)!.FullName;
+        }
         start.UseShellExecute = false;
         start.CreateNoWindow = true;
         start.RedirectStandardOutput = start.RedirectStandardError = true;
@@ -53,11 +66,14 @@ internal static class RuntimeHost
                 address.AbsolutePath.StartsWith("/devtools/browser/", StringComparison.Ordinal)) endpoint.TrySetResult(address);
         };
         process.OutputDataReceived += (_, _) => { };
-        process.Exited += (_, _) => endpoint.TrySetException(new InvalidOperationException("Wand завершился до подключения перевода."));
+        if (supervisedPort is null)
+            process.Exited += (_, _) => endpoint.TrySetException(new InvalidOperationException("Wand завершился до подключения перевода."));
         var clients = new Dictionary<string, DevToolsClient>();
         var seen = new HashSet<string>();
         var started = false;
         var translated = false;
+        var completed = false;
+        Process? supervisedChild = null;
         try
         {
             started = process.Start();
@@ -66,10 +82,20 @@ internal static class RuntimeHost
             process.BeginOutputReadLine();
             using var startup = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             startup.CancelAfter(TimeSpan.FromSeconds(30));
-            var address = await endpoint.Task.WaitAsync(startup.Token).ConfigureAwait(false);
-            if (!await RuntimeScope.OwnsListenerAsync(address.Port, process.Id, cancellationToken).ConfigureAwait(false))
+            Uri address;
+            if (supervisedPort is not null)
+            {
+                var owned = await RuntimeSupervised.WaitAsync(process, Path.Combine(appDir, "Wand.exe"), supervisedPort.Value, startup.Token).ConfigureAwait(false);
+                supervisedChild = owned.Child;
+                address = owned.Endpoint;
+            }
+            else address = await endpoint.Task.WaitAsync(startup.Token).ConfigureAwait(false);
+            var owner = supervisedChild ?? process;
+            if (!await RuntimeScope.OwnsListenerAsync(address.Port, owner.Id, cancellationToken).ConfigureAwait(false))
                 throw new InvalidOperationException("Не подтверждено безопасное локальное соединение Wand.");
-            var actualAppDir = Path.GetDirectoryName(process.MainModule!.FileName)!;
+            if (enhanced is not null)
+                RuntimeEnhancer.Pin(Path.GetDirectoryName(activation!.Value.Path)!, RuntimeEnhancer.Snapshot(appDir, enhanced.Value), false);
+            var actualAppDir = supervisedChild is null ? Path.GetDirectoryName(owner.MainModule!.FileName)! : appDir;
             var scope = new RuntimeScope(actualAppDir, address.Port);
             var script = RuntimeScripts.MainScript(actualAppDir, settings, activation);
             await using var browser = await DevToolsClient.ConnectAsync(address, cancellationToken).ConfigureAwait(false);
@@ -80,13 +106,13 @@ internal static class RuntimeHost
                 Timeout = TimeSpan.FromSeconds(3), MaxResponseContentBufferSize = DevToolsClient.MaxMessageBytes
             };
             var firstPageDeadline = DateTime.UtcNow.AddSeconds(30);
-            while (!process.HasExited)
+            while (!owner.HasExited)
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 frames.ThrowIfFailed();
                 string snapshot;
                 try { snapshot = await http.GetStringAsync("json/list", cancellationToken).ConfigureAwait(false); }
-                catch (HttpRequestException) when (process.HasExited) { break; }
+                catch (HttpRequestException) when (owner.HasExited) { break; }
                 using var targets = JsonDocument.Parse(snapshot);
                 var live = targets.RootElement.EnumerateArray().Select(t => t.GetProperty("id").GetString()!).ToHashSet();
                 frames.Prune(live);
@@ -101,7 +127,7 @@ internal static class RuntimeHost
                     if (!scope.TryGetAppSocket(target, out var socket)) continue;
                     var id = target.GetProperty("id").GetString()!;
                     if (!seen.Add(id)) continue;
-                    if (process.HasExited || !await RuntimeScope.OwnsListenerAsync(address.Port, process.Id, cancellationToken).ConfigureAwait(false))
+                    if (owner.HasExited || !await RuntimeScope.OwnsListenerAsync(address.Port, owner.Id, cancellationToken).ConfigureAwait(false))
                         throw new IOException("Локальное соединение Wand изменилось.");
                     var page = await AttachPageAsync(socket!, id, http, script, cancellationToken, frames).ConfigureAwait(false);
                     if (page is null) { seen.Remove(id); continue; }
@@ -114,11 +140,24 @@ internal static class RuntimeHost
                     throw new InvalidOperationException("Окно Wand не подтвердило готовность перевода.");
                 await Task.Delay(500, cancellationToken).ConfigureAwait(false);
             }
+            completed = true;
         }
         finally
         {
             foreach (var client in clients.Values) await client.DisposeAsync().ConfigureAwait(false);
-            if (started && !process.HasExited)
+            if (supervisedChild is not null)
+            {
+                await RuntimeSupervised.StopChildAsync(supervisedChild).ConfigureAwait(false);
+                supervisedChild.Dispose();
+                if (!completed && !process.HasExited)
+                {
+                    process.Kill(); // Only the launcher we started; never its process tree.
+                    await process.WaitForExitAsync().ConfigureAwait(false);
+                }
+            }
+            else if (supervisedPort is not null && started)
+                await RuntimeSupervised.StopFailedLaunchAsync(process, Path.Combine(appDir, "Wand.exe")).ConfigureAwait(false);
+            else if (supervisedPort is null && started && !process.HasExited)
             {
                 process.CloseMainWindow();
                 using var close = new CancellationTokenSource(TimeSpan.FromSeconds(5));
@@ -161,8 +200,10 @@ internal static class RuntimeHost
         finally { if (!attached && client is not null) await client.DisposeAsync().ConfigureAwait(false); }
     }
 
-    internal static void ValidateOriginal(string appDir)
+    internal static bool? ValidateOriginal(string appDir)
     {
+        var enhanced = RuntimeEnhancer.Validate(appDir);
+        if (enhanced is not null) return enhanced;
         var executable = Path.Combine(appDir, "Wand.exe");
         var rootExecutable = Path.Combine(Directory.GetParent(appDir)!.FullName, "Wand.exe");
         if (!Authenticode.IsTrusted(executable) || !Authenticode.IsTrusted(rootExecutable))
@@ -178,6 +219,7 @@ internal static class RuntimeHost
         var embedded = AsarIntegrity.ReadHash(executable);
         if (embedded is null || embedded != AsarIntegrity.ComputeHeaderHash(archive))
             throw new InvalidOperationException("Целостность Wand не подтверждена. Восстановите оригинальные файлы Wand.");
+        return null;
     }
 
     static bool HasRunningInstance(string root)

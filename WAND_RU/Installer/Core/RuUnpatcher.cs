@@ -13,6 +13,9 @@ public static class RuUnpatcher
         log ??= _ => { };
         var resources = Path.Combine(appDir, "resources");
         using var _lock = RuPatcher.AcquireLock(resources);   // не откатывать, пока другой процесс патчит
+        if (File.Exists(Path.Combine(resources, "app.asar.backup")) ||
+            Directory.Exists(Path.Combine(resources, "app.asar.unpacked.backup")))
+            throw new InvalidOperationException("Обнаружен Wand-Enhancer. Откат старого перевода остановлен, чтобы не удалить его изменения.");
         var manifestPath = Path.Combine(resources, "wand-ru-patch.json");
         if (!File.Exists(manifestPath))
             throw new InvalidOperationException("Патч не установлен (нет manifest).");
