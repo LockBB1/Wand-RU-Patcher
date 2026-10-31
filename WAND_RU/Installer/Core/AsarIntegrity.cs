@@ -110,7 +110,7 @@ public static class AsarIntegrity
         return Encoding.ASCII.GetString(buf);
     }
 
-    static bool WriteHash(string exePath, byte[] hashBytes)
+    internal static bool WriteHash(string exePath, byte[] hashBytes)
     {
         using var fs = new FileStream(exePath, FileMode.Open, FileAccess.ReadWrite, FileShare.Read);
         long hashPos = LocateHash(fs);

@@ -36,6 +36,9 @@ internal static class RuntimeEnhancer
         if (!File.Exists(backup) && !Directory.Exists(unpackedBackup) && !File.Exists(stub) && !File.Exists(fuseBackup) && !incomplete) return null;
         if (!File.Exists(backup) || !Directory.Exists(unpackedBackup) || incomplete)
             throw new InvalidOperationException("Состояние Wand-Enhancer не подтверждено: отсутствует резервная копия или установка не завершена.");
+        var originalHash = ReadArchiveHash(backup);
+        var currentHash = ReadArchiveHash(Path.Combine(resources, "app.asar"));
+        string? hash;
         var supervised = File.Exists(stub);
         if (supervised)
         {
@@ -44,19 +47,17 @@ internal static class RuntimeEnhancer
             if (!Authenticode.IsTrusted(stub) || !Authenticode.IsTrusted(executable) || File.Exists(fuseBackup) ||
                 AssemblyName.GetAssemblyName(rootExecutable).Name != "WandEnhancer")
                 throw new InvalidOperationException("Не удалось проверить загрузчик Wand-Enhancer и оригинальные файлы Wand.");
+            hash = AsarIntegrity.ReadHash(executable);
         }
-        else if (!Authenticode.IsTrusted(rootExecutable) || !ValidateStaticExecutable(executable, fuseBackup))
+        else if (!Authenticode.IsTrusted(rootExecutable) || !ValidateStaticExecutable(executable, fuseBackup, originalHash, out hash))
             throw new InvalidOperationException("Не удалось проверить оригинальный файл Wand для Wand-Enhancer.");
 
-        ValidateArchiveHeader(backup);
-        var hash = AsarIntegrity.ReadHash(executable);
-        if (hash is null || hash != AsarIntegrity.ComputeHeaderHash(backup))
+        if (hash is null || (hash != originalHash && (supervised || hash != currentHash)))
             throw new InvalidOperationException("Резервная копия Wand-Enhancer не соответствует оригинальному Wand.");
-        ValidateArchiveHeader(Path.Combine(resources, "app.asar"));
         return supervised;
     }
 
-    static void ValidateArchiveHeader(string path)
+    static string ReadArchiveHash(string path)
     {
         using var stream = File.OpenRead(path);
         Span<byte> prefix = stackalloc byte[16];
@@ -64,10 +65,14 @@ internal static class RuntimeEnhancer
         var length = BitConverter.ToInt32(prefix[12..]);
         if (length < 2 || length > 16 * 1024 * 1024 || length > stream.Length - prefix.Length)
             throw new InvalidDataException("Повреждён заголовок app.asar.");
+        var header = new byte[length];
+        stream.ReadExactly(header);
+        return Convert.ToHexString(SHA256.HashData(header)).ToLowerInvariant();
     }
 
-    static bool ValidateStaticExecutable(string executable, string backup)
+    static bool ValidateStaticExecutable(string executable, string backup, string originalHash, out string? embeddedHash)
     {
+        embeddedHash = null;
         if (!File.Exists(backup) || new FileInfo(backup).Length != 1) return false;
         var previous = File.ReadAllBytes(backup)[0];
         if (previous is not ((byte)'0' or (byte)'1')) return false;
@@ -87,11 +92,15 @@ internal static class RuntimeEnhancer
         try
         {
             File.Copy(executable, temporary);
-            using (var stream = new FileStream(temporary, FileMode.Open, FileAccess.Write, FileShare.None))
+            embeddedHash = AsarIntegrity.ReadHash(temporary);
+            using (var stream = new FileStream(temporary, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
             {
+                stream.Position = offset;
+                if (stream.ReadByte() != 'r') return false;
                 stream.Position = offset;
                 stream.WriteByte(previous);
             }
+            if (!AsarIntegrity.WriteHash(temporary, Encoding.ASCII.GetBytes(originalHash))) return false;
             return Authenticode.IsTrusted(temporary);
         }
         finally { File.Delete(temporary); }
