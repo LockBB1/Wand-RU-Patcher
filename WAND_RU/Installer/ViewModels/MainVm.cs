@@ -238,7 +238,7 @@ public sealed class MainVm : ObservableObject
             try
             {
                 var runtime = _runtime(root);
-                if (runtime.HasState) await Task.Run(runtime.Restore);
+                if (runtime.HasState) await Task.Run(() => runtime.Restore(Install.SelectedAppDir));
                 else await Task.Run(() => RuUnpatcher.Restore(Install.SelectedAppDir, Add));
                 DetectFrom(new[] { root });
             }

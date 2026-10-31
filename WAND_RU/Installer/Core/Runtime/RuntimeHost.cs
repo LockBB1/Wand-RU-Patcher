@@ -34,6 +34,12 @@ internal static class RuntimeHost
     {
         cancellationToken.ThrowIfCancellationRequested();
         var appDir = Path.GetDirectoryName(Path.GetFullPath(start.FileName))!;
+        if (activation is not null)
+        {
+            if (HasRunningInstance(Directory.GetParent(appDir)!.FullName))
+                throw new InvalidOperationException("Wand уже запущен. Закройте его перед запуском перевода.");
+            RuntimeExeRepair.TryRepair(appDir, Path.GetDirectoryName(activation.Value.Path)!);
+        }
         var enhanced = ValidateOriginal(appDir);
         if (enhanced is not null)
         {

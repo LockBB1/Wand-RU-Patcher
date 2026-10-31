@@ -3,7 +3,10 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Reflection;
 using System.Security.Cryptography;
+using System.Security.AccessControl;
+using System.Security.Principal;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace WandRuInstaller.Core.Runtime;
 
@@ -56,8 +59,11 @@ internal sealed class RuntimeInstallation
     {
         if (!string.Equals(Path.GetDirectoryName(Path.GetFullPath(appDir)), _root, StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException("Выбранная версия находится вне установки Wand.");
+        using var lifecycle = AcquireLifecycle(_root);
+        if (File.Exists(RuntimeExeRepair.JournalPath(appDir, _storage))) RuntimeExeRepair.TryRepair(appDir, _storage);
         if (WandLocator.Manifest(appDir) is not null && RuPatcher.IsAsarPatched(Path.Combine(appDir, "resources", "app.asar")))
             RuUnpatcher.Restore(appDir, log);
+        RuntimeExeRepair.TryRepair(appDir, _storage);
         var enhanced = RuntimeHost.ValidateOriginal(appDir);
         var helper = Deploy();
         RuntimeEnhancer.Pin(_storage, enhanced is null ? RuntimeEnhancer.CleanState : RuntimeEnhancer.Snapshot(appDir, enhanced.Value), true);
@@ -82,7 +88,79 @@ internal sealed class RuntimeInstallation
         if (!IsInstalled) throw new IOException("Не удалось проверить установку перевода через ярлык Wand.");
     }
 
-    public void Restore() => _shortcuts.Restore();
+    public void Restore(string appDir)
+    {
+        if (!string.Equals(Path.GetDirectoryName(Path.GetFullPath(appDir)), _root, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("Выбранная версия находится вне установки Wand.");
+        using var lifecycle = AcquireLifecycle(_root);
+        Exception? repairError = null;
+        try
+        {
+            foreach (var directory in WandLocator.FindAppDirs(_root))
+                if (File.Exists(RuntimeExeRepair.JournalPath(directory, _storage)))
+                {
+                    RuntimeExeRepair.TryRepair(directory, _storage);
+                    var resources = Path.Combine(directory, "resources");
+                    if (!string.Equals(directory, appDir, StringComparison.OrdinalIgnoreCase) && File.Exists(Path.Combine(_root, "Wand.exe.stub")) &&
+                        !File.Exists(Path.Combine(resources, "app.asar.backup")) && !Directory.Exists(Path.Combine(resources, "app.asar.unpacked.backup")) &&
+                        !File.Exists(Path.Combine(resources, ".incomplete-patch")) && !File.Exists(Path.Combine(directory, "Wand.exe.fusebak")))
+                    {
+                        var exe = Path.Combine(directory, "Wand.exe");
+                        var archive = Path.Combine(resources, "app.asar");
+                        RuntimeShortcuts.EnsureNoLinks(exe);
+                        RuntimeShortcuts.EnsureNoLinks(archive);
+                        using var directories = HandleFile.LockDirectories(directory, resources);
+                        using var executable = HandleFile.Open(exe);
+                        using var asar = HandleFile.Open(archive);
+                        if (!executable.Trusted() || executable.EmbeddedHash() != asar.ArchiveHash())
+                            throw new InvalidOperationException("Не удалось проверить восстановленную версию Wand.");
+                        directories.Validate();
+                    }
+                    else RuntimeHost.ValidateOriginal(directory);
+                }
+            RuntimeExeRepair.TryRepair(appDir, _storage);
+            RuntimeHost.ValidateOriginal(appDir);
+        }
+        catch (Exception error)
+        {
+            repairError = error;
+        }
+        var orphanedJournal = false;
+        try
+        {
+            RuntimeShortcuts.EnsureNoLinks(_storage);
+            using var operation = RuntimeExeRepair.AcquireOperation(_storage);
+            var options = new EnumerationOptions { AttributesToSkip = 0, IgnoreInaccessible = false };
+            var journals = Directory.EnumerateFiles(_storage, "exe-repair-app-*.json", options).ToArray();
+            if (journals.Length != 0 && (WandProcess.AnyRunning() || RuntimeExeRepair.AnyUpdaterRunning()))
+                throw new InvalidOperationException("Закройте Wand и дождитесь завершения обновления.");
+            using var updater = journals.Length != 0 ? RuntimeExeRepair.AcquireUpdaterPin(_root) : null;
+            if (journals.Length != 0)
+            {
+                if (WandProcess.AnyRunning() || RuntimeExeRepair.AnyUpdaterRunning())
+                    throw new InvalidOperationException("Закройте Wand и дождитесь завершения обновления.");
+                RuntimeShortcuts.EnsureNoLinks(_root);
+                var installed = Directory.EnumerateDirectories(_root, "app-*", options).Select(Path.GetFileName).ToHashSet(StringComparer.OrdinalIgnoreCase);
+                foreach (var journal in journals)
+                {
+                    var name = Path.GetFileNameWithoutExtension(journal)["exe-repair-".Length..];
+                    if (!Regex.IsMatch(name, @"^app-\d+\.\d+\.\d+$") || installed.Contains(name))
+                        throw new InvalidOperationException("Восстановление Wand не завершено. Ярлык WRP сохранён для повторной попытки.");
+                    orphanedJournal = true;
+                }
+                RuntimeHost.ValidateOriginal(appDir);
+            }
+            _shortcuts.Restore();
+        }
+        catch (Exception error) when (repairError is not null)
+        {
+            throw new AggregateException("Не удалось восстановить Wand и вернуть ярлык.", repairError, error);
+        }
+        if (repairError is not null) throw new InvalidOperationException(orphanedJournal
+            ? "Ярлык Wand восстановлен, но проверить или восстановить EXE не удалось; данные восстановления отсутствующей старой версии сохранены."
+            : "Ярлык Wand восстановлен, но проверить или восстановить EXE не удалось.", repairError);
+        if (orphanedJournal) throw new InvalidOperationException("Ярлык Wand восстановлен; данные восстановления отсутствующей старой версии сохранены.");
+    }
 
     public static (string Path, string Identity)? CurrentActivation(string root) => ActivationForExecutable(root, Bundle()[0]);
 
@@ -104,6 +182,32 @@ internal sealed class RuntimeInstallation
     }
 
     static string Identity(string root) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(Path.GetFullPath(root).TrimEnd('\\').ToUpperInvariant())));
+
+    static IDisposable AcquireLifecycle(string root)
+    {
+        var lease = HandleFile.LockRoot(root);
+        Mutex? mutex = null;
+        try
+        {
+            using var identity = WindowsIdentity.GetCurrent();
+            var user = identity.User ?? throw new InvalidOperationException("Не удалось определить пользователя Windows.");
+            var security = new MutexSecurity();
+            security.SetAccessRuleProtection(true, false);
+            security.AddAccessRule(new MutexAccessRule(user, MutexRights.FullControl, AccessControlType.Allow));
+            mutex = MutexAcl.Create(false, @"Global\WandRuInstaller-" + lease.Identity, out _, security);
+            bool acquired;
+            try { acquired = mutex.WaitOne(0); }
+            catch (AbandonedMutexException) { acquired = true; }
+            if (!acquired) throw new InvalidOperationException("Другая операция WRP уже выполняется. Дождитесь её завершения.");
+            return new LifecycleLock(mutex, lease);
+        }
+        catch { mutex?.Dispose(); lease.Dispose(); throw; }
+    }
+
+    sealed class LifecycleLock(Mutex mutex, HandleFile.RootLease lease) : IDisposable
+    {
+        public void Dispose() { try { mutex.ReleaseMutex(); } finally { mutex.Dispose(); lease.Dispose(); } }
+    }
 
     public ProcessStartInfo CreateStartInfo()
     {
