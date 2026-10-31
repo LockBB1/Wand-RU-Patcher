@@ -32,8 +32,9 @@ internal static class RuntimeEnhancer
         var rootExecutable = Path.Combine(root, "Wand.exe");
         var stub = rootExecutable + ".stub";
         var fuseBackup = executable + ".fusebak";
-        if (!File.Exists(backup) && !Directory.Exists(unpackedBackup) && !File.Exists(stub) && !File.Exists(fuseBackup)) return null;
-        if (!File.Exists(backup) || !Directory.Exists(unpackedBackup) || File.Exists(Path.Combine(resources, ".incomplete-patch")))
+        var incomplete = File.Exists(Path.Combine(resources, ".incomplete-patch"));
+        if (!File.Exists(backup) && !Directory.Exists(unpackedBackup) && !File.Exists(stub) && !File.Exists(fuseBackup) && !incomplete) return null;
+        if (!File.Exists(backup) || !Directory.Exists(unpackedBackup) || incomplete)
             throw new InvalidOperationException("Состояние Wand-Enhancer не подтверждено: отсутствует резервная копия или установка не завершена.");
         var supervised = File.Exists(stub);
         if (supervised)
