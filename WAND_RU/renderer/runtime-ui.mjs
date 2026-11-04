@@ -5,8 +5,9 @@
     var configuration = window.__WANDRU_RUNTIME_CONFIG;
     if (!configuration || !configuration.translations) throw new Error('WRP: missing UI dictionary');
     var dictionary = configuration.translations;
+    var overlay = /\/overlay\.html$/i.test(window.location.pathname);
     var localeTag = 'ru-RU', failure = null, probeKey;
-    var wrapped = new WeakSet();
+    var wrapped = new WeakSet(), decorated = new WeakSet();
     var decorators = {
       73508: function (exports) {
         if (!Array.isArray(exports.d)) throw new Error('WRP: supported locales contract changed');
@@ -46,6 +47,20 @@
         exports.flags.set(localeTag, configuration.flag);
       }
     };
+    function applyDecorator(id, exports, require) {
+      if (decorated.has(exports)) return;
+      decorators[id](exports, require);
+      decorated.add(exports);
+    }
+    function decorateCached(require) {
+      if (!require.c) return;
+      for (var id of Object.keys(decorators)) {
+        var module = require.c[id];
+        if (!module || !module.loaded) continue;
+        try { applyDecorator(id, module.exports, require); }
+        catch (error) { failure = error; }
+      }
+    }
     function decorate(chunk) {
       var modules = Array.isArray(chunk) && chunk[1];
       if (!modules || typeof modules !== 'object') return;
@@ -55,7 +70,7 @@
         (function (id, original) {
           var factory = function (module, exports, require) {
             var result = original.apply(this, arguments);
-            try { decorators[id](module.exports || exports, require); }
+            try { applyDecorator(id, module.exports || exports, require); }
             catch (error) { failure = error; }
             return result;
           };
@@ -83,8 +98,11 @@
 
     var deadline = Date.now() + 15000;
     var runtime, service, container;
+    // An overlay can load modules before its one-shot native connection completes.
+    chunks.push([['wandru-capture-' + Date.now()], {}, function (r) { runtime = r; decorateCached(r); }]);
     while (Date.now() < deadline) {
       if (failure) throw failure;
+      if (runtime) decorateCached(runtime);
       var root = document.getElementById('root');
       container = root && root.aurelia && root.aurelia.container;
       if (container) {
@@ -100,11 +118,29 @@
       await new Promise(function (resolve) { setTimeout(resolve, 100); });
     }
     if (failure) throw failure;
-    if (!service || !service.locales.some(function (locale) { return locale.tag === localeTag; }))
+    if (!service || !Array.isArray(service.locales))
       throw new Error('WRP: Russian locale was not registered before bootstrap');
     var flags = runtime('resources/value-converters/flags').flags;
+    decorateCached(runtime);
+    if (failure) throw failure;
     if (flags.get(localeTag) !== configuration.flag) throw new Error('WRP: Russian flag did not register');
-    var overlay = /\/overlay\.html$/i.test(window.location.pathname);
+    var lateOverlay = !service.locales.some(function (locale) { return locale.tag === localeTag; });
+    if (lateOverlay) {
+      var required = ['73508', '82063', '34721', 'resources/value-converters/flags'];
+      if (!overlay || !runtime.c || !required.every(function (id) {
+        var module = runtime.c[id];
+        return module && module.loaded && decorated.has(module.exports);
+      })) throw new Error('WRP: Russian locale was not registered before bootstrap');
+      if (typeof service.getClosestMatchingSupportedLocale !== 'function' || typeof service.getSystemLocale !== 'function')
+        throw new Error('WRP: locale metadata contract changed');
+      var russian = {tag: localeTag, name: configuration.language};
+      service.locales.push(russian);
+      var closest = service.getClosestMatchingSupportedLocale;
+      service.getClosestMatchingSupportedLocale = function (locale) {
+        var requested = locale || this.getSystemLocale();
+        return requested && requested.language === 'ru' ? russian : closest.apply(this, arguments);
+      };
+    }
     var Store = runtime(11700).il;
     var action = runtime(overlay || !runtime.m?.[35256] ? 55674 : 35256).Kc;
     var store = container.get(Store);
@@ -150,6 +186,9 @@
       await store.dispatch(action, {language: localeTag}, 'wandru');
       await service.setLocale(localeTag, 'wandru');
     }
+    else if (lateOverlay && service.getEffectiveLocale().language !== 'ru' &&
+        (currentLanguage === localeTag || currentLanguage === null && service.getSystemLocale()?.language === 'ru'))
+      await service.setLocale(currentLanguage, 'wandru');
     var active = service.getEffectiveLocale().language === 'ru';
     if (active) {
       var applied = probeKey && service.getValue(probeKey) === dictionary[probeKey];

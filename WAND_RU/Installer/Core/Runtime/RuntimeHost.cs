@@ -117,7 +117,8 @@ internal static class RuntimeHost
                     if (!seen.Add(id)) continue;
                     if (owner.HasExited || !await RuntimeScope.OwnsListenerAsync(address.Port, owner.Id, cancellationToken).ConfigureAwait(false))
                         throw new IOException("Локальное соединение Wand изменилось.");
-                    var page = await AttachPageAsync(socket!, id, http, script, cancellationToken, frames).ConfigureAwait(false);
+                    var page = await AttachPageAsync(socket!, id, http, script, cancellationToken, frames,
+                        scope.IsOverlayPage(target.GetProperty("url").GetString())).ConfigureAwait(false);
                     if (page is null) { seen.Remove(id); continue; }
                     clients.Add(id, page.Value.Client);
                     translated = true;
@@ -147,7 +148,7 @@ internal static class RuntimeHost
     }
 
     internal static async Task<(DevToolsClient Client, JsonElement Status)?> AttachPageAsync(Uri socket, string id,
-        HttpClient http, string script, CancellationToken cancellationToken, RuntimeTargets? frames = null)
+        HttpClient http, string script, CancellationToken cancellationToken, RuntimeTargets? frames = null, bool isOverlay = false)
     {
         DevToolsClient? client = null;
         var attached = false;
@@ -158,9 +159,14 @@ internal static class RuntimeHost
             if (reload is null) return null;
             await client.SendAsync("Page.enable", cancellationToken: cancellationToken).ConfigureAwait(false);
             await client.SendAsync("Page.addScriptToEvaluateOnNewDocument", new { source = script }, cancellationToken).ConfigureAwait(false);
-            // Only pre-existing pages need reload; future overlays were armed while paused.
-            if (reload.Value) await client.SendAsync("Page.reload", new { ignoreCache = false }, cancellationToken).ConfigureAwait(false);
-            var status = await WaitReadyAsync(client, cancellationToken).ConfigureAwait(false);
+            if (reload.Value && isOverlay)
+            {
+                // The overlay receives its native message port only once; reloading can lose it.
+                var injected = await client.SendAsync("Runtime.evaluate", new { expression = script, returnByValue = true }, cancellationToken).ConfigureAwait(false);
+                if (injected.TryGetProperty("exceptionDetails", out _)) throw new InvalidOperationException("Не удалось подготовить перевод оверлея Wand.");
+            }
+            else if (reload.Value) await client.SendAsync("Page.reload", new { ignoreCache = false }, cancellationToken).ConfigureAwait(false);
+            var status = await WaitReadyAsync(client, cancellationToken, isOverlay).ConfigureAwait(false);
             attached = true;
             return (client, status);
         }
@@ -215,7 +221,7 @@ internal static class RuntimeHost
         return false;
     }
 
-    static async Task<JsonElement> WaitReadyAsync(DevToolsClient client, CancellationToken cancellationToken)
+    static async Task<JsonElement> WaitReadyAsync(DevToolsClient client, CancellationToken cancellationToken, bool isOverlay)
     {
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeout.CancelAfter(TimeSpan.FromSeconds(20));
@@ -231,7 +237,8 @@ internal static class RuntimeHost
             }
             catch (InvalidOperationException) { await Task.Delay(200, timeout.Token).ConfigureAwait(false); continue; }
             if (response.TryGetProperty("exceptionDetails", out _))
-                throw new InvalidOperationException("Служба перевода не поддерживает эту версию Wand.");
+                throw new InvalidOperationException(isOverlay ? "Не удалось подготовить перевод оверлея Wand." :
+                    "Служба перевода не поддерживает эту версию Wand.");
             if (response.TryGetProperty("result", out var result) && result.TryGetProperty("value", out var value) &&
                 value.ValueKind == JsonValueKind.Object && value.TryGetProperty("ui", out var ui) && ui.ValueKind == JsonValueKind.True)
                 return value.Clone();

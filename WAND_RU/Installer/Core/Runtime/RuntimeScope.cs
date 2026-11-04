@@ -20,6 +20,9 @@ internal sealed class RuntimeScope(string appDir, int port)
         catch (ArgumentException) { return false; }
     }
 
+    public bool IsOverlayPage(string? url) => IsAppPage(url) &&
+        string.Equals(Path.GetFileName(new Uri(url!).LocalPath), "overlay.html", StringComparison.OrdinalIgnoreCase);
+
     public bool TryGetAppSocket(JsonElement target, out Uri? socket)
     {
         socket = null;
