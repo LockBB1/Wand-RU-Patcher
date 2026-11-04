@@ -184,6 +184,7 @@ internal sealed class RuntimeTargets : IAsyncDisposable
         var arming = _arming.AddOrUpdate(session.Target, _ => new ArmingState(), (_, current) => current.Closed ? new ArmingState() : current);
         Exception? failure = null;
         var resumed = false;
+        var prearmed = true;
         async Task Resume()
         {
             using var resume = new CancellationTokenSource(TimeSpan.FromSeconds(3));
@@ -196,7 +197,11 @@ internal sealed class RuntimeTargets : IAsyncDisposable
             _sessions[id] = session;
             if (session.Type == "page")
             {
-                await Send("Page.addScriptToEvaluateOnNewDocument", new { source = _script }, id).ConfigureAwait(false);
+                using var deadline = CancellationTokenSource.CreateLinkedTokenSource(_lifetime.Token);
+                deadline.CancelAfter(TimeSpan.FromSeconds(3));
+                try { await _client.SendAsync("Page.addScriptToEvaluateOnNewDocument", new { source = _script }, deadline.Token, id).ConfigureAwait(false); }
+                // Some paused windows cannot answer until resumed; the page connection will arm and reload them.
+                catch (OperationCanceledException) when (!_lifetime.IsCancellationRequested) { prearmed = false; }
             }
             // Page.enable can wait for a paused child; resume each target independently first.
             await Resume().ConfigureAwait(false);
@@ -230,7 +235,7 @@ internal sealed class RuntimeTargets : IAsyncDisposable
         if (session.Type == "page")
         {
             if (!arming.Closed && _sessions.TryGetValue(id, out var current) && ReferenceEquals(current, session)) arming.Error = failure;
-            arming.Ready.TrySetResult(resumed ? parameters.GetProperty("waitingForDebugger").GetBoolean() : null);
+            arming.Ready.TrySetResult(resumed ? prearmed && parameters.GetProperty("waitingForDebugger").GetBoolean() : null);
         }
     }
 
