@@ -7,7 +7,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <Version>0.21.0</Version>
-    <FileVersion>0.21.0.154</FileVersion>
+    <FileVersion>0.21.0.155</FileVersion>
     <AssemblyVersion>0.21.0.0</AssemblyVersion>
     <ApplicationIcon>app.ico</ApplicationIcon>
   </PropertyGroup>
@@ -36,9 +36,6 @@
     </EmbeddedResource>
     <EmbeddedResource Include="..\renderer\map-translator.mjs">
       <LogicalName>map-translator.js</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="..\renderer\map-mainhook.mjs">
-      <LogicalName>map-mainhook.js</LogicalName>
     </EmbeddedResource>
     <EmbeddedResource Include="..\renderer\assistant-ui.json">
       <LogicalName>assistant-ui.json</LogicalName>

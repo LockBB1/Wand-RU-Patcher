@@ -42,19 +42,6 @@ internal sealed class RuntimeInstallation
     public bool HasState => _shortcuts.HasState;
     public bool IsInstalled => _shortcuts.IsInstalled && _shortcuts.Paths.All(path => IsOwnHelper(ShellShortcut.Read(path).Target));
 
-    public static bool Required(string appDir)
-    {
-        var minimum = new Version(12, 61, 0);
-        var byFolder = Version.TryParse(WandLocator.VersionOf(appDir), out var folder) && folder >= minimum;
-        var root = Path.GetDirectoryName(Path.GetFullPath(appDir));
-        if (root is not null && WandLocator.FindAppDirs(root).Any(directory => Version.TryParse(WandLocator.VersionOf(directory), out var version) && version >= minimum))
-            return true; // A newer auxiliary service can serve a pinned older client too.
-        if (!File.Exists(Path.Combine(appDir, "Wand.exe"))) return byFolder;
-        var file = FileVersionInfo.GetVersionInfo(Path.Combine(appDir, "Wand.exe"));
-        return new Version(Math.Max(0, file.FileMajorPart), Math.Max(0, file.FileMinorPart), Math.Max(0, file.FileBuildPart)) >= minimum ||
-            byFolder;
-    }
-
     public void Install(string appDir, Action<string>? log = null)
     {
         if (!string.Equals(Path.GetDirectoryName(Path.GetFullPath(appDir)), _root, StringComparison.OrdinalIgnoreCase))
@@ -66,7 +53,7 @@ internal sealed class RuntimeInstallation
         RuntimeExeRepair.TryRepair(appDir, _storage);
         var enhanced = RuntimeHost.ValidateOriginal(appDir);
         var helper = Deploy();
-        RuntimeEnhancer.Pin(_storage, enhanced is null ? RuntimeEnhancer.CleanState : RuntimeEnhancer.Snapshot(appDir, enhanced.Value), true);
+        RuntimeEnhancer.Pin(_storage, enhanced is null ? RuntimeEnhancer.CleanState : RuntimeEnhancer.Snapshot(appDir), true);
         var paths = _shortcuts.Paths.Concat(_shortcuts.Discover()).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
         if (paths.Length == 0)
         {

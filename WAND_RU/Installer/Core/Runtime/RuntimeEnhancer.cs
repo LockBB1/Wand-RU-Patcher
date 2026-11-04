@@ -1,8 +1,6 @@
 using System.IO;
-using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
-using System.Text.RegularExpressions;
 
 namespace WandRuInstaller.Core.Runtime;
 
@@ -10,17 +8,6 @@ internal static class RuntimeEnhancer
 {
     static readonly byte[] FuseMarker = Encoding.ASCII.GetBytes("dL7pKGdnNz796PbbjQWNKmHXBZaB9tsX");
     internal static readonly string CleanState = new('0', 64);
-    internal static bool IsSelectedBySupervisor(string appDir)
-    {
-        var root = Directory.GetParent(appDir)!.FullName;
-        var selected = new DirectoryInfo(root).EnumerateDirectories()
-            .Where(dir => Regex.IsMatch(dir.Name, @"^app-\w+"))
-            .OrderByDescending(dir => dir.LastWriteTime)
-            .FirstOrDefault(dir => File.Exists(Path.Combine(dir.FullName, "resources", "app.asar")) &&
-                (File.Exists(Path.Combine(dir.FullName, "Wand.exe")) || File.Exists(Path.Combine(dir.FullName, "WeMod.exe"))));
-        return selected is not null && string.Equals(selected.FullName, Path.GetFullPath(appDir), StringComparison.OrdinalIgnoreCase);
-    }
-
     // Returns null for a normal Wand installation; a detected Enhancer must validate completely.
     internal static bool? Validate(string appDir)
     {
@@ -32,6 +19,7 @@ internal static class RuntimeEnhancer
         var rootExecutable = Path.Combine(root, "Wand.exe");
         var stub = rootExecutable + ".stub";
         var fuseBackup = executable + ".fusebak";
+        if (File.Exists(stub)) throw new InvalidOperationException("Режим Supervised не поддерживается. Выберите Static в Wand-Enhancer.");
         var incomplete = File.Exists(Path.Combine(resources, ".incomplete-patch"));
         if (!File.Exists(backup) && !Directory.Exists(unpackedBackup) && !File.Exists(stub) && !File.Exists(fuseBackup) && !incomplete) return null;
         if (!File.Exists(backup) || !Directory.Exists(unpackedBackup) || incomplete)
@@ -39,22 +27,12 @@ internal static class RuntimeEnhancer
         var originalHash = ReadArchiveHash(backup);
         var currentHash = ReadArchiveHash(Path.Combine(resources, "app.asar"));
         string? hash;
-        var supervised = File.Exists(stub);
-        if (supervised)
-        {
-            if (!IsSelectedBySupervisor(appDir))
-                throw new InvalidOperationException("Wand-Enhancer выберет другую версию Wand. Выберите ту же версию в WRP.");
-            if (!Authenticode.IsTrusted(stub) || !Authenticode.IsTrusted(executable) || File.Exists(fuseBackup) ||
-                AssemblyName.GetAssemblyName(rootExecutable).Name != "WandEnhancer")
-                throw new InvalidOperationException("Не удалось проверить загрузчик Wand-Enhancer и оригинальные файлы Wand.");
-            hash = AsarIntegrity.ReadHash(executable);
-        }
-        else if (!Authenticode.IsTrusted(rootExecutable) || !ValidateStaticExecutable(executable, fuseBackup, originalHash, out hash))
+        if (!Authenticode.IsTrusted(rootExecutable) || !ValidateStaticExecutable(executable, fuseBackup, originalHash, out hash))
             throw new InvalidOperationException("Не удалось проверить оригинальный файл Wand для Wand-Enhancer.");
 
-        if (hash is null || (hash != originalHash && (supervised || hash != currentHash)))
+        if (hash is null || (hash != originalHash && hash != currentHash))
             throw new InvalidOperationException("Резервная копия Wand-Enhancer не соответствует оригинальному Wand.");
-        return supervised;
+        return false;
     }
 
     static string ReadArchiveHash(string path)
@@ -106,7 +84,7 @@ internal static class RuntimeEnhancer
         finally { File.Delete(temporary); }
     }
 
-    internal static string Snapshot(string appDir, bool supervised)
+    internal static string Snapshot(string appDir)
     {
         var root = Directory.GetParent(appDir)!.FullName;
         var resources = Path.Combine(appDir, "resources");
@@ -117,7 +95,7 @@ internal static class RuntimeEnhancer
             ? Directory.EnumerateFiles(auxiliaryDir, "*AuxiliaryService.exe").SingleOrDefault() : null;
         if (auxiliary is null) throw new InvalidOperationException("Не найдена служба Wand-Enhancer для проверки.");
         var files = new[] { executable, launcher, Path.Combine(resources, "app.asar"),
-            Path.Combine(resources, "app.asar.backup"), auxiliary, supervised ? launcher + ".stub" : executable + ".fusebak" };
+            Path.Combine(resources, "app.asar.backup"), auxiliary, executable + ".fusebak" };
         using var combined = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
         foreach (var path in files)
         {

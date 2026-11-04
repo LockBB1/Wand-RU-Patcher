@@ -17,12 +17,9 @@ public sealed class MainVm : ObservableObject
     bool _isAboutOpen;
     bool _isHelpOpen;
     bool _isPatchOptionsOpen;
-    bool _isBackupWarnOpen;
     bool _rollbackAvailable;
-    bool _backuplessOk;   // юзер согласился патчить без бэкапа (откат будет недоступен)
     bool _busy;           // патч/откат в работе - реентранси-guard (второй запуск = гонка за файлы Wand)
     SettingsVm? _settings;
-    readonly RuOverrides _overrides = RuOverrides.LoadEmbedded();
     readonly AppSettings _appSettings;
     readonly Action<AppSettings> _saveSettings;
     readonly Func<string, RuntimeInstallation> _runtime;
@@ -38,8 +35,6 @@ public sealed class MainVm : ObservableObject
     public bool IsHelpOpen { get => _isHelpOpen; set => SetProperty(ref _isHelpOpen, value); }
     /// <summary>Открыт диалог «Что будем русифицировать?» (выбор компонентов перед патчем).</summary>
     public bool IsPatchOptionsOpen { get => _isPatchOptionsOpen; set => SetProperty(ref _isPatchOptionsOpen, value); }
-    /// <summary>Открыто предупреждение «бэкап утерян, откат будет недоступен» (решает юзер).</summary>
-    public bool IsBackupWarnOpen { get => _isBackupWarnOpen; set => SetProperty(ref _isBackupWarnOpen, value); }
     /// <summary>Есть ли что откатывать (манифест на диске). Прячет кнопку «Откатить» в Error, когда патч
     /// упал ДО записи манифеста (неподдерж. версия) - там откат дал бы бесполезное «нет manifest».</summary>
     public bool RollbackAvailable { get => _rollbackAvailable; private set => SetProperty(ref _rollbackAvailable, value); }
@@ -54,8 +49,6 @@ public sealed class MainVm : ObservableObject
     public ICommand OpenPatchOptionsCommand { get; }
     public ICommand ClosePatchOptionsCommand { get; }
     public ICommand ConfirmPatchCommand { get; }
-    public ICommand ConfirmBacklessPatchCommand { get; }
-    public ICommand CloseBackupWarnCommand { get; }
     public ICommand LaunchWandCommand { get; }
     public ICommand BackToMenuCommand { get; }
 
@@ -81,43 +74,10 @@ public sealed class MainVm : ObservableObject
             _ => State is InstallerState.Ready or InstallerState.Patched or InstallerState.Done or InstallerState.Error);
         ClosePatchOptionsCommand = new RelayCommand(_ => IsPatchOptionsOpen = false);
         ConfirmPatchCommand = new AsyncRelayCommand(async _ => { IsPatchOptionsOpen = false; await PatchAsync(null); });
-        // «Продолжить без отката»: патчим, но фальшивый бэкап не создаём (RuPatcher.BackupLost).
-        ConfirmBacklessPatchCommand = new AsyncRelayCommand(async _ =>
-        {
-            IsBackupWarnOpen = false;
-            _backuplessOk = true;
-            await PatchAsync(null);
-        });
-        CloseBackupWarnCommand = new RelayCommand(_ => IsBackupWarnOpen = false);
         LaunchWandCommand = new RelayCommand(_ => TryRestartWand());
         // После установки: вернуться в меню (откат/переустановка) без перезапуска WRP - просто пере-детект.
         BackToMenuCommand = new RelayCommand(_ => { if (Install is not null) DetectFrom(new[] { Install.RootDir }); });
     }
-
-    MapDiagServer? _mapDiag;
-    internal bool MapDiagListening => _mapDiag is not null;
-
-    /// <summary>Приёмник диагностики map-хука живёт ТОЛЬКО пока включён лог: без ShowLog map-хук ничего
-    /// не шлёт, а открытый :39271 (loopback, без auth, тело POST -> лог) - лишняя поверхность. Зовётся при
-    /// старте, смене ShowLog и пере-Detect - поднимает/гасит сервер по текущему флагу.</summary>
-    public void SyncMapDiag()
-    {
-        var want = Settings?.ShowLog ?? false;
-        if (want && _mapDiag is null)
-        {
-            var srv = new MapDiagServer(line => Add("[map] " + line));
-            if (srv.Start()) { _mapDiag = srv; Add($"[map] диагностика карт слушает :{MapDiagServer.Port} - открой карту в Wand"); }
-            else srv.Dispose();   // порт занят - не держим мёртвый приёмник
-        }
-        else if (!want && _mapDiag is not null)
-        {
-            _mapDiag.Dispose();
-            _mapDiag = null;
-        }
-    }
-
-    /// <summary>Гасит приёмник при закрытии окна - иначе TcpListener переживал бы окно.</summary>
-    public void DisposeMapDiag() { _mapDiag?.Dispose(); _mapDiag = null; }
 
     public void Detect() => DetectFrom(WandLocator.DefaultRoots());
 
@@ -143,7 +103,6 @@ public sealed class MainVm : ObservableObject
         // Смена версии в настройках -> обновить шапку/состояние. НЕ во время патча/отката: RefreshSelection
         // затёр бы Working на Ready/Patched -> кнопка снова активна -> второй патч поверх идущего (гонка).
         Settings.OnAppDirSelected = _ => { if (State != InstallerState.Working) RefreshSelection(); };
-        Settings.OnShowLogChanged = _ => SyncMapDiag();   // тумблер лога поднимает/гасит приёмник карт
         RefreshSelection();
     }
 
@@ -181,31 +140,13 @@ public sealed class MainVm : ObservableObject
             if (Settings is not null && mode is not null)
                 Settings.TranslateCheatsOnline = mode.Equals("online", StringComparison.OrdinalIgnoreCase);
             var runtime = _runtime(Install.RootDir);
-            var useRuntime = runtime.HasState || RuntimeInstallation.Required(Install.SelectedAppDir);
-            // Бэкап утерян, а Wand уже русифицирован: патч возможен, но откат мёртв - цена решения юзера.
-            if (!useRuntime && !_backuplessOk && RuPatcher.BackupLost(Install.SelectedAppDir)) { IsBackupWarnOpen = true; return; }
             if (!await EnsureWandClosedAsync()) return;
             State = InstallerState.Working;
             Log.Clear();
             try
             {
-                if (useRuntime)
-                {
-                    await Task.Run(() => runtime.Install(Install.SelectedAppDir, Add));
-                    StatusText = L.Get("S_RuntimeInstalled");
-                }
-                else
-                {
-                    var translateCheats = Settings?.TranslateCheats ?? true;
-                    var maps = Settings?.TranslateMaps ?? true;
-                    var mapsOnline = Settings?.TranslateMapsOnline ?? true;
-                    var mapDiag = Settings?.ShowLog ?? false;
-                    var backupless = _backuplessOk;
-                    var patcher = new RuPatcher(Install.SelectedAppDir, _overrides, translateCheats, maps, mapsOnline,
-                        mapDiag, backupless, Add);
-                    await Task.Run(() => patcher.Apply());
-                    StatusText = FormatReport(patcher.Report);
-                }
+                await Task.Run(() => runtime.Install(Install.SelectedAppDir, Add));
+                StatusText = L.Get("S_RuntimeInstalled");
                 State = InstallerState.Done;
                 RollbackAvailable = true;
                 if (Install is not null) Install.IsPatched = true;
@@ -222,7 +163,7 @@ public sealed class MainVm : ObservableObject
                 RollbackAvailable = runtime.HasState || Install?.SelectedAppDir is { } d && WandLocator.Manifest(d) is not null;
             }
         }
-        finally { _backuplessOk = false; _busy = false; }   // согласие разовое: следующая установка спросит заново
+        finally { _busy = false; }
     }
 
     internal async Task RestoreAsync()
@@ -253,23 +194,6 @@ public sealed class MainVm : ObservableObject
             }
         }
         finally { _busy = false; }
-    }
-
-    /// <summary>Строка итога для экрана «Готово»: «локаль ✓ · читы ✓ · карты - якорь не найден».
-    /// Выключенные компоненты в отчёт не попадают (их никто не просил).</summary>
-    internal static string FormatReport(PatchReport? report)
-    {
-        if (report is null) return L.Get("S_Msg_Done");
-        var parts = new List<string> { L.Get("S_Rep_Locale") + Mark(report.Locale) };
-        // Флаг и native-имя - косметика списка языков: в отчёт попадают, только если якорь промахнулся
-        // (на части версий Wand флаг-пары лежат в бандле без якорей локали - патч их не достаёт).
-        if (!report.LangName) parts.Add(L.Get("S_Rep_LangName") + Mark(false));
-        if (!report.Flag) parts.Add(L.Get("S_Rep_Flag") + Mark(false));
-        if (report.Cheats is bool cheats) parts.Add(L.Get("S_Rep_Cheats") + Mark(cheats));
-        if (report.Maps is bool maps) parts.Add(L.Get("S_Rep_Maps") + Mark(maps));
-        return string.Join(" · ", parts);
-
-        static string Mark(bool ok) => ok ? " ✓" : " - " + L.Get("S_Rep_NoAnchor");
     }
 
     // Wand залочивает файлы (app.asar.unpacked/*.exe). Если включён авто-перезапуск - закрываем сами,

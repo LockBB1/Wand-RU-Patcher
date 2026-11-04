@@ -44,19 +44,11 @@ internal static class RuntimeHost
         if (enhanced is not null)
         {
             if (activation is null) throw new InvalidOperationException("Сначала установите перевод WRP для Wand-Enhancer.");
-            RuntimeEnhancer.Pin(Path.GetDirectoryName(activation.Value.Path)!, RuntimeEnhancer.Snapshot(appDir, enhanced.Value), false);
+            RuntimeEnhancer.Pin(Path.GetDirectoryName(activation.Value.Path)!, RuntimeEnhancer.Snapshot(appDir), false);
         }
         if (HasRunningInstance(Directory.GetParent(appDir)!.FullName))
             throw new InvalidOperationException("Wand уже запущен. Закройте его перед запуском перевода.");
         cancellationToken.ThrowIfCancellationRequested();
-        int? supervisedPort = null;
-        if (enhanced == true)
-        {
-            supervisedPort = RuntimeSupervised.ReservePort();
-            start.ArgumentList[0] = "--remote-debugging-port=" + supervisedPort.Value;
-            start.FileName = Path.Combine(Directory.GetParent(appDir)!.FullName, "Wand.exe");
-            start.WorkingDirectory = Directory.GetParent(appDir)!.FullName;
-        }
         start.UseShellExecute = false;
         start.CreateNoWindow = true;
         start.RedirectStandardOutput = start.RedirectStandardError = true;
@@ -72,14 +64,11 @@ internal static class RuntimeHost
                 address.AbsolutePath.StartsWith("/devtools/browser/", StringComparison.Ordinal)) endpoint.TrySetResult(address);
         };
         process.OutputDataReceived += (_, _) => { };
-        if (supervisedPort is null)
-            process.Exited += (_, _) => endpoint.TrySetException(new InvalidOperationException("Wand завершился до подключения перевода."));
+        process.Exited += (_, _) => endpoint.TrySetException(new InvalidOperationException("Wand завершился до подключения перевода."));
         var clients = new Dictionary<string, DevToolsClient>();
         var seen = new HashSet<string>();
         var started = false;
         var translated = false;
-        var completed = false;
-        Process? supervisedChild = null;
         try
         {
             started = process.Start();
@@ -88,20 +77,13 @@ internal static class RuntimeHost
             process.BeginOutputReadLine();
             using var startup = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             startup.CancelAfter(TimeSpan.FromSeconds(30));
-            Uri address;
-            if (supervisedPort is not null)
-            {
-                var owned = await RuntimeSupervised.WaitAsync(process, Path.Combine(appDir, "Wand.exe"), supervisedPort.Value, startup.Token).ConfigureAwait(false);
-                supervisedChild = owned.Child;
-                address = owned.Endpoint;
-            }
-            else address = await endpoint.Task.WaitAsync(startup.Token).ConfigureAwait(false);
-            var owner = supervisedChild ?? process;
+            var address = await endpoint.Task.WaitAsync(startup.Token).ConfigureAwait(false);
+            var owner = process;
             if (!await RuntimeScope.OwnsListenerAsync(address.Port, owner.Id, cancellationToken).ConfigureAwait(false))
                 throw new InvalidOperationException("Не подтверждено безопасное локальное соединение Wand.");
             if (enhanced is not null)
-                RuntimeEnhancer.Pin(Path.GetDirectoryName(activation!.Value.Path)!, RuntimeEnhancer.Snapshot(appDir, enhanced.Value), false);
-            var actualAppDir = supervisedChild is null ? Path.GetDirectoryName(owner.MainModule!.FileName)! : appDir;
+                RuntimeEnhancer.Pin(Path.GetDirectoryName(activation!.Value.Path)!, RuntimeEnhancer.Snapshot(appDir), false);
+            var actualAppDir = Path.GetDirectoryName(owner.MainModule!.FileName)!;
             var scope = new RuntimeScope(actualAppDir, address.Port);
             var script = RuntimeScripts.MainScript(actualAppDir, settings, activation);
             await using var browser = await DevToolsClient.ConnectAsync(address, cancellationToken).ConfigureAwait(false);
@@ -146,24 +128,11 @@ internal static class RuntimeHost
                     throw new InvalidOperationException("Окно Wand не подтвердило готовность перевода.");
                 await Task.Delay(500, cancellationToken).ConfigureAwait(false);
             }
-            completed = true;
         }
         finally
         {
             foreach (var client in clients.Values) await client.DisposeAsync().ConfigureAwait(false);
-            if (supervisedChild is not null)
-            {
-                await RuntimeSupervised.StopChildAsync(supervisedChild).ConfigureAwait(false);
-                supervisedChild.Dispose();
-                if (!completed && !process.HasExited)
-                {
-                    process.Kill(); // Only the launcher we started; never its process tree.
-                    await process.WaitForExitAsync().ConfigureAwait(false);
-                }
-            }
-            else if (supervisedPort is not null && started)
-                await RuntimeSupervised.StopFailedLaunchAsync(process, Path.Combine(appDir, "Wand.exe")).ConfigureAwait(false);
-            else if (supervisedPort is null && started && !process.HasExited)
+            if (started && !process.HasExited)
             {
                 process.CloseMainWindow();
                 using var close = new CancellationTokenSource(TimeSpan.FromSeconds(5));
