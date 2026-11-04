@@ -109,6 +109,7 @@ internal sealed class RuntimeShortcuts(string wandRoot, string stateDirectory, I
             if (!File.Exists(link.Path)) continue;
             var hash = Hash(ReadLink(link.Path));
             if (link.Original is not null && hash == Hash(link.Original)) continue;
+            if (!IsOwnedHash(link, hash) && IsWand(ShellShortcut.Read(link.Path).Target)) continue;
             if (!IsOwnedHash(link, hash)) throw new InvalidOperationException("Ярлык Wand изменён пользователем. Изменения сохранены; данные отката оставлены.");
             if (link.Original is null) File.Delete(link.Path);
             else
