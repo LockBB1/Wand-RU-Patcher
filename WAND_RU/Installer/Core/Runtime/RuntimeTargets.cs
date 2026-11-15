@@ -72,7 +72,9 @@ internal sealed class RuntimeTargets : IAsyncDisposable
     static object AutoAttach(string type) => new
     {
         autoAttach = true, waitForDebuggerOnStart = true, flatten = true,
-        filter = new object[] { new { type, exclude = false }, new { exclude = true } }
+        filter = type == "iframe"
+            ? new object[] { new { type, exclude = false }, new { type = "worker", exclude = false }, new { exclude = true } }
+            : new object[] { new { type, exclude = false }, new { exclude = true } }
     };
 
     ArmingState Arming(string target) => _arming.GetOrAdd(target, _ => new ArmingState());
@@ -181,7 +183,9 @@ internal sealed class RuntimeTargets : IAsyncDisposable
         var info = parameters.GetProperty("targetInfo");
         var session = new Session(id, info.GetProperty("targetId").GetString()!, info.GetProperty("type").GetString()!, parent,
             info.GetProperty("url").GetString()!);
-        var arming = _arming.AddOrUpdate(session.Target, _ => new ArmingState(), (_, current) => current.Closed ? new ArmingState() : current);
+        var arming = session.Type == "page"
+            ? _arming.AddOrUpdate(session.Target, _ => new ArmingState(), (_, current) => current.Closed ? new ArmingState() : current)
+            : null;
         Exception? failure = null;
         var resumed = false;
         var prearmed = true;
@@ -193,7 +197,11 @@ internal sealed class RuntimeTargets : IAsyncDisposable
         }
         try
         {
-            if (session.Type is not ("page" or "iframe")) return;
+            if (session.Type is not ("page" or "iframe"))
+            {
+                await Resume().ConfigureAwait(false);
+                return;
+            }
             _sessions[id] = session;
             if (session.Type == "page")
             {
@@ -234,7 +242,7 @@ internal sealed class RuntimeTargets : IAsyncDisposable
         }
         if (session.Type == "page")
         {
-            if (!arming.Closed && _sessions.TryGetValue(id, out var current) && ReferenceEquals(current, session)) arming.Error = failure;
+            if (!arming!.Closed && _sessions.TryGetValue(id, out var current) && ReferenceEquals(current, session)) arming.Error = failure;
             arming.Ready.TrySetResult(resumed ? prearmed && parameters.GetProperty("waitingForDebugger").GetBoolean() : null);
         }
     }
