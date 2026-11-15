@@ -1,0 +1,30 @@
+{
+  "title": "Baldur's Gate 3",
+  "names": {
+    "God Mode": "Режим бога",
+    "Unlimited Movement/Action": "Бесконечное движение и действия",
+    "Action Point Cost Multiplier": "Множитель затрат очков действия",
+    "Items Don't Decrease": "Предметы не расходуются",
+    "Ignore Weight/No Overburden": "Без ограничения веса и перегрузки",
+    "Weight Impact": "Влияние веса",
+    "Unlimited XP": "Бесконечный опыт",
+    "XP Multiplier": "Множитель опыта",
+    "[Selected Character] Edit Strength": "[Выбранный персонаж] Изменить силу",
+    "[Selected Character] Edit Dexterity": "[Выбранный персонаж] Изменить ловкость",
+    "[Selected Character] Edit Constitution": "[Выбранный персонаж] Изменить телосложение",
+    "[Selected Character] Edit Intelligence": "[Выбранный персонаж] Изменить интеллект",
+    "[Selected Character] Edit Wisdom": "[Выбранный персонаж] Изменить мудрость",
+    "[Selected Character] Edit Charisma": "[Выбранный персонаж] Изменить харизму",
+    "[All Playable Characters] Edit Strength": "[Все игровые персонажи] Изменить силу",
+    "[All Playable Characters] Edit Dexterity": "[Все игровые персонажи] Изменить ловкость",
+    "[All Playable Characters] Edit Constitution": "[Все игровые персонажи] Изменить телосложение",
+    "[All Playable Characters] Edit Intelligence": "[Все игровые персонажи] Изменить интеллект",
+    "[All Playable Characters] Edit Wisdom": "[Все игровые персонажи] Изменить мудрость",
+    "[All Playable Characters] Edit Charisma": "[Все игровые персонажи] Изменить харизму",
+    "Max Companions Approval": "Максимальное одобрение спутников",
+    "Roll Dice Always Succeed": "Всегда успешный бросок кубика",
+    "Minimum Roll Value": "Минимальное значение броска",
+    "Roll Bonus": "Бонус к броску",
+    "Game Speed": "Скорость игры"
+  }
+}
