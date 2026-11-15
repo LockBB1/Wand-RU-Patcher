@@ -42,7 +42,9 @@ window.__wandRuTranslateMap = async function (text) {
   if (mapCache.has(text)) return mapCache.get(text);
   var russian = await translateOne(text, mapGet, 'auto', mapProviderState);
   if (russian && /Wand/.test(text)) russian = russian.replace(/Палочк[а-яё]*/gi, 'Wand').replace(/Ванд[а-яё]*/gi, 'Wand');
-  if (mapCache.size >= 5000) mapCache.clear();
-  mapCache.set(text, russian);
+  if (russian) {
+    if (mapCache.size >= 5000) mapCache.clear();
+    mapCache.set(text, russian);
+  }
   return russian;
 };

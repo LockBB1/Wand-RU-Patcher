@@ -293,7 +293,7 @@ internal sealed class RuntimeTargets : IAsyncDisposable
             {
                 var current = await Send("Runtime.evaluate", new
                 {
-                    expression = Guard(source.Address!, "return window!==window.top && window.__wandruTr===1;"),
+                    expression = MapGuard(source.Address!, "return window!==window.top && window.__wandruTr===1;"),
                     uniqueContextId = source.UniqueId, returnByValue = true
                 }, session.Id).ConfigureAwait(false);
                 if (!current.GetProperty("result").TryGetProperty("value", out var valid) || valid.ValueKind != JsonValueKind.True) return;
@@ -306,7 +306,7 @@ internal sealed class RuntimeTargets : IAsyncDisposable
                     if (!_translations.Writer.TryWrite((session, source, accepted)))
                         await Send("Runtime.evaluate", new
                         {
-                            expression = Guard(source.Address!, "setTimeout(function(){window.__wandruRetry && window.__wandruRetry(" + JsonSerializer.Serialize(accepted) + ");},1000);"),
+                            expression = MapGuard(source.Address!, "setTimeout(function(){window.__wandruRetry && window.__wandruRetry(" + JsonSerializer.Serialize(accepted) + ");},1000);"),
                             uniqueContextId = source.UniqueId
                         }, session.Id).ConfigureAwait(false);
                 }
@@ -367,7 +367,7 @@ internal sealed class RuntimeTargets : IAsyncDisposable
                     {
                         await Send("Runtime.evaluate", new
                         {
-                            expression = Guard(batch.Context.Address!, "window.__wandruApply && window.__wandruApply(" + JsonSerializer.Serialize(translated) + ");"),
+                            expression = MapGuard(batch.Context.Address!, "window.__wandruApply && window.__wandruApply(" + JsonSerializer.Serialize(translated) + "," + JsonSerializer.Serialize(batch.Texts) + ");"),
                             uniqueContextId = batch.Context.UniqueId
                         }, batch.Session.Id).ConfigureAwait(false);
                     }
@@ -381,6 +381,16 @@ internal sealed class RuntimeTargets : IAsyncDisposable
 
     static string Guard(string address, string body) =>
         "(function(){var u=new URL(location.href);u.search='';u.hash='';if(u.href!==" + JsonSerializer.Serialize(address) + ")return null;" + body + "})()";
+
+    internal static string MapGuard(string address, string body)
+    {
+        var uri = new Uri(address);
+        var parts = uri.AbsolutePath.Split('/');
+        var slug = parts[1] == "ru" ? parts[3] : parts[2];
+        return "(function(){var u=new URL(location.href),p=u.pathname.split('/');if(p[1]==='ru')p.splice(1,1);" +
+            "if(u.origin!==" + JsonSerializer.Serialize(uri.GetLeftPart(UriPartial.Authority)) + "||u.username||u.password||p[1]!=='maps'||p[2]!==" +
+            JsonSerializer.Serialize(slug) + ")return null;" + body + "})()";
+    }
 
     public async ValueTask DisposeAsync()
     {

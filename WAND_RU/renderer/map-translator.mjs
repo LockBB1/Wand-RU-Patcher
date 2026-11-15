@@ -63,7 +63,7 @@
     return null;
   }
 
-  var pending = {}, sent = {}, waiting = {}, timer = null, cnt = 0;
+  var pending = {}, sent = {}, waiting = {}, failures = {}, blocked = {}, timer = null, cnt = 0;
   var cyr = /[а-яёА-ЯЁ]/, lat = /[A-Za-z]/;
 
   function send(t) { try { console.log("WANDRU_DUMP::" + btoa(unescape(encodeURIComponent(t)))); } catch (e) {} }
@@ -91,10 +91,13 @@
     [/^Hide (.+) on map$/, "Скрыть %C% на карте"],
     [/^Show (.+) on map$/, "Показать %C% на карте"]
   ];
-  function filterTr(t) {
+  function filterTr(t, partial) {
     for (var i = 0; i < FT.length; i++) {
       var m = FT[i][0].exec(t);
-      if (m) return FT[i][1].replace("%C%", D[m[1]] || m[1]);
+      if (m) {
+        if (MTON && !UIONLY && !partial && !D[m[1]]) return null;
+        return FT[i][1].replace("%C%", D[m[1]] || m[1]);
+      }
     }
     return null;
   }
@@ -116,6 +119,7 @@
     // помощник: незнакомую строку (в т.ч. стримящийся ответ модели) не трогаем.
     // MTON=false: ответа не будет - ни очереди, ни waiting (см. комментарий у объявления MTON).
     if (UIONLY || !MTON) return;
+    if (blocked[t]) return;
     // промах: запомнить узел, ждущий этот перевод - __wandruApply патчит его точечно (не полный re-walk).
     var q = waiting[t] || (waiting[t] = []);
     if (q.length < 200) q.push(node);   // cap: одна строка на многих узлах не растёт без предела
@@ -203,15 +207,31 @@
   }
 
   // Main зовёт после MT: мержим перевод и точечно патчим узлы, ждавшие его. Полного re-walk нет -
-  // будущие узлы с тем же текстом переведёт MO -> dict-hit; пустой/повторный ответ = ноль работы.
-  window.__wandruApply = function (map) {
+  // будущие узлы с тем же текстом переведёт MO -> dict-hit; ошибки ограниченно повторяются.
+  window.__wandruApply = function (map, attempted) {
     var o;
     for (o in map) {
       if (!map.hasOwnProperty(o) || !map[o]) continue;
       D[o] = map[o];
+      delete failures[o];
       var ns = waiting[o];
       if (ns) { for (var i = 0; i < ns.length; i++) patch(ns[i], o, map[o]); delete waiting[o]; }
     }
+    var retry = [], cooldown = [];
+    for (var j = 0; attempted && j < attempted.length; j++) {
+      var t = attempted[j];
+      if (map[t] || !waiting[t] || !sent[t]) continue;
+      failures[t] = (failures[t] || 0) + 1;
+      if (failures[t] <= 2) retry.push(t);
+      else {
+        var fallback = filterTr(t, true), nodes = waiting[t];
+        if (fallback) for (var k = 0; k < nodes.length; k++) patch(nodes[k], t, fallback);
+        blocked[t] = 1; cooldown.push(t);
+        delete failures[t]; delete waiting[t]; delete sent[t];
+      }
+    }
+    if (retry.length) setTimeout(function () { window.__wandruRetry(retry); }, 3000);
+    if (cooldown.length) setTimeout(function () { for (var i = 0; i < cooldown.length; i++) delete blocked[cooldown[i]]; }, 30000);
   };
 
   function arm() {
