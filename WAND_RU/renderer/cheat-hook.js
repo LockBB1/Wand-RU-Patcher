@@ -334,7 +334,7 @@
       existing.className = cls; existing.textContent = label.text; existing.title = label.title;
       return "updated";
     }
-    var el = doc.createElement("div");
+    var el = doc.createElement("span");
     el.className = cls; el.textContent = label.text; el.title = label.title;
     actionsEl.appendChild(el);
     return "inserted";
@@ -342,6 +342,15 @@
   
   // Один проход: найти шапку -> gameId -> состояние -> вставить. Нет шапки -> noop (best-effort).
   function syncBadge(doc, games, fallbackGameId) {
+    var titles = doc && doc.querySelectorAll ? doc.querySelectorAll(".title--new-header .title-header-wrapper h1") : [];
+    if (titles.length) {
+      var state = badgeState(resolveGameId(doc, fallbackGameId), games), result = "unchanged";
+      for (var i = 0; i < titles.length; i++) {
+        var updated = insertBadge(doc, titles[i], state);
+        if (updated !== "unchanged") result = updated;
+      }
+      return result;
+    }
     var actions = doc && doc.querySelector ? doc.querySelector(".title-header__title-actions") : null;
     if (!actions) return "noop";
     return insertBadge(doc, actions, badgeState(resolveGameId(doc, fallbackGameId), games));
@@ -352,7 +361,8 @@
     "." + BADGE_CLASS + "{display:inline-flex;align-items:center;height:24px;padding:0 10px;margin-left:8px;" +
     "border-radius:12px;font-size:12px;font-weight:600;line-height:1;white-space:nowrap;vertical-align:middle;cursor:default}" +
     "." + BADGE_CLASS + "--" + MANUAL + "{background:rgba(74,222,128,.15);color:#4ADE80;border:1px solid rgba(74,222,128,.4)}" +
-    "." + BADGE_CLASS + "--" + AUTO + "{background:rgba(148,163,184,.15);color:#94A3B8;border:1px solid rgba(148,163,184,.3)}";
+    "." + BADGE_CLASS + "--" + AUTO + "{background:rgba(148,163,184,.15);color:#94A3B8;border:1px solid rgba(148,163,184,.3)}" +
+    ".title--new-header .title-header-wrapper h1>." + BADGE_CLASS + "{flex:0 0 auto;margin-left:0}";
   
   // Вставить стиль один раз (по id).
   function ensureStyle(doc) {
