@@ -32,6 +32,7 @@
   // Пер-карта словарь: main ставит window.__WANDRU_SEED ДО этого скрипта -> в D до первого walk
   // (иначе гонка: строки очередятся в MT раньше, чем придёт seed).
   try { var _sd = window.__WANDRU_SEED; if (_sd) for (var _sk in _sd) if (_sd[_sk]) D[_sk] = _sd[_sk]; } catch (e) {}
+  try { var _cache = window.__WANDRU_CACHE; if (_cache) for (var _ck in _cache) if (!D[_ck] && _cache[_ck]) D[_ck] = _cache[_ck]; } catch (e) {}
 
   // UI-режим (фрейм AI-помощника): переводим ТОЛЬКО известные строки и атрибуты, MT не зовём.
   // Ответы модели приходят по-русски сами; гонять их через MT нельзя - они СТРИМЯТСЯ, и MT переводил

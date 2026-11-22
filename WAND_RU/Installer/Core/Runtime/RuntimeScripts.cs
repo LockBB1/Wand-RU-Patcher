@@ -18,18 +18,21 @@ internal static class RuntimeScripts
     static Uri? FrameAddress(string url) => Uri.TryCreate(url, UriKind.Absolute, out var uri) &&
         uri.Scheme == "https" && uri.IsDefaultPort && uri.UserInfo.Length == 0 ? uri : null;
 
-    public static string? FrameScript(string url, AppSettings settings)
+    internal static string MapSlug(string url) => MapPath.Match(new Uri(url).AbsolutePath).Groups[1].Value;
+
+    public static string? FrameScript(string url, AppSettings settings, string? cachePath = null)
     {
         if (!settings.TranslateMaps || FrameAddress(url) is not { } uri) return null;
         string seed;
         if (IsMap(url))
         {
             using var maps = JsonDocument.Parse(MapFrameHook.MapsJson);
+            var cache = MapTranslationCache.Load(cachePath ?? MapTranslationCache.Path, MapSlug(url));
             var dictionary = new Dictionary<string, string>();
             foreach (var slug in new[] { "_common", MapPath.Match(uri.AbsolutePath).Groups[1].Value })
                 if (maps.RootElement.TryGetProperty(slug, out var entries))
                     foreach (var entry in entries.EnumerateObject()) dictionary[entry.Name] = entry.Value.GetString()!;
-            seed = $"window.__WANDRU_MTON={(settings.TranslateMapsOnline ? "true" : "false")};window.__WANDRU_SEED={JsonSerializer.Serialize(dictionary, JsonOptions)};";
+            seed = $"window.__WANDRU_MTON={(settings.TranslateMapsOnline ? "true" : "false")};window.__WANDRU_SEED={JsonSerializer.Serialize(dictionary, JsonOptions)};window.__WANDRU_CACHE={JsonSerializer.Serialize(cache, JsonOptions)};";
         }
         else if (uri.Host == "mist.wand.com" && AssistantPath.IsMatch(uri.AbsolutePath))
         {

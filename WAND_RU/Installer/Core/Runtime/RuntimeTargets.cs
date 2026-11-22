@@ -12,6 +12,7 @@ internal sealed class RuntimeTargets : IAsyncDisposable
     readonly RuntimeScope _scope;
     readonly string _script;
     readonly AppSettings _settings;
+    readonly string _mapCachePath;
     readonly CancellationTokenSource _lifetime;
     readonly Channel<(string Method, JsonElement Parameters, string? Session)> _events =
         Channel.CreateBounded<(string, JsonElement, string?)>(512);
@@ -48,9 +49,10 @@ internal sealed class RuntimeTargets : IAsyncDisposable
         public bool Injected, IsMap;
     }
 
-    RuntimeTargets(DevToolsClient client, RuntimeScope scope, string script, AppSettings settings, CancellationToken token)
+    RuntimeTargets(DevToolsClient client, RuntimeScope scope, string script, AppSettings settings, CancellationToken token, string? mapCachePath)
     {
         (_client, _scope, _script, _settings) = (client, scope, script, settings);
+        _mapCachePath = mapCachePath ?? MapTranslationCache.Path;
         _lifetime = CancellationTokenSource.CreateLinkedTokenSource(token);
         _client.EventReceived += Receive;
         _reader = ReadAsync();
@@ -58,9 +60,9 @@ internal sealed class RuntimeTargets : IAsyncDisposable
     }
 
     public static async Task<RuntimeTargets> StartAsync(DevToolsClient client, RuntimeScope scope, string script,
-        AppSettings settings, CancellationToken token = default)
+        AppSettings settings, CancellationToken token = default, string? mapCachePath = null)
     {
-        var targets = new RuntimeTargets(client, scope, script, settings, token);
+        var targets = new RuntimeTargets(client, scope, script, settings, token, mapCachePath);
         try
         {
             await client.SendAsync("Target.setAutoAttach", AutoAttach("page"), token).ConfigureAwait(false);
@@ -331,7 +333,7 @@ internal sealed class RuntimeTargets : IAsyncDisposable
         var url = value.GetString()!;
         if (session.Type == "page" && context.Frame == session.MainFrame && _scope.IsAppPage(url))
             context.AppPage = new Uri(url).GetLeftPart(UriPartial.Path);
-        if (RuntimeScripts.FrameScript(url, _settings) is not { } script) return;
+        if (RuntimeScripts.FrameScript(url, _settings, _mapCachePath) is not { } script) return;
         var response = await Send("Runtime.evaluate", new { expression = script, uniqueContextId = context.UniqueId, returnByValue = true }, session.Id).ConfigureAwait(false);
         if (response.TryGetProperty("exceptionDetails", out _) ||
             !response.GetProperty("result").TryGetProperty("value", out var armed) || armed.ValueKind != JsonValueKind.True) return;
@@ -361,7 +363,7 @@ internal sealed class RuntimeTargets : IAsyncDisposable
                     {
                         var response = await Send("Runtime.evaluate", new
                         {
-                            expression = Guard(bridge.Context.AppPage!, "return window.__wandRuTranslateMap ? window.__wandRuTranslateMap(" + JsonSerializer.Serialize(text) + ") : null;"),
+                            expression = Guard(bridge.Context.AppPage!, "return window.__wandRuTranslateMap ? window.__wandRuTranslateMap(" + JsonSerializer.Serialize(text) + ",true) : null;"),
                             uniqueContextId = bridge.Context.UniqueId, awaitPromise = true, returnByValue = true
                         }, bridge.Session.Id).ConfigureAwait(false);
                         if (response.TryGetProperty("result", out var result) && result.TryGetProperty("value", out var value) &&
@@ -369,6 +371,7 @@ internal sealed class RuntimeTargets : IAsyncDisposable
                     }
                     catch (Exception error) when (error is IOException or InvalidOperationException or OperationCanceledException) { }
                 }).ConfigureAwait(false);
+                MapTranslationCache.Save(_mapCachePath, RuntimeScripts.MapSlug(batch.Context.Address!), translated);
                 if (Active(batch.Session, batch.Context))
                 {
                     try

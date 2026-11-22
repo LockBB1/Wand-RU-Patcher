@@ -82,7 +82,12 @@ public sealed class SettingsVm : ObservableObject
 
     public ICommand ClearCacheCommand { get; }
 
-    void RefreshCacheInfo() => CacheInfo = $"{CheatCache.HumanSize()} · {CheatCache.EntryCount()}";
+    void RefreshCacheInfo()
+    {
+        var bytes = CheatCache.SizeBytes() + MapTranslationCache.SizeBytes();
+        var size = bytes >= 1048576 ? $"{bytes / 1048576.0:0.0} МБ" : bytes >= 1024 ? $"{bytes / 1024.0:0.0} КБ" : $"{bytes} Б";
+        CacheInfo = $"{size} · {CheatCache.EntryCount() + MapTranslationCache.EntryCount()}";
+    }
 
     public SettingsVm(WandInstall install) : this(install, AppSettings.Load(), settings => settings.Save()) { }
 
@@ -98,7 +103,7 @@ public sealed class SettingsVm : ObservableObject
         _translateMaps = _appSettings.TranslateMaps;
         _translateMapsOnline = _appSettings.TranslateMapsOnline;
         _onlineProvider = string.IsNullOrEmpty(_appSettings.OnlineProvider) ? "auto" : _appSettings.OnlineProvider;
-        ClearCacheCommand = new RelayCommand(_ => { CheatCache.Clear(); RefreshCacheInfo(); });
+        ClearCacheCommand = new RelayCommand(_ => { CheatCache.Clear(); MapTranslationCache.Clear(MapTranslationCache.Path); RefreshCacheInfo(); });
         RefreshCacheInfo();
         AppVersions = install.AppDirs.Select(VersionOf).ToList();
         _selectedAppVersion = install.SelectedAppDir is not null

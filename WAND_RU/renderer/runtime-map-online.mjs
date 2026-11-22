@@ -37,12 +37,12 @@ function mapGet(url) {
   });
 }
 
-window.__wandRuTranslateMap = async function (text) {
+window.__wandRuTranslateMap = async function (text, fresh) {
   if (!mapHttps || typeof text !== 'string' || text.length < 2 || text.length > 1500) return null;
-  if (mapCache.has(text)) return mapCache.get(text);
+  if (!fresh && mapCache.has(text)) return mapCache.get(text);
   var russian = await translateOne(text, mapGet, 'auto', mapProviderState);
   if (russian && /Wand/.test(text)) russian = russian.replace(/Палочк[а-яё]*/gi, 'Wand').replace(/Ванд[а-яё]*/gi, 'Wand');
-  if (russian) {
+  if (russian && !fresh) {
     if (mapCache.size >= 5000) mapCache.clear();
     mapCache.set(text, russian);
   }
