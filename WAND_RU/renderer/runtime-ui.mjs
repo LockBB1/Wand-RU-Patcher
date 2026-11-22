@@ -8,7 +8,58 @@
     var overlay = /\/overlay\.html$/i.test(window.location.pathname);
     var localeTag = 'ru-RU', failure = null, probeKey;
     var wrapped = new WeakSet(), decorated = new WeakSet();
+    function syncReactLocale(i18n) {
+      try {
+        if (i18n?.isInitialized && typeof i18n.changeLanguage === 'function' &&
+            service?.getEffectiveLocale()?.language === 'ru' && i18n.language !== 'ru')
+          Promise.resolve(i18n.changeLanguage('ru')).catch(function () {});
+      } catch (_) {}
+    }
     var decorators = {
+      26604: function (exports) {
+        try {
+          if (!exports.r4 || !exports.Sb || !exports.j5?.add || !exports.Dn?.add) return;
+          exports.r4.ru = {name: 'Russian', native: configuration.language, locale: localeTag};
+          exports.Sb[localeTag] = 'ru';
+          exports.j5.add('ru');
+          exports.Dn.add(localeTag);
+        } catch (_) {}
+      },
+      4210: function (exports, require) {
+        var i18n = exports.A;
+        if (!i18n || typeof i18n.addResourceBundle !== 'function') return;
+        function installReactLocale() {
+          try {
+          if (!i18n.options || !Array.isArray(i18n.options.supportedLngs)) return;
+          var resources = Object.create(null);
+          var sections = /^(game_header|user_ideas|first_look|overlay_mini_map|trainer_feedback|session_end_card)\./;
+          for (var key of Object.keys(dictionary)) {
+            if (!sections.test(key)) continue;
+            var parts = key.split('.'), target = resources;
+            for (var i = 0; i < parts.length - 1; i++) target = target[parts[i]] || (target[parts[i]] = Object.create(null));
+            target[parts[parts.length - 1]] = dictionary[key];
+          }
+          function addRussianPlurals(group) {
+            for (var name of Object.keys(group)) {
+              var value = group[name];
+              if (value && typeof value === 'object') { addRussianPlurals(value); continue; }
+              if (typeof value !== 'string' || name.endsWith('_one')) continue;
+              if (Object.prototype.hasOwnProperty.call(group, name + '_one')) {
+                group[name + '_few'] = value;
+                group[name + '_many'] = value;
+                group[name + '_other'] = value;
+              }
+            }
+          }
+          addRussianPlurals(resources);
+          i18n.addResourceBundle('ru', 'desktop', resources, true, true);
+          if (!i18n.options.supportedLngs.includes('ru')) i18n.options.supportedLngs.push('ru');
+          syncReactLocale(i18n);
+          } catch (_) {}
+        }
+        if (i18n.isInitialized) installReactLocale();
+        else if (typeof i18n.on === 'function') i18n.on('initialized', installReactLocale);
+      },
       73508: function (exports) {
         if (!Array.isArray(exports.d)) throw new Error('WRP: supported locales contract changed');
         if (!exports.d.includes(localeTag)) exports.d.splice(1, 0, localeTag);
@@ -120,6 +171,7 @@
     if (failure) throw failure;
     if (!service || !Array.isArray(service.locales))
       throw new Error('WRP: Russian locale was not registered before bootstrap');
+    if (runtime.c?.[4210]?.loaded) syncReactLocale(runtime.c[4210].exports.A);
     var flags = runtime('resources/value-converters/flags').flags;
     decorateCached(runtime);
     if (failure) throw failure;
@@ -169,6 +221,7 @@
     // The native account observer is inactive on the sign-in screen.
     service.onLocaleChanged(function (event) {
       updateStatus();
+      if (runtime.c?.[4210]?.loaded) syncReactLocale(runtime.c[4210].exports.A);
       Promise.resolve(persist(event.source)).catch(function () {
         if (window.__wandRuRuntimeStatus) window.__wandRuRuntimeStatus.persistence = false;
       });
